@@ -3,18 +3,15 @@ from ultralytics import YOLO
 # Carregar modelo base pré-treinado (Transfer Learning)
 model = YOLO("yolov8n.pt")
 
-if __name__ == '__main__':
-    model = YOLO("yolov8n.pt")  # Modelo YOLOv8 nano (rápido)
-
 # Treinar o modelo com o novo dataset
-    model.train(
-        data="dataset.yaml",
-        epochs=30, 
-        batch=16, 
-        imgsz=512, 
-        device=0, 
-        workers=2,  # Melhor para Windows
-        cache="disk"  # Usa cache no disco, mais estável
-    )
+model.train(
+    data="dataset.yaml",
+    epochs=30, 
+    batch=16, 
+    imgsz=512, 
+    device=0, 
+    workers=2,  # Melhor para Windows
+    cache="disk"  # Usa cache no disco, mais estável
+)
 
 
