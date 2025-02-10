@@ -1,58 +1,46 @@
-// Remova as duplas atribuições. Cada evento (onopen, onmessage, etc.) deve ser definido apenas 1 vez.
-// O código abaixo sobrescrevia onmessage e onclose, então nunca executava o JSON.parse que atualiza o estado:
+import React, { useRef, useState, useEffect } from "react";
 
-import React, { useState, useEffect } from "react";
-
-const App = () => {
-  const [image, setImage] = useState("");
-  const [detections, setDetections] = useState([]);
+export default function App() {
+  const videoRef = useRef(null);
+  const [ws, setWs] = useState(null);
+  const [frame, setFrame] = useState("");
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:3001/ws");
-
-    ws.onopen = () => console.log("WS aberto");
-
-    ws.onmessage = (event) => {
-      console.log("Recebido:", event.data);
-      try {
-        const data = JSON.parse(event.data);
-        if (data.frame) setImage(`data:image/jpeg;base64,${data.frame}`);
-        if (data.detections) setDetections(data.detections);
-      } catch (err) {
-        console.error("Erro ao parsear JSON:", err);
-      }
+    const w = new WebSocket("ws://localhost:3001/ws");
+    w.onopen = () => console.log("WS aberto");
+    w.onmessage = (e) => {
+      const d = JSON.parse(e.data);
+      if (d.frame) setFrame(`data:image/jpeg;base64,${d.frame}`);
     };
-
-    ws.onerror = (e) => console.error("Erro:", e);
-    ws.onclose = () => console.log("WS fechado");
-
-    return () => {
-      ws.close();
-    };
+    w.onerror = (e) => console.log("WS erro:", e);
+    w.onclose = () => console.log("WS fechado");
+    setWs(w);
+    return () => w.close();
   }, []);
+
+  useEffect(() => {
+    navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+      if (videoRef.current) videoRef.current.srcObject = stream;
+    });
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!videoRef.current || !ws || ws.readyState !== WebSocket.OPEN) return;
+      const c = document.createElement("canvas");
+      c.width = 640;
+      c.height = 480;
+      c.getContext("2d").drawImage(videoRef.current, 0, 0, 640, 480);
+      const b64 = c.toDataURL("image/jpeg").split(",")[1];
+      ws.send(JSON.stringify({ frame: b64 }));
+    }, 50);
+    return () => clearInterval(interval);
+  }, [ws]);
 
   return (
     <div style={{ textAlign: "center" }}>
-      <h1>Detecção de EPI com YOLOv8</h1>
-      {image && (
-        <img
-          src={image}
-          alt="Webcam"
-          style={{ width: "640px", border: "2px solid black" }}
-        />
-      )}
-      <div>
-        <h2>Detecções:</h2>
-        <ul>
-          {detections.map((det, i) => (
-            <li key={i}>
-              {det.class} - Confiança: {Math.round(det.confidence * 100)}%
-            </li>
-          ))}
-        </ul>
-      </div>
+      {frame && <img src={frame} alt="processed" style={{ width: "640px" }} />}
+      <video ref={videoRef} style={{ display: "none" }} autoPlay />
     </div>
   );
-};
-
-export default App;
+}
