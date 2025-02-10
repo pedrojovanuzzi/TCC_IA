@@ -12,7 +12,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-model = YOLO("runs/detect/train2/weights/best.pt")
+model = YOLO("runs/detect/train3/weights/best.pt")
 
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
