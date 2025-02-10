@@ -1,68 +1,59 @@
-import cv2
+from fastapi import FastAPI, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
+import cv2, json, base64, asyncio
 from ultralytics import YOLO
 
-# Carregar o modelo treinado
-model = YOLO("runs/detect/train2/weights/best.pt")
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Inicializar a webcam
+model = YOLO("runs/detect/train2/weights/best.pt")
 cap = cv2.VideoCapture(0)
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+async def detect_and_stream(ws: WebSocket):
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        results = model(frame)
+        detections = []
+        for r in results:
+            if not hasattr(r, "boxes") or r.boxes is None:
+                continue
+            for b in r.boxes:
+                if not hasattr(b, "cls") or not hasattr(b, "xyxy") or not hasattr(b, "conf"):
+                    continue
+                x1, y1, x2, y2 = map(int, b.xyxy[0])
+                cid = int(b.cls[0])
+                conf = float(b.conf[0])
+                cname = model.names[cid]
+                detections.append({"class": cname, "confidence": conf, "bbox": [x1, y1, x2, y2]})
+                c = (0,255,0) if cname == "helmet" else (0,0,255)
+                cv2.rectangle(frame, (x1,y1), (x2,y2), c, 2)
+                cv2.putText(frame, f"{cname}: {conf:.2f}", (x1,y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, c, 2)
+        _, buffer = cv2.imencode(".jpg", frame)
+        frame64 = base64.b64encode(buffer).decode("utf-8")
+        data = {"detections": detections, "frame": frame64}
+        try:
+            await ws.send_text(json.dumps(data))
+        except Exception as e:
+            print("Erro:", e)
+        await asyncio.sleep(0.03)
 
-    # Fazer inferência
-    results = model(frame)
+@app.websocket("/ws")
+async def ws_endpoint(ws: WebSocket):
+    await ws.accept()
+    try:
+        await detect_and_stream(ws)
+    finally:
+        cap.release()
+        await ws.close()
 
-    # Listas para armazenar bounding boxes
-    heads = []
-    helmets = []
-
-    for result in results:
-        for box in result.boxes:
-            x1, y1, x2, y2 = map(int, box.xyxy[0])  # Coordenadas da bounding box
-            class_id = int(box.cls[0])  # ID da classe detectada
-            confidence = float(box.conf[0])  # Confiança da detecção
-            class_name = model.names[class_id]  # Nome da classe
-
-            # Guardar bounding boxes das classes relevantes
-            if class_name == "head":
-                heads.append((x1, y1, x2, y2))
-            elif class_name == "helmet":
-                helmets.append((x1, y1, x2, y2))
-
-            # Desenhar bounding box inicial (vermelho por padrão)
-            color = (0, 0, 255)  
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(frame, f"{class_name}: {confidence:.2f}", (x1, y1 - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-    # Verificar se cada cabeça tem um capacete sobreposto
-    for hx1, hy1, hx2, hy2 in heads:
-        wearing_helmet = False
-
-        for hx, hy, hxw, hyh in helmets:
-            # Verificar se a bounding box do capacete está dentro da bounding box da cabeça
-            if hx >= hx1 and hy >= hy1 and hxw <= hx2 and hyh <= hy2:
-                wearing_helmet = True
-                break
-
-        # Mudar cor da bounding box da cabeça se estiver usando capacete
-        color = (0, 255, 0) if wearing_helmet else (0, 0, 255)
-        text = "✅ Com Capacete" if wearing_helmet else "❌ Sem Capacete!"
-
-        cv2.rectangle(frame, (hx1, hy1), (hx2, hy2), color, 2)
-        cv2.putText(frame, text, (hx1, hy1 - 30), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-
-    # Mostrar a imagem com as detecções
-    cv2.imshow("Detecção de EPIs", frame)
-
-    # Pressione 'q' para sair
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-# Liberar a webcam e fechar janelas
-cap.release()
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=3001)

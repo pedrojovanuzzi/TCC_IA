@@ -18,5 +18,3 @@ if __name__ == '__main__':
     )
 
 
-    model_path = "runs/detect/train/weights/best.pt"
-    print(f"✅ Modelo salvo em: {model_path}")
