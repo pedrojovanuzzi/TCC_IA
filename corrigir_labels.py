@@ -1,7 +1,7 @@
 import os
 
 # Defina o número que deseja substituir (exemplo: mudar 0 para um novo ID)
-novo_id = 1  # 🔹 Altere este valor conforme necessário
+novo_id = 2  # 🔹 Altere este valor conforme necessário
 
 # Lista das pastas onde estão os labels (.txt)
 pastas_labels = [
