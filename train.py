@@ -1,7 +1,7 @@
 from ultralytics import YOLO
 
 # Carregar modelo base pré-treinado (Transfer Learning)
-model = YOLO("yolov8n.pt")
+model = YOLO("yolov8m.pt")
 
 if __name__ == '__main__':
 # Treinar o modelo com o novo dataset
@@ -13,7 +13,7 @@ if __name__ == '__main__':
         device=0,
         workers=4,  # Melhor para Windows
         cache="disk", # Usa cache no disco, mais estável
-        patience=10  # Para se não houver melhoria por 10 epochs
+        patience=20  # Para se não houver melhoria por 20 epochs
     )
 
 

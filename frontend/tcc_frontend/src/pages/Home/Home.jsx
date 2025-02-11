@@ -50,12 +50,12 @@ export default function Home() {
               </p>
               <div className="mt-10 flex items-center gap-x-6">
                 <a
-                  href="#"
+                  href="/Cam"
                   className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                 >
                   Começar a Usar
                 </a>
-                <a href="/Cam" className="text-sm/6 font-semibold text-gray-900">
+                <a href="/about" className="text-sm/6 font-semibold text-gray-900">
                   Ler Mais <span aria-hidden="true">→</span>
                 </a>
               </div>
