@@ -1,39 +1,11 @@
-'use client'
-
 import img from "../../assets/imgs/hero1.webp";
-import img2 from "../../assets/imgs/hero2.png";
-
-
+import { Header } from "../../components/Header";
 
 export default function Home() {
 
   return (
     <div className="bg-white">
-      <header className="absolute inset-x-0 top-0 z-50">
-        <nav aria-label="Global" className="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8">
-          <div className="flex lg:flex-1">
-            <a href="#" className="-m-1.5 p-1.5">
-              <span className="sr-only">Faculdades Integradas de Bauru</span>
-              <img
-                alt=""
-                src={img2}
-                className="h-10 w-auto"
-              />
-            </a>
-          </div>
-          <div className="flex lg:hidden">
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700"
-            >
-              <span className="sr-only">Open main menu</span>
-            </button>
-          </div>
-          <div className="hidden lg:flex lg:gap-x-12">
-          </div>
-        </nav>
-      </header>
+    <Header/>
       <div className="relative isolate overflow-hidden bg-gradient-to-b from-indigo-100/20 pt-14">
         <div
           aria-hidden="true"
