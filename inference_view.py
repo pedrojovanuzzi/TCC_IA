@@ -2,6 +2,7 @@ from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 import cv2, json, base64, asyncio, numpy as np
 from ultralytics import YOLO
+import uvicorn
 
 app = FastAPI()
 app.add_middleware(
@@ -49,5 +50,4 @@ async def ws_endpoint(ws: WebSocket):
         await ws.close()
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=3001)
