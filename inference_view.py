@@ -41,11 +41,21 @@ async def conexao_websocket(websocket: WebSocket):
                     x1, y1, x2, y2 = map(int, caixa.xyxy[0])
                     classe_detectada = modelo_yolo.names[int(caixa.cls[0])]
                     confianca = float(caixa.conf[0])
-                    # Define a cor do retângulo baseado na classe detectada
-                    cor_deteccao = (0, 255, 0) if classe_detectada == "helmet" else (0, 0, 255)
+
+                    if classe_detectada == "helmet":
+                        cor_deteccao = (0, 255, 0)  # Verde
+                    elif classe_detectada == "glove":
+                        cor_deteccao = (0, 255, 255)  # Amarelo
+                    # elif classe_detectada == "head":
+                    #     cor_deteccao = (255, 165, 0)  # Laranja
+                    elif classe_detectada == "head":
+                        cor_deteccao = (255, 0, 0)  # Vermelho
+                    else:
+                        cor_deteccao = (0, 0, 255)  # Azul para classes desconhecidas
+
 
                     # Se a confiança for >= 0.50, desenha a detecção
-                    if confianca >= 0.30:
+                    if confianca >= 0.60:
                         cv2.rectangle(frame_decodificado, (x1, y1), (x2, y2), cor_deteccao, 2)
                         cv2.putText(
                             frame_decodificado,
