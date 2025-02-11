@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const PASSWORD = process.env.REACT_APP_PASS; // Defina sua senha fixa
+const PASSWORD = import.meta.env.VITE_APP_PASS;
 
 export default function Authentication({ onLogin }) {
   const [input, setInput] = useState("");

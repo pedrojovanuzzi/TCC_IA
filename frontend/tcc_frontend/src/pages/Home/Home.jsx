@@ -1,12 +1,11 @@
 'use client'
 
-import { useState } from 'react'
 import img from "../../assets/imgs/hero1.webp";
 import img2 from "../../assets/imgs/hero2.png";
 
 
 
-export default function Example() {
+export default function Home() {
 
   return (
     <div className="bg-white">
@@ -56,7 +55,7 @@ export default function Example() {
                 >
                   Começar a Usar
                 </a>
-                <a href="#" className="text-sm/6 font-semibold text-gray-900">
+                <a href="/Cam" className="text-sm/6 font-semibold text-gray-900">
                   Ler Mais <span aria-hidden="true">→</span>
                 </a>
               </div>
