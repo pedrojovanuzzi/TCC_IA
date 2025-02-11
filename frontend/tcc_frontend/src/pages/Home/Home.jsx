@@ -1,5 +1,6 @@
 import img from "../../assets/imgs/hero1.webp";
 import { Header } from "../../components/Header";
+import { Footer } from "../../components/Footer";
 
 export default function Home() {
 
@@ -41,6 +42,7 @@ export default function Home() {
         </div>
         <div className="absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-t from-white sm:h-32" />
       </div>
+    <Footer/>
     </div>
   )
 }
