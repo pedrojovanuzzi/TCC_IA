@@ -1,36 +1,26 @@
-import openai
+import requests
 import os
-import time
-from dotenv import load_dotenv
-load_dotenv()
+import base64
 
-
-# Diretório para salvar as imagens
-output_dir = "/imagens_geradas"
+output_dir = "imagens_geradas"
 os.makedirs(output_dir, exist_ok=True)
 
-# Criar cliente OpenAI
-client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+url = "http://127.0.0.1:7860/sdapi/v1/txt2img"
 
-# Geração das imagens
+data = {
+    "prompt": "A safety harness used for climbing electric poles, detailed view, realistic",
+    "steps": 50,
+    "width": 512,
+    "height": 512,
+    "batch_size": 1
+}
+
 for i in range(300):
-    try:
-        response = client.images.generate(
-            model="dall-e-3",
-            prompt="A safety harness used for climbing electric poles, detailed view",
-            n=1,
-            size="1024x1024"
-        )
-        
-        image_url = response.data[0].url
-        image_path = os.path.join(output_dir, f"cinto_{i+1}.jpg")
+    response = requests.post(url, json=data)
+    image_data = response.json()["images"][0]
 
-        # Baixar e salvar a imagem
-        os.system(f"wget -O {image_path} {image_url}")
-        print(f"Imagem {i+1}/300 salva.")
-
-        time.sleep(1)  # Evita rate limit da API
-
-    except Exception as e:
-        print(f"Erro ao gerar a imagem {i+1}: {e}")
-        time.sleep(5)
+    image_path = os.path.join(output_dir, f"cinto_{i+1}.png")
+    with open(image_path, "wb") as f:
+        f.write(base64.b64decode(image_data))
+    
+    print(f"Imagem {i+1}/300 salva.")

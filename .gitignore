@@ -2,3 +2,4 @@ train/*
 test/*
 valid/*
 .env
+venv
