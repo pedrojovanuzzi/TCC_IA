@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const PASSWORD = "minhaSenha123"; // Defina sua senha fixa
+const PASSWORD = process.env.REACT_APP_PASS; // Defina sua senha fixa
 
 export default function Authentication({ onLogin }) {
   const [input, setInput] = useState("");
