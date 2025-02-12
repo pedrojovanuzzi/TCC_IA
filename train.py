@@ -1,37 +1,39 @@
 from ultralytics import YOLO
 import os
 
+#NANO yolov8n
+#MEDIUM yolov8m
+
 # TREINAMENTO DO ZERO
 # Carregar modelo base pré-treinado (Transfer Learning)
-# model = YOLO("yolov8n.pt")
+model = YOLO("yolov8n.pt")  # Carrega arquitetura YOLOv8m
 
 #Treinamento Fine-Tuning
 # Garante que o caminho do modelo seja absoluto
 script_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(script_dir, "runs", "detect", "train5", "weights", "best.pt")
+model_path = os.path.join(script_dir, "runs", "detect", "train6", "weights", "best.pt")
 
 # Confirma se o arquivo realmente existe
 if not os.path.exists(model_path):
     raise FileNotFoundError(f"Arquivo não encontrado: {model_path}")
 
-# Carrega o modelo
-model = YOLO(model_path)
+# model = YOLO("yolov8m.pt")  # Carrega arquitetura YOLOv8m
+
+# model.load(model_path)  # Usa pesos do YOLOv8n treinado
 
 if __name__ == '__main__':
 # Treinar o modelo com o novo dataset
     model.train(
         data="dataset.yaml",
-        epochs=100,
-        imgsz=768,
-        batch=16,
-        augment=True,  # Ativa data augmentation
-        mosaic=1.0,  # Mistura imagens para variação
-        hsv_h=0.015,  # Ajusta matiz
-        hsv_s=0.7,  # Ajusta saturação
-        hsv_v=0.4,  # Ajusta brilho
-        scale=0.5,  # Permite objetos menores no dataset
-        device=0,
-        workers=4,  # Melhor para Windows
-        cache="disk", # Usa cache no disco, mais estável
-        patience=20  # Para se não houver melhoria por 20 epochs
+        epochs=30,  # Ajuste conforme a convergência
+        imgsz=640,  # Reduz o tamanho da imagem para mais velocidade
+        batch=32,  # RTX 3060 Ti suporta batch maior
+        optimizer="AdamW",  # Convergência mais rápida que SGD
+        device=0,  # Usa a GPU
+        workers=4,  # Carregamento paralelo de imagens
+        cache="disk",  # Evita leitura repetida do disco, acelera bastante
+        patience=10,  # Para automaticamente se não melhorar por 10 epochs
+        half=True,  # Usa precisão mista (Mixed Precision)
+        amp=True  # Ativa Mixed Precision Training para menos uso de VRAM
     )
+
