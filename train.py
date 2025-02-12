@@ -35,11 +35,13 @@ if __name__ == '__main__':
 # Treinar o modelo com o novo dataset
     model.train(
         data="dataset.yaml",
-        epochs=30, 
-        batch=16, 
-        imgsz=512, 
-        device=0,
-        workers=4,  # Melhor para Windows
-        cache="disk", # Usa cache no disco, mais estável
-        patience=20  # Para se não houver melhoria por 20 epochs
+        epochs=100,
+        imgsz=768,
+        batch=16,
+        augment=True,  # Ativa data augmentation
+        mosaic=1.0,  # Mistura imagens para variação
+        hsv_h=0.015,  # Ajusta matiz
+        hsv_s=0.7,  # Ajusta saturação
+        hsv_v=0.4,  # Ajusta brilho
+        scale=0.5  # Permite objetos menores no dataset
     )
