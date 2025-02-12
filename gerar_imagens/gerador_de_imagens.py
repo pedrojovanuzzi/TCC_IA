@@ -19,8 +19,8 @@ with open(image_path, "rb") as image_file:
 
 data = {
     "init_images": [f"data:image/png;base64,{base64_image}"],  # Usa a imagem como base
-    "prompt": "A detailed, realistic image of a safety harness, isolated on a white background, high-resolution, professional photography, no pole, no human",
-    "negative_prompt": "electric pole, climbing, worker, human, hands, background clutter, blurry, low quality, watermark, distortion",
+    "prompt": "A detailed, realistic image of a person wearing a safety harness, professional photography, high-resolution, well-lit, full-body shot, construction worker or industrial worker, wearing proper safety equipment, standing in a neutral pose, facing the camera.",
+    "negative_prompt": "blurry, low quality, extra limbs, distorted face, watermark, text, cartoon, anime, painting, unrealistic proportions, helmet without harness, climbing poles, background clutter",
     "steps": 50,
     "denoising_strength": 0.7,  # Controla o quanto a IA altera a imagem original (0.5-0.8 recomendado)
     "cfg_scale": 7,
@@ -28,6 +28,7 @@ data = {
     "height": 768,
     "sampler_index": "Euler a"
 }
+
 
 
 
