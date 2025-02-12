@@ -1,26 +1,9 @@
 from ultralytics import YOLO
-
+import os
 
 # TREINAMENTO DO ZERO
 # Carregar modelo base pré-treinado (Transfer Learning)
-model = YOLO("yolov8n.pt")
-
-if __name__ == '__main__':
-# Treinar o modelo com o novo dataset
-    model.train(
-        data="dataset.yaml",
-        epochs=30, 
-        batch=16, 
-        imgsz=512, 
-        device=0,
-        workers=4,  # Melhor para Windows
-        cache="disk", # Usa cache no disco, mais estável
-        patience=20  # Para se não houver melhoria por 20 epochs
-    )
-
-
-#Treinamento Fine-Tuning
-# model = YOLO("./runs/train4/weights/best.pt")
+# model = YOLO("yolov8n.pt")
 
 # if __name__ == '__main__':
 # # Treinar o modelo com o novo dataset
@@ -34,3 +17,29 @@ if __name__ == '__main__':
 #         cache="disk", # Usa cache no disco, mais estável
 #         patience=20  # Para se não houver melhoria por 20 epochs
 #     )
+
+
+#Treinamento Fine-Tuning
+# Garante que o caminho do modelo seja absoluto
+script_dir = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(script_dir, "runs", "detect", "train4", "weights", "best.pt")
+
+# Confirma se o arquivo realmente existe
+if not os.path.exists(model_path):
+    raise FileNotFoundError(f"Arquivo não encontrado: {model_path}")
+
+# Carrega o modelo
+model = YOLO(model_path)
+
+if __name__ == '__main__':
+# Treinar o modelo com o novo dataset
+    model.train(
+        data="dataset.yaml",
+        epochs=30, 
+        batch=16, 
+        imgsz=512, 
+        device=0,
+        workers=4,  # Melhor para Windows
+        cache="disk", # Usa cache no disco, mais estável
+        patience=20  # Para se não houver melhoria por 20 epochs
+    )

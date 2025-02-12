@@ -43,9 +43,24 @@ async def conexao_websocket(websocket: WebSocket):
                     classe_detectada = modelo_yolo.names[int(caixa.cls[0])]
                     confianca = float(caixa.conf[0])
 
-                    cor_deteccao = (0, 255, 0) if classe_detectada == "helmet" else (255, 0, 0)
+                    cor_deteccao = (0, 255, 0) 
 
-                    if confianca >= 0.60:
+                    
+                    
+                    # Dicionário de cores RGB para diferentes classes detectadas
+                    cores_classes = {
+                        "helmet": (0, 255, 0),    # Verde
+                        "glove": (255, 255, 0),   # Amarelo
+                        "vest": (0, 165, 255),    # Laranja
+                        "boots": (255, 0, 0),     # Vermelho
+                        "goggles": (128, 0, 128), # Roxo
+                        "belt": (0, 255, 255),    # Ciano
+                    }
+
+                    # Define a cor baseada na classe detectada, padrão azul (0, 0, 255) se não estiver no dicionário
+                    cor_deteccao = cores_classes.get(classe_detectada, (0, 0, 255))
+
+                    if confianca >= 0.30:
                         cv2.rectangle(frame_decodificado, (x1, y1), (x2, y2), cor_deteccao, 2)
                         cv2.putText(frame_decodificado, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
 
