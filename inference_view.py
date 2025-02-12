@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import cv2, json, base64, numpy as np
 from ultralytics import YOLO
 import uvicorn
+import traceback
 
 # Inicializa o aplicativo FastAPI
 app = FastAPI()
@@ -20,6 +21,8 @@ app.add_middleware(
 modelo_yolo = YOLO("runs/detect/train3/weights/best.pt").to("cuda")
 
 @app.websocket("/ws")
+
+@app.websocket("/ws")
 async def conexao_websocket(websocket: WebSocket):
     await websocket.accept()
     try:
@@ -27,12 +30,10 @@ async def conexao_websocket(websocket: WebSocket):
             mensagem_recebida = await websocket.receive_text()
             dados_json = json.loads(mensagem_recebida)
             
-            # Decodifica a imagem base64
             frame_base64 = base64.b64decode(dados_json["frame"])
             array_bytes = np.frombuffer(frame_base64, np.uint8)
             frame_decodificado = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
 
-            # Executa a detecção com o YOLO
             resultados = modelo_yolo(frame_decodificado)
             for resultado in resultados:
                 if not resultado.boxes:
@@ -42,42 +43,21 @@ async def conexao_websocket(websocket: WebSocket):
                     classe_detectada = modelo_yolo.names[int(caixa.cls[0])]
                     confianca = float(caixa.conf[0])
 
-                    if classe_detectada == "helmet":
-                        cor_deteccao = (0, 255, 0)  # Verde
-                    elif classe_detectada == "glove":
-                        cor_deteccao = (0, 255, 255)  # Amarelo
-                    # elif classe_detectada == "head":
-                    #     cor_deteccao = (255, 165, 0)  # Laranja
-                    elif classe_detectada == "head":
-                        cor_deteccao = (255, 0, 0)  # Vermelho
-                    else:
-                        cor_deteccao = (0, 0, 255)  # Azul para classes desconhecidas
+                    cor_deteccao = (0, 255, 0) if classe_detectada == "helmet" else (255, 0, 0)
 
-
-                    # Se a confiança for >= 0.50, desenha a detecção
                     if confianca >= 0.60:
                         cv2.rectangle(frame_decodificado, (x1, y1), (x2, y2), cor_deteccao, 2)
-                        cv2.putText(
-                            frame_decodificado,
-                            f"{classe_detectada}: {confianca:.2f}",
-                            (x1, y1 - 5),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.6,
-                            cor_deteccao,
-                            1
-                        )
+                        cv2.putText(frame_decodificado, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
 
-            # Codifica a imagem novamente para enviar pelo WebSocket
             _, buffer_codificado = cv2.imencode(".jpg", frame_decodificado)
             frame_enviado_base64 = base64.b64encode(buffer_codificado).decode("utf-8")
 
-            # Envia o frame processado de volta ao cliente
             await websocket.send_text(json.dumps({"frame": frame_enviado_base64}))
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Erro WebSocket: {e}")
+        traceback.print_exc()
     finally:
         await websocket.close()
-
 # Inicia o servidor FastAPI
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=3001)
