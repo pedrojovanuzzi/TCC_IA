@@ -56,7 +56,7 @@ async def conexao_websocket(websocket: WebSocket):
                         "helmet": (0, 255, 0),    # Verde
                         "glove": (255, 255, 0),   # Amarelo
                         "vest": (0, 165, 255),    # Laranja
-                        "boots": (255, 0, 0),     # Vermelho
+                        "head": (255, 0, 0),     # Vermelho
                         "goggles": (128, 0, 128), # Roxo
                         "belt": (0, 255, 255),    # Ciano
                     }
