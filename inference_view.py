@@ -36,10 +36,8 @@ async def conexao_websocket(websocket: WebSocket):
             frame_base64 = base64.b64decode(dados_json["frame"])
             array_bytes = np.frombuffer(frame_base64, np.uint8)
             frame_decodificado = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
-
             dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
             resultados = modelo_yolo.predict(frame_decodificado, device=dispositivo)
-
             for resultado in resultados:
                 if not resultado.boxes:
                     continue
@@ -49,12 +47,13 @@ async def conexao_websocket(websocket: WebSocket):
                     confianca = float(caixa.conf[0])
 
                     cores_classes = {
-                        "helmet": (0, 255, 0),
-                        "glove": (255, 255, 0),
-                        "vest": (0, 165, 255),
-                        "boots": (255, 0, 0),
-                        "goggles": (128, 0, 128),
-                        "belt": (0, 255, 255),
+
+                        "helmet": (0, 255, 0),    # Verde
+                        "glove": (255, 255, 0),   # Amarelo
+                        "vest": (0, 165, 255),    # Laranja
+                        "head": (255, 0, 0),     # Vermelho
+                        "goggles": (128, 0, 128), # Roxo
+                        "belt": (0, 255, 255),    # Ciano
                     }
 
                     cor_deteccao = cores_classes.get(classe_detectada, (0, 0, 255))
