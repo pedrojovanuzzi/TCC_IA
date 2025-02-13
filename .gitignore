@@ -4,3 +4,5 @@ imagens_geradas
 test/*
 train/*
 valid/*
+.zip
+arquivos_imagens_labels.zip
