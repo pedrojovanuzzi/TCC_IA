@@ -25,11 +25,11 @@ if __name__ == '__main__':
         data="dataset.yaml",
         epochs=50,  # Ajuste conforme a convergência
         imgsz=640,  # Reduz o tamanho da imagem para mais velocidade
-        batch=32,  # RTX 3060 Ti suporta batch maior
+        batch=-1,  # RTX 3060 Ti suporta batch maior
         optimizer="AdamW",  # Convergência mais rápida que SGD
         device=0,  # Usa a GPU
         workers=4,  # Carregamento paralelo de imagens
-        cache="disk",  # Evita leitura repetida do disco, acelera bastante
+        cache="ram",  # Evita leitura repetida do disco, acelera bastante
         patience=10,  # Para automaticamente se não melhorar por 10 epochs
         half=True,  # Usa precisão mista (Mixed Precision)
         amp=True  # Ativa Mixed Precision Training para menos uso de VRAM
