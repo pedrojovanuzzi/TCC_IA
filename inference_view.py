@@ -4,6 +4,7 @@ import cv2, json, base64, numpy as np
 from ultralytics import YOLO
 import uvicorn
 import traceback
+import torch
 
 # Inicializa o aplicativo FastAPI
 app = FastAPI()
@@ -19,7 +20,7 @@ app.add_middleware(
 
 # Carrega o modelo YOLO treinado
 # modelo_yolo = YOLO("runs/detect/train7/weights/best.pt").to("cuda")
-modelo_yolo = YOLO("runs/detect/train7/weights/best.engine")
+modelo_yolo = YOLO("runs/detect/train6/weights/best.engine")
 
 
 @app.websocket("/ws")
@@ -36,8 +37,9 @@ async def conexao_websocket(websocket: WebSocket):
             array_bytes = np.frombuffer(frame_base64, np.uint8)
             frame_decodificado = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
 
-            # resultados = modelo_yolo(frame_decodificado)
-            resultados = modelo_yolo.predict(frame_decodificado, device="cuda")  # Agora especifica o device corretamente
+            dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
+            resultados = modelo_yolo.predict(frame_decodificado, device=dispositivo)
+
             for resultado in resultados:
                 if not resultado.boxes:
                     continue
@@ -46,21 +48,15 @@ async def conexao_websocket(websocket: WebSocket):
                     classe_detectada = modelo_yolo.names[int(caixa.cls[0])]
                     confianca = float(caixa.conf[0])
 
-                    cor_deteccao = (0, 255, 0) 
-
-                    
-                    
-                    # Dicionário de cores RGB para diferentes classes detectadas
                     cores_classes = {
-                        "helmet": (0, 255, 0),    # Verde
-                        "glove": (255, 255, 0),   # Amarelo
-                        "vest": (0, 165, 255),    # Laranja
-                        "boots": (255, 0, 0),     # Vermelho
-                        "goggles": (128, 0, 128), # Roxo
-                        "belt": (0, 255, 255),    # Ciano
+                        "helmet": (0, 255, 0),
+                        "glove": (255, 255, 0),
+                        "vest": (0, 165, 255),
+                        "boots": (255, 0, 0),
+                        "goggles": (128, 0, 128),
+                        "belt": (0, 255, 255),
                     }
 
-                    # Define a cor baseada na classe detectada, padrão azul (0, 0, 255) se não estiver no dicionário
                     cor_deteccao = cores_classes.get(classe_detectada, (0, 0, 255))
 
                     if confianca >= 0.10:
@@ -75,7 +71,8 @@ async def conexao_websocket(websocket: WebSocket):
         print(f"Erro WebSocket: {e}")
         traceback.print_exc()
     finally:
-        await websocket.close()
+        print("Cliente desconectado, aguardando novas conexões...")
+
 # Inicia o servidor FastAPI
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=3001)

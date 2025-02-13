@@ -1,12 +1,12 @@
 from ultralytics import YOLO
 import os
 
-#NANO yolov8n
-#MEDIUM yolov8m
+#NANO yolov11n
+#MEDIUM yolov11m
 
 # TREINAMENTO DO ZERO
 # Carregar modelo base pré-treinado (Transfer Learning)
-model = YOLO("yolov8m")
+model = YOLO("yolov11m")
 
 #Treinamento Fine-Tuning
 # Garante que o caminho do modelo seja absoluto
