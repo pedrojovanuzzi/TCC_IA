@@ -6,7 +6,7 @@ import os
 
 # TREINAMENTO DO ZERO
 # Carregar modelo base pré-treinado (Transfer Learning)
-model = YOLO("yolov11m")
+model = YOLO("yolov11m.pt")
 
 #Treinamento Fine-Tuning
 # Garante que o caminho do modelo seja absoluto
