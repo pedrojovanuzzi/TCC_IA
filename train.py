@@ -23,7 +23,7 @@ if __name__ == '__main__':
 # Treinar o modelo com o novo dataset
     model.train(
         data="dataset.yaml",
-        epochs=50,  # Ajuste conforme a convergência
+        epochs=300,  # Ajuste conforme a convergência
         imgsz=640,  # Reduz o tamanho da imagem para mais velocidade
         batch=-1,  # RTX 3060 Ti suporta batch maior
         optimizer="AdamW",  # Convergência mais rápida que SGD
