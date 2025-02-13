@@ -24,8 +24,6 @@ modelo_yolo = YOLO("runs/detect/train6/weights/best.engine")
 
 
 @app.websocket("/ws")
-
-@app.websocket("/ws")
 async def conexao_websocket(websocket: WebSocket):
     await websocket.accept()
     try:
