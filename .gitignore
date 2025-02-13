@@ -1,3 +1,6 @@
 .env
 venv
 imagens_geradas
+test/*
+train/*
+valid/*
