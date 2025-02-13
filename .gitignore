@@ -6,3 +6,4 @@ train/*
 valid/*
 .zip
 arquivos_imagens_labels.zip
+corrigir_labels/*

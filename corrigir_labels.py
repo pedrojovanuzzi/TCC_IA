@@ -2,7 +2,7 @@ import os
 import random
 
 # 🔹 Novo ID para substituir na classe dos labels
-novo_id = 2  # Altere conforme necessário
+novo_id = 4  # Altere conforme necessário
 
 # 🔹 Caminho do dataset (modifique conforme necessário)
 dataset_path = "./corrigir_labels"
