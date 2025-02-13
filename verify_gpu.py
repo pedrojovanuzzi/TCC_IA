@@ -1,4 +1,8 @@
 import torch
-print(torch.cuda.is_available())  # Deve retornar True se a GPU estiver ativa
-print(torch.cuda.device_count())  # Número de GPUs disponíveis
-print(torch.cuda.get_device_name(0))  # Nome da GPU
+import torchvision
+
+print("PyTorch versão:", torch.__version__)
+print("Torchvision versão:", torchvision.__version__)
+print("CUDA disponível:", torch.cuda.is_available())
+print("Versão CUDA no PyTorch:", torch.version.cuda)
+print("Versão cuDNN:", torch.backends.cudnn.version())

@@ -19,7 +19,7 @@ app.add_middleware(
 
 # Carrega o modelo YOLO treinado
 # modelo_yolo = YOLO("runs/detect/train7/weights/best.pt").to("cuda")
-modelo_yolo = YOLO("runs/detect/train7/weights/best.engine")
+modelo_yolo = YOLO("runs/detect/train6/weights/best.engine")
 
 
 @app.websocket("/ws")
@@ -35,6 +35,7 @@ async def conexao_websocket(websocket: WebSocket):
             frame_base64 = base64.b64decode(dados_json["frame"])
             array_bytes = np.frombuffer(frame_base64, np.uint8)
             frame_decodificado = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
+
 
             # resultados = modelo_yolo(frame_decodificado)
             resultados = modelo_yolo.predict(frame_decodificado, device="cuda")  # Agora especifica o device corretamente
