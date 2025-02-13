@@ -2,5 +2,5 @@ train: ../train/images
 val: ../valid/images
 test: ../test/images
 
-nc: 4
+nc: 5
 names: ['head', 'helmet', 'glove', 'hands', 'glasses']
