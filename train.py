@@ -22,11 +22,11 @@ if __name__ == '__main__':
         epochs=300,
         imgsz=736,
         batch=-1,
-        optimizer="AdamW",
+        optimizer='auto',
         device=0,
         workers=4,
         cache="disk",
-        patience=10,
+        patience=5,
         half=True,
         amp=True
     )
