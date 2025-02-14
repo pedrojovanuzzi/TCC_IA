@@ -41,7 +41,7 @@ export default function Cam() {
   return (
     <ProtectedPage>
     <div className="flex justify-center items-center h-screen bg-gray-800" style={{ textAlign: "center" }}>
-      {frame && <img src={frame} alt="processed" style={{ width: "1024px" }} />}
+      {frame && <img src={frame} alt="processed" style={{ width: "1920px" }} />}
       {!frame && <h1 className="text-3xl font-semibold text-gray-200">Video Ainda Não Iniciado</h1>}
       <video ref={videoRef} style={{ display: "none" }} autoPlay />
     </div>
