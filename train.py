@@ -20,7 +20,7 @@ if __name__ == '__main__':
     YOLO(model_path).train(
         data="dataset.yaml",
         epochs=300,
-        imgsz=736,
+        imgsz=640,
         batch=-1,
         optimizer='auto',
         device=0,
