@@ -31,12 +31,5 @@ if __name__ == '__main__':
         amp=True
     )
 
-# INFERÊNCIA USANDO SAHI EM TEMPO REAL (para WebSocket ou vídeo)
-detection_model = AutoDetectionModel.from_pretrained(
-    model_type="ultralytics",
-    model_path=model_path,
-    confidence_threshold=0.3,
-    device="cuda"
-)
 
 print("Modelo pronto para inferência com SAHI!")

@@ -24,7 +24,7 @@ app.add_middleware(
 dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Caminho do modelo YOLOv11 convertido para TensorRT
-modelo_path = "runs/detect/train9/weights/best.engine"
+modelo_path = "runs/detect/train10/weights/best.engine"
 
 # Carregar modelo YOLO otimizado para inferência com SAHI
 detection_model = AutoDetectionModel.from_pretrained(
