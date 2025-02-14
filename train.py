@@ -29,7 +29,7 @@ if __name__ == '__main__':
         optimizer="AdamW",  # Convergência mais rápida que SGD
         device=0,  # Usa a GPU
         workers=4,  # Carregamento paralelo de imagens
-        cache="ram",  # Evita leitura repetida do disco, acelera bastante
+        cache="disk",  # Evita leitura repetida do disco, acelera bastante
         patience=10,  # Para automaticamente se não melhorar por 10 epochs
         half=True,  # Usa precisão mista (Mixed Precision)
         amp=True  # Ativa Mixed Precision Training para menos uso de VRAM
