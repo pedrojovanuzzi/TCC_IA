@@ -8,5 +8,5 @@ valid/*
 arquivos_imagens_labels.zip
 corrigir_labels/*
 augmented/*
-runs/detect/train9/weights/best.onnx
-runs/detect/train9/weights/best.engine
+*.onnx
+*.engine
