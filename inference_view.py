@@ -20,7 +20,7 @@ app.add_middleware(
 
 # Carrega o modelo YOLO treinado
 # modelo_yolo = YOLO("runs/detect/train7/weights/best.pt").to("cuda")
-modelo_yolo = YOLO("runs/detect/train10/weights/best.engine")
+modelo_yolo = YOLO("runs/detect/train11/weights/best.engine")
 
 
 @app.websocket("/ws")
@@ -58,7 +58,7 @@ async def conexao_websocket(websocket: WebSocket):
 
                     cor_deteccao = cores_classes.get(classe_detectada)
 
-                    if confianca >= 0.70:
+                    if confianca >= 0.10:
                         cv2.rectangle(frame_decodificado, (x1, y1), (x2, y2), cor_deteccao, 2)
                         cv2.putText(frame_decodificado, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
 
