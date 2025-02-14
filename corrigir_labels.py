@@ -11,7 +11,7 @@ dataset_path = "./corrigir_labels"
 folders = ["train", "valid", "test"]
 
 # 🔹 Número máximo de imagens/labels a manter
-max_files = 1000
+max_files = 2000
 
 # 🔹 Extensões de imagem suportadas
 image_extensions = (".jpg", ".jpeg", ".png", ".bmp", ".webp")

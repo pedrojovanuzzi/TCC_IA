@@ -4,3 +4,4 @@ test: ../test/images
 
 nc: 5
 names: ['head', 'helmet', 'glove', 'hands', 'glasses']
+task: detect
