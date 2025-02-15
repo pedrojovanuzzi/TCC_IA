@@ -2,7 +2,7 @@ import os
 import random
 
 # 🔹 Novo ID para substituir na classe dos labels
-novo_id = 3 # Altere conforme necessário
+novo_id = 2  # Altere conforme necessário
 
 # 🔹 Caminho do dataset (modifique conforme necessário)
 dataset_path = "./corrigir_labels"
@@ -34,18 +34,18 @@ def process_folder(folder_path):
     image_set = {os.path.splitext(img)[0] for img in images}
     label_set = {os.path.splitext(lbl)[0] for lbl in labels}
 
-    # Encontrar pares correspondentes
-    valid_pairs = sorted(image_set & label_set)
+    # Encontrar pares correspondentes (garante que cada imagem tem seu label)
+    valid_pairs = list(image_set & label_set)
 
     if not valid_pairs:
         print(f"⚠️ Nenhum par encontrado em {folder_path}/images e {folder_path}/labels.")
         return
 
-    # Se houver mais do que o necessário, seleciona aleatoriamente 1000 pares
-    if len(valid_pairs) > max_files:
-        valid_pairs = set(random.sample(valid_pairs, max_files))
-    else:
-        valid_pairs = set(valid_pairs)
+    # 🔹 EMBARALHAR OS PARES PARA ESCOLHA ALEATÓRIA
+    random.shuffle(valid_pairs)
+
+    # 🔹 Selecionar apenas os `max_files` primeiros pares de forma aleatória
+    valid_pairs = set(valid_pairs[:max_files])
 
     # 🔹 Corrigir os labels (.txt) alterando a classe
     for lbl in labels:

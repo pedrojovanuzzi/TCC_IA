@@ -58,7 +58,7 @@ async def conexao_websocket(websocket: WebSocket):
 
                     cor_deteccao = cores_classes.get(classe_detectada)
 
-                    if confianca >= 0.10:
+                    if confianca >= 0.70:
                         cv2.rectangle(frame_decodificado, (x1, y1), (x2, y2), cor_deteccao, 2)
                         cv2.putText(frame_decodificado, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
 

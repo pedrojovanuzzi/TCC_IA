@@ -4,8 +4,7 @@ imagens_geradas
 test/*
 train/*
 valid/*
-.zip
-arquivos_imagens_labels.zip
+*.zip
 corrigir_labels/*
 augmented/*
 *.onnx
