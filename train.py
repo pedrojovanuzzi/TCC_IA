@@ -4,8 +4,7 @@ from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 
 # NANO yolov11n / MEDIUM yolov11m
-model_path = YOLO("./yolo11m.pt")
-
+model_path = "./yolo11m.pt"
 
 # Caminho do modelo treinado
 # script_dir = os.path.dirname(os.path.abspath(__file__))
