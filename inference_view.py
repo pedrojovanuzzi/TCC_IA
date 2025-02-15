@@ -48,7 +48,7 @@ async def conexao_websocket(websocket: WebSocket):
 
                         "helmet": (0, 255, 0),    # Verde
                         "glove": (255, 255, 0),   # Amarelo
-                        "vest": (0, 165, 255),    # Laranja
+                        "belt": (0, 165, 255),    # Laranja
                         "head": (255, 0, 0),     # Vermelho
                         "glasses": (128, 0, 128), # Roxo
                         "hands": (0, 255, 255),    # Ciano
@@ -58,7 +58,7 @@ async def conexao_websocket(websocket: WebSocket):
 
                     cor_deteccao = cores_classes.get(classe_detectada)
 
-                    if confianca >= 0.70:
+                    if confianca >= 0.00:
                         cv2.rectangle(frame_decodificado, (x1, y1), (x2, y2), cor_deteccao, 2)
                         cv2.putText(frame_decodificado, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
 
