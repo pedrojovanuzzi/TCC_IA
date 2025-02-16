@@ -8,7 +8,7 @@ from sahi.predict import get_sliced_prediction
 
 # Caminho do modelo treinado
 script_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(script_dir, "runs", "detect", "train10", "weights", "best.pt")
+model_path = os.path.join(script_dir, "runs", "detect", "train13", "weights", "best.pt")
 
 # # Confirma se o arquivo do modelo existe
 if not os.path.exists(model_path):
@@ -25,7 +25,7 @@ if __name__ == '__main__':
         device=0,
         workers=4,
         cache="disk",
-        patience=5,
+        patience=20,
         half=True,
         amp=True
     )
