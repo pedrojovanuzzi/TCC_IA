@@ -56,8 +56,10 @@ export default function Photo() {
   };
 
   return (
-    <div className="relative">
-      <img src={img} alt="" className="size-16 mt-5 sm:size-24 absolute left-1/2 -translate-x-1/2" />
+    <div>
+      <div className="relative flex justify-center">
+      <img src={img} className="size-16 sm:size-24 absolute left-1/2 -translate-x-1/2" />
+      </div>
       <div className="h-screen flex flex-col justify-center items-center">
       
       <h1 className="font-semibold mb-4">Arraste ou clique para selecionar uma Foto</h1>
