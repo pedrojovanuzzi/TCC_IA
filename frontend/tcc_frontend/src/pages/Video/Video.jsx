@@ -1,8 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState } from "react";
+import axios from "axios";
 
 export default function Video() {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [processedVideo, setProcessedVideo] = useState(null);
 
   const handleDragOver = (event) => {
     event.preventDefault();
@@ -19,27 +22,51 @@ export default function Video() {
 
     if (event.dataTransfer.files.length > 0) {
       const file = event.dataTransfer.files[0];
-
-      if (inputRef.current) {
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        inputRef.current.files = dataTransfer.files;
-      }
+      handleUpload(file);
     }
   };
 
+  const handleFileChange = (event) => {
+    if (event.target.files.length > 0) {
+      const file = event.target.files[0];
+      handleUpload(file);
+    }
+  };
+
+  const handleUpload = async (file) => {
+    setUploading(true);
+  
+    const formData = new FormData();
+    formData.append("file", file);
+  
+    try {
+      const response = await axios.post("http://localhost:3001/predict_video", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        responseType: "blob", // Importante para receber o vídeo corretamente
+      });
+  
+      // Criar um URL Blob corretamente definido como vídeo
+      const videoBlob = new Blob([response.data], { type: "video/mp4" });
+      const videoURL = URL.createObjectURL(videoBlob);
+      setProcessedVideo(videoURL);
+    } catch (error) {
+      console.error("Erro ao enviar o vídeo:", error);
+    } finally {
+      setUploading(false);
+    }
+  };
+  
+
   return (
     <div className="h-screen flex justify-center items-center flex-col">
-      <h1 className="font-semibold mb-10">
-        Arraste o vídeo que deseja ou clique para selecionar um
-      </h1>
+      <h1 className="font-semibold mb-6">Arraste ou clique para selecionar um vídeo</h1>
 
-      <input type="file" ref={inputRef} accept="video/*" className="hidden" />
+      <input type="file" ref={inputRef} accept="video/*" className="hidden" onChange={handleFileChange} />
 
       <div
         className={`relative cursor-pointer block w-1/4 rounded-lg border-2 border-dashed ${
-          dragging ? 'border-blue-500 bg-blue-100' : 'border-gray-300'
-        } p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+          dragging ? "border-blue-500 bg-blue-100" : "border-gray-300"
+        } p-12 text-center hover:border-gray-400`}
         onClick={() => inputRef.current?.click()}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -60,9 +87,26 @@ export default function Video() {
           />
         </svg>
         <span className="mt-2 block text-sm font-semibold text-gray-900">
-          Selecione ou arraste um vídeo aqui
+          {uploading ? "Processando vídeo..." : "Selecione ou arraste um vídeo aqui"}
         </span>
       </div>
+
+      {processedVideo && (
+        <div className="mt-6 flex justify-center flex-col items-center">
+          <h2 className="font-semibold">Vídeo Processado:</h2>
+          <video controls className="mt-2 w-2/3 rounded-lg shadow-md">
+            <source src={processedVideo} type="video/mp4" />
+            Seu navegador não suporta o elemento de vídeo.
+          </video>
+          <a
+            href={processedVideo}
+            download="video_processado.mp4"
+            className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700"
+          >
+            Baixar Vídeo Processado
+          </a>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,8 +6,10 @@ import torch
 from sahi.predict import get_sliced_prediction
 from sahi.models.ultralytics import UltralyticsDetectionModel
 from io import BytesIO
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, FileResponse
 import os
+import tempfile
+import shutil
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -35,6 +37,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Cores das classes para desenho
+cores_classes = {
+    "helmet": (0, 255, 0),    # Verde
+    "glove": (255, 255, 0),   # Amarelo
+    "belt": (0, 165, 255),    # Laranja
+    "head": (255, 0, 0),      # Vermelho
+    "glasses": (128, 0, 128), # Roxo
+    "hands": (0, 255, 255)    # Ciano
+}
 
 @app.post("/predict")
 async def inferencia_imagem(file: UploadFile = File(...)):
@@ -61,15 +72,6 @@ async def inferencia_imagem(file: UploadFile = File(...)):
             overlap_width_ratio=0.2
         )
 
-        # Cores das classes para desenho
-        cores_classes = {
-            "helmet": (0, 255, 0),    # Verde
-            "glove": (255, 255, 0),   # Amarelo
-            "belt": (0, 165, 255),    # Laranja
-            "head": (255, 0, 0),      # Vermelho
-            "glasses": (128, 0, 128), # Roxo
-            "hands": (0, 255, 255)    # Ciano
-        }
 
         # Desenha as detecções na imagem
         for obj in resultado.object_prediction_list:
@@ -90,6 +92,73 @@ async def inferencia_imagem(file: UploadFile = File(...)):
 
     except Exception as e:
         return JSONResponse(content={"erro": str(e)}, status_code=500)
+
+@app.post("/predict_video")
+async def inferencia_video(file: UploadFile = File(...)):
+    try:
+
+        dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
+        modelo_yolo = UltralyticsDetectionModel(
+            model_path=model_path_pt,  # Caminho do modelo
+            confidence_threshold=0.5,
+            device=dispositivo
+)
+        # Criar um arquivo temporário para salvar o vídeo recebido
+        temp_input = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        temp_output = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+
+        # Salvar o arquivo temporariamente
+        with open(temp_input.name, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # Abrir o vídeo com OpenCV
+        cap = cv2.VideoCapture(temp_input.name)
+        fps = int(cap.get(cv2.CAP_PROP_FPS))
+        largura = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        altura = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        # Configurar o vídeo de saída com mesmo FPS e resolução
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(temp_output.name, fourcc, fps, (largura, altura))
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break  # Sai do loop quando o vídeo termina
+
+            # Faz a inferência com SAHI
+            resultado = get_sliced_prediction(
+                image=frame,
+                detection_model=modelo_yolo,
+                slice_height=640,  # Ajuste conforme necessário
+                slice_width=640,
+                overlap_height_ratio=0.2,
+                overlap_width_ratio=0.2
+            )
+
+            # Desenha as detecções na imagem
+            for obj in resultado.object_prediction_list:
+                x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
+                classe_detectada = obj.category.name
+                confianca = obj.score.value
+
+                cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))  # Branco se não listado
+
+                cv2.rectangle(frame, (x1, y1), (x2, y2), cor_deteccao, 2)
+                cv2.putText(frame, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
+
+            # Escreve o frame processado no vídeo de saída
+            out.write(frame)
+
+        # Libera os vídeos
+        cap.release()
+        out.release()
+
+        return FileResponse(temp_output.name, media_type="video/mp4", filename="video_processado.mp4")
+
+    except Exception as e:
+        return {"erro": str(e)}
+
 
 @app.websocket("/ws")
 async def conexao_websocket(websocket: WebSocket):
@@ -115,15 +184,6 @@ async def conexao_websocket(websocket: WebSocket):
                     classe_detectada = modelo_yolo.names[int(caixa.cls[0])]
                     confianca = float(caixa.conf[0])
 
-                    cores_classes = {
-
-                        "helmet": (0, 255, 0),    # Verde
-                        "glove": (255, 255, 0),   # Amarelo
-                        "belt": (0, 165, 255),    # Laranja
-                        "head": (255, 0, 0),     # Vermelho
-                        "glasses": (128, 0, 128), # Roxo
-                        "hands": (0, 255, 255),    # Ciano
-                    }
 
                     print(classe_detectada);
 
