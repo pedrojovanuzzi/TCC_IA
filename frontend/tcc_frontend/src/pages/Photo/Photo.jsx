@@ -40,7 +40,7 @@ export default function Photo() {
     formData.append("file", file);
 
     try {
-      const response = await axios.post("http://localhost:3002/predict", formData, {
+      const response = await axios.post("http://localhost:3001/predict", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
