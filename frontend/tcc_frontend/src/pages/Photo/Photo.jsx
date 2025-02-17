@@ -56,11 +56,11 @@ export default function Photo() {
   };
 
   return (
-    <div>
-      <div className="relative flex justify-center">
-      <img src={img} className="size-16 sm:size-24 absolute left-1/2 -translate-x-1/2" />
+    <div className="flex justify-center flex-col">
+      <div className="flex justify-center">
+      <img src={img} className="size-16 mt-5 sm:size-24" />
       </div>
-      <div className="h-screen flex flex-col justify-center items-center">
+      <div className="flex flex-col justify-center items-center">
       
       <h1 className="font-semibold mb-4">Arraste ou clique para selecionar uma Foto</h1>
 
@@ -103,7 +103,7 @@ export default function Photo() {
       {preview && (
         <div className="mt-4">
           <h2 className="font-semibold">Imagem Processada:</h2>
-          <img src={preview} alt="Imagem processada" className="mt-2 max-w-xs rounded-lg shadow-md" />
+          <img src={preview} alt="Imagem processada" className="mt-2 w-3xl rounded-lg shadow-md" />
         </div>
       )}
     </div>
