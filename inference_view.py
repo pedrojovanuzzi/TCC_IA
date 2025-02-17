@@ -20,7 +20,7 @@ app.add_middleware(
 
 # Carrega o modelo YOLO treinado
 # modelo_yolo = YOLO("runs/detect/train7/weights/best.pt").to("cuda")
-modelo_yolo = YOLO("runs/detect/train11/weights/best.engine")
+modelo_yolo = YOLO("runs/detect/train12/weights/best.engine")
 
 
 @app.websocket("/ws")
