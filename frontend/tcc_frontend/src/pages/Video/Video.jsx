@@ -41,21 +41,18 @@ export default function Video() {
     formData.append("file", file);
   
     try {
-      const response = await axios.post("http://localhost:3001/predict_video", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        responseType: "blob", // Importante para receber o vídeo corretamente
-      });
+      const response = await axios.post("http://localhost:3001/predict_video", formData);
   
-      // Criar um URL Blob corretamente definido como vídeo
-      const videoBlob = new Blob([response.data], { type: "video/mp4" });
-      const videoURL = URL.createObjectURL(videoBlob);
-      setProcessedVideo(videoURL);
+      if (response.data.video_url) {
+        setProcessedVideo(response.data.video_url);
+      }
     } catch (error) {
       console.error("Erro ao enviar o vídeo:", error);
     } finally {
       setUploading(false);
     }
   };
+  
   
       
 
@@ -100,7 +97,7 @@ export default function Video() {
       {processedVideo && (
         <div className="mt-6 flex justify-center flex-col items-center">
           <h2 className="font-semibold">Vídeo Processado:</h2>
-          <video controls className="mt-2 w-2/3 rounded-lg shadow-md">
+          <video key={processedVideo} controls className="mt-2 w-2/3 rounded-lg shadow-md">
             <source src={processedVideo} type="video/mp4" />
             Seu navegador não suporta o elemento de vídeo.
           </video>

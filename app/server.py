@@ -16,6 +16,10 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 model_path_pt = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.pt")
 model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.engine")
 
+# Pasta onde os vídeos processados serão armazenados
+STATIC_DIR = os.path.join(BASE_DIR, "static", "videos")
+os.makedirs(STATIC_DIR, exist_ok=True)  # Cria a pasta se não existir
+
 if not os.path.exists(model_path_pt):
     raise FileNotFoundError(f"Arquivo não encontrado: {model_path_pt}")
 
@@ -96,41 +100,45 @@ async def inferencia_imagem(file: UploadFile = File(...)):
 @app.post("/predict_video")
 async def inferencia_video(file: UploadFile = File(...)):
     try:
-
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
         modelo_yolo = UltralyticsDetectionModel(
-            model_path=model_path_pt,  # Caminho do modelo
+            model_path=model_path_pt,
             confidence_threshold=0.5,
             device=dispositivo
-)
-        # Criar um arquivo temporário para salvar o vídeo recebido
-        temp_input = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-        temp_output = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        )
 
-        # Salvar o arquivo temporariamente
+        # Nome do arquivo de saída
+        video_nome = f"video_processado_{file.filename}"
+        video_path = os.path.join(STATIC_DIR, video_nome)
+
+        # Salvar o arquivo original
+        temp_input = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
         with open(temp_input.name, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # Abrir o vídeo com OpenCV
+        # Abrir vídeo com OpenCV
         cap = cv2.VideoCapture(temp_input.name)
         fps = int(cap.get(cv2.CAP_PROP_FPS))
         largura = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         altura = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        # Configurar o vídeo de saída com mesmo FPS e resolução
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        out = cv2.VideoWriter(temp_output.name, fourcc, fps, (largura, altura))
+        # Configurar FPS e codec
+        if fps == 0:
+            fps = 30  # Define FPS padrão se não detectado
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Codec compatível com MP4
+
+        out = cv2.VideoWriter(video_path, fourcc, fps, (largura, altura))
 
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break  # Sai do loop quando o vídeo termina
 
-            # Faz a inferência com SAHI
+            # Inferência YOLOv8 + SAHI
             resultado = get_sliced_prediction(
                 image=frame,
                 detection_model=modelo_yolo,
-                slice_height=640,  # Ajuste conforme necessário
+                slice_height=640,
                 slice_width=640,
                 overlap_height_ratio=0.2,
                 overlap_width_ratio=0.2
@@ -141,24 +149,24 @@ async def inferencia_video(file: UploadFile = File(...)):
                 x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
                 classe_detectada = obj.category.name
                 confianca = obj.score.value
-
-                cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))  # Branco se não listado
+                cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))
 
                 cv2.rectangle(frame, (x1, y1), (x2, y2), cor_deteccao, 2)
-                cv2.putText(frame, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
+                cv2.putText(frame, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
 
-            # Escreve o frame processado no vídeo de saída
             out.write(frame)
 
-        # Libera os vídeos
         cap.release()
         out.release()
 
-        return FileResponse(temp_output.name, media_type="video/mp4", filename="video_processado.mp4")
+        # Criar URL pública
+        video_url = f"http://localhost:3001/static/videos/{video_nome}"
+
+        return JSONResponse(content={"video_url": video_url})
 
     except Exception as e:
-        return {"erro": str(e)}
-
+        return JSONResponse(content={"erro": str(e)}, status_code=500)
 
 @app.websocket("/ws")
 async def conexao_websocket(websocket: WebSocket):
