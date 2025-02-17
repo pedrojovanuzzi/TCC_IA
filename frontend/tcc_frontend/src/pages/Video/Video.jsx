@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import axios from "axios";
+import img from "../../assets/imgs/video.png";
 
 export default function Video() {
   const inputRef = useRef(null);
@@ -56,8 +57,11 @@ export default function Video() {
     }
   };
   
+      
 
   return (
+    <div className="relative">
+    <img src={img} alt="" className="size-16 mt-5 sm:size-24 absolute left-1/2 -translate-x-1/2" />
     <div className="h-screen flex justify-center items-center flex-col">
       <h1 className="font-semibold mb-6">Arraste ou clique para selecionar um vídeo</h1>
 
@@ -77,7 +81,7 @@ export default function Video() {
           stroke="currentColor"
           viewBox="0 0 48 48"
           aria-hidden="true"
-          className="mx-auto size-12 text-gray-400"
+          className="mx-auto sm:size-12 text-gray-400"
         >
           <path
             d="M8 14v20c0 4.418 7.163 8 16 8 1.381 0 2.721-.087 4-.252M8 14c0 4.418 7.163 8 16 8s16-3.582 16-8M8 14c0-4.418 7.163-8 16-8s16 3.582 16 8m0 0v14m0-4c0 4.418-7.163 8-16 8S8 28.418 8 24m32 10v6m0 0v6m0-6h6m-6 0h-6"
@@ -107,6 +111,7 @@ export default function Video() {
           </a>
         </div>
       )}
+    </div>
     </div>
   );
 }

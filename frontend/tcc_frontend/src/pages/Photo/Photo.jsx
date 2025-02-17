@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import axios from "axios";
+import img from "../../assets/imgs/photo.png";
 
 export default function Photo() {
   const inputRef = useRef(null);
@@ -55,7 +56,10 @@ export default function Photo() {
   };
 
   return (
-    <div className="h-screen flex flex-col justify-center items-center">
+    <div className="relative">
+      <img src={img} alt="" className="size-16 mt-5 sm:size-24 absolute left-1/2 -translate-x-1/2" />
+      <div className="h-screen flex flex-col justify-center items-center">
+      
       <h1 className="font-semibold mb-4">Arraste ou clique para selecionar uma Foto</h1>
 
       <input type="file" ref={inputRef} className="hidden" onChange={handleFileChange} />
@@ -78,7 +82,7 @@ export default function Photo() {
               stroke="currentColor"
               viewBox="0 0 48 48"
               aria-hidden="true"
-              className="mx-auto size-12 text-gray-400"
+              className="mx-auto sm:size-12 text-gray-400"
             >
               <path
                 d="M8 14v20c0 4.418 7.163 8 16 8 1.381 0 2.721-.087 4-.252M8 14c0 4.418 7.163 8 16 8s16-3.582 16-8M8 14c0-4.418 7.163-8 16-8s16 3.582 16 8m0 0v14m0-4c0 4.418-7.163 8-16 8S8 28.418 8 24m32 10v6m0 0v6m0-6h6m-6 0h-6"
@@ -100,6 +104,7 @@ export default function Photo() {
           <img src={preview} alt="Imagem processada" className="mt-2 max-w-xs rounded-lg shadow-md" />
         </div>
       )}
+    </div>
     </div>
   );
 }
