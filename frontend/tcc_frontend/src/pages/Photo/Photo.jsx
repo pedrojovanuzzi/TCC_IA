@@ -67,7 +67,7 @@ export default function Photo() {
       <input type="file" ref={inputRef} className="hidden" onChange={handleFileChange} />
 
       <div
-        className={`relative cursor-pointer block w-1/4 rounded-lg border-2 border-dashed ${
+        className={`relative cursor-pointer block w-2/4 rounded-lg border-2 border-dashed ${
           dragging ? "border-blue-500 bg-blue-100" : "border-gray-300"
         } p-12 text-center hover:border-gray-400`}
         onClick={() => inputRef.current?.click()}
@@ -84,7 +84,7 @@ export default function Photo() {
               stroke="currentColor"
               viewBox="0 0 48 48"
               aria-hidden="true"
-              className="mx-auto sm:size-12 text-gray-400"
+              className="mx-auto size-12 text-gray-400"
             >
               <path
                 d="M8 14v20c0 4.418 7.163 8 16 8 1.381 0 2.721-.087 4-.252M8 14c0 4.418 7.163 8 16 8s16-3.582 16-8M8 14c0-4.418 7.163-8 16-8s16 3.582 16 8m0 0v14m0-4c0 4.418-7.163 8-16 8S8 28.418 8 24m32 10v6m0 0v6m0-6h6m-6 0h-6"
@@ -103,7 +103,7 @@ export default function Photo() {
       {preview && (
         <div className="mt-4">
           <h2 className="font-semibold">Imagem Processada:</h2>
-          <img src={preview} alt="Imagem processada" className="mt-2 w-3xl rounded-lg shadow-md" />
+          <img src={preview} alt="Imagem processada" className="mt-2 w-7xl m-5 rounded-lg shadow-md" />
         </div>
       )}
     </div>
