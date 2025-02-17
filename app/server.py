@@ -7,6 +7,20 @@ from sahi.predict import get_sliced_prediction
 from sahi.models.ultralytics import UltralyticsDetectionModel
 from io import BytesIO
 from starlette.responses import JSONResponse
+import os
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+model_path_pt = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.pt")
+model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.engine")
+
+if not os.path.exists(model_path_pt):
+    raise FileNotFoundError(f"Arquivo não encontrado: {model_path_pt}")
+
+if not os.path.exists(model_path_engine):
+    raise FileNotFoundError(f"Arquivo não encontrado: {model_path_engine}")
+
+print("Arquivos encontrados com sucesso!")
 
 
 # Inicializa o aplicativo FastAPI
@@ -21,8 +35,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-model_path_pt = "../runs/detect/train13/weights/best.pt";
-model_path_engine = "../runs/detect/train13/weights/best.engine";
 
 @app.post("/predict")
 async def inferencia_imagem(file: UploadFile = File(...)):
