@@ -207,7 +207,9 @@ async def conexao_websocket(websocket: WebSocket):
 
                     cor_deteccao = cores_classes.get(classe_detectada)
 
-
+                    if confianca >= 0.00:
+                        cv2.rectangle(frame_decodificado, (x1, y1), (x2, y2), cor_deteccao, 2)
+                        cv2.putText(frame_decodificado, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
 
             _, buffer_codificado = cv2.imencode(".jpg", frame_decodificado)
             frame_enviado_base64 = base64.b64encode(buffer_codificado).decode("utf-8")
