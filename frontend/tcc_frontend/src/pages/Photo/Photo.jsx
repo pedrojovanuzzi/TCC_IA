@@ -64,7 +64,7 @@ export default function Photo() {
       
       <h1 className="font-semibold mb-4">Arraste ou clique para selecionar uma Foto</h1>
 
-      <input type="file" ref={inputRef} className="hidden" onChange={handleFileChange} />
+      <input type="file" ref={inputRef} accept="image/*" className="hidden" onChange={handleFileChange} />
 
       <div
         className={`relative cursor-pointer block w-2/4 rounded-lg border-2 border-dashed ${
