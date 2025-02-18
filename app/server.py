@@ -1,3 +1,4 @@
+import traceback
 from fastapi import FastAPI, File, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 import cv2, json, base64, numpy as np
@@ -66,7 +67,7 @@ async def inferencia_imagem(file: UploadFile = File(...)):
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
         modelo_yolo = UltralyticsDetectionModel(
         model_path=model_path_pt,  # Use .pt para SAHI funcionar
-        confidence_threshold=0.5,
+        confidence_threshold=0.327,
         device=dispositivo
 )
         # Lê a imagem enviada
@@ -111,7 +112,7 @@ async def inferencia_video(file: UploadFile = File(...)):
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
         modelo_yolo = UltralyticsDetectionModel(
             model_path=model_path_pt,
-            confidence_threshold=0.5,
+            confidence_threshold=0.327,
             device=dispositivo
         )
 
@@ -192,7 +193,7 @@ async def conexao_websocket(websocket: WebSocket):
             array_bytes = np.frombuffer(frame_base64, np.uint8)
             frame_decodificado = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
             dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-            resultados = modelo_yolo.predict(frame_decodificado, imgsz=640, device=dispositivo, half=True, conf=0.5)
+            resultados = modelo_yolo.predict(frame_decodificado, imgsz=640, device=dispositivo, half=True, conf=0.327)
             for resultado in resultados:
                 if not resultado.boxes:
                     continue
