@@ -36,15 +36,15 @@ export default function Video() {
 
   const handleUpload = async (file) => {
     setUploading(true);
-  
+    
     const formData = new FormData();
     formData.append("file", file);
-  
+    
     try {
       const response = await axios.post("http://localhost:3001/predict_video", formData);
-  
+      
       if (response.data.video_url) {
-        setProcessedVideo(response.data.video_url);
+        setProcessedVideo(response.data.video_url); // Agora usa o caminho relativo
       }
     } catch (error) {
       console.error("Erro ao enviar o vídeo:", error);
@@ -52,6 +52,7 @@ export default function Video() {
       setUploading(false);
     }
   };
+  
   
   
       

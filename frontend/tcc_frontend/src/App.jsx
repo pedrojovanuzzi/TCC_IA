@@ -16,6 +16,7 @@ export default function App() {
         <Route path="/foto" element={<Photo />} />
         <Route path="/Cam" element={<Cam />} />
         <Route path="/about" element={<About />} />
+        <Route path="/videos"/>
         <Route path="*" element={<NotFound />} />
       </Routes>
   );

@@ -10,15 +10,21 @@ from starlette.responses import JSONResponse, FileResponse
 import os
 import tempfile
 import shutil
+from fastapi.staticfiles import StaticFiles
+
+
+
+
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 model_path_pt = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.pt")
 model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.engine")
 
-# Pasta onde os vídeos processados serão armazenados
-STATIC_DIR = os.path.join(BASE_DIR, "static", "videos")
-os.makedirs(STATIC_DIR, exist_ok=True)  # Cria a pasta se não existir
+# Caminho para a pasta public/videos do React
+REACT_PUBLIC_DIR = os.path.abspath(os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "videos"))
+os.makedirs(REACT_PUBLIC_DIR, exist_ok=True)  # Cria a pasta se não existir
+
 
 if not os.path.exists(model_path_pt):
     raise FileNotFoundError(f"Arquivo não encontrado: {model_path_pt}")
@@ -29,8 +35,10 @@ if not os.path.exists(model_path_engine):
 print("Arquivos encontrados com sucesso!")
 
 
+
 # Inicializa o aplicativo FastAPI
 app = FastAPI()
+
 
 # Configuração do middleware para permitir CORS
 app.add_middleware(
@@ -109,7 +117,8 @@ async def inferencia_video(file: UploadFile = File(...)):
 
         # Nome do arquivo de saída
         video_nome = f"video_processado_{file.filename}"
-        video_path = os.path.join(STATIC_DIR, video_nome)
+        video_path = os.path.join(REACT_PUBLIC_DIR, video_nome)  # Agora salva na pasta do React
+
 
         # Salvar o arquivo original
         temp_input = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
@@ -161,9 +170,9 @@ async def inferencia_video(file: UploadFile = File(...)):
         out.release()
 
         # Criar URL pública
-        video_url = f"http://localhost:3001/static/videos/{video_nome}"
-
+        video_url = f"/videos/{video_nome}"  # Caminho relativo ao public/
         return JSONResponse(content={"video_url": video_url})
+
 
     except Exception as e:
         return JSONResponse(content={"erro": str(e)}, status_code=500)
