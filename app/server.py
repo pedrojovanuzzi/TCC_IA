@@ -134,7 +134,7 @@ async def inferencia_video(file: UploadFile = File(...)):
         # Configurar FPS e codec
         if fps == 0:
             fps = 30  # Define FPS padrão se não detectado
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Codec compatível com MP4
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")
 
         out = cv2.VideoWriter(video_path, fourcc, fps, (largura, altura))
 
