@@ -60,6 +60,8 @@ cores_classes = {
     "hands": (0, 255, 255)    # Ciano
 }
 
+confidence=0.327
+
 @app.post("/predict")
 async def inferencia_imagem(file: UploadFile = File(...)):
     try:
@@ -67,7 +69,7 @@ async def inferencia_imagem(file: UploadFile = File(...)):
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
         modelo_yolo = UltralyticsDetectionModel(
         model_path=model_path_pt,  # Use .pt para SAHI funcionar
-        confidence_threshold=0.327,
+        confidence_threshold=confidence,
         device=dispositivo
 )
         # Lê a imagem enviada
@@ -112,7 +114,7 @@ async def inferencia_video(file: UploadFile = File(...)):
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
         modelo_yolo = UltralyticsDetectionModel(
             model_path=model_path_pt,
-            confidence_threshold=0.327,
+            confidence_threshold=confidence,
             device=dispositivo
         )
 
@@ -193,7 +195,7 @@ async def conexao_websocket(websocket: WebSocket):
             array_bytes = np.frombuffer(frame_base64, np.uint8)
             frame_decodificado = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
             dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-            resultados = modelo_yolo.predict(frame_decodificado, imgsz=640, device=dispositivo, half=True, conf=0.327)
+            resultados = modelo_yolo.predict(frame_decodificado, imgsz=640, device=dispositivo, half=True, conf=confidence)
             for resultado in resultados:
                 if not resultado.boxes:
                     continue
