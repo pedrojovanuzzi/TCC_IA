@@ -9,3 +9,4 @@ corrigir_labels/*
 augmented/*
 *.onnx
 *.engine
+/frontend/tcc_frontend/public/videos
