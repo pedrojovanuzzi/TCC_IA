@@ -97,15 +97,17 @@ for base in base_dirs:
             continue
 
         augmented_img = adjust_image(img)
+        # Obter nome base sem extensão
+        base_name = os.path.splitext(os.path.basename(img_path))[0]
 
         # Salvar a imagem alterada
-        img_name = os.path.splitext(os.path.basename(img_path))[0] + "_aug" + os.path.splitext(img_path)[1]
+        img_name = base_name + "_aug" + os.path.splitext(img_path)[1]
         cv2.imwrite(os.path.join(output_image_dir, img_name), augmented_img)
 
         # Copiar o rótulo correspondente
-        label_path = os.path.join(label_dir, img_name.replace(".jpg", ".txt").replace(".png", ".txt"))
+        label_path = os.path.join(label_dir, base_name + ".txt")
         if os.path.exists(label_path):
-            new_label_path = os.path.join(output_label_dir, os.path.basename(label_path))
-            os.system(f"copy {label_path} {new_label_path}")  # Para Windows
+            new_label_path = os.path.join(output_label_dir, base_name + "_aug.txt")
+            os.system(f"copy \"{label_path}\" \"{new_label_path}\"")  # Para Windows
 
 print("🚀 Processamento concluído para todas as pastas!")
