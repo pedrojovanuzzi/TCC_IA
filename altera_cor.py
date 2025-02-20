@@ -99,7 +99,7 @@ for base in base_dirs:
         augmented_img = adjust_image(img)
 
         # Salvar a imagem alterada
-        img_name = os.path.basename(img_path)
+        img_name = os.path.splitext(os.path.basename(img_path))[0] + "_aug" + os.path.splitext(img_path)[1]
         cv2.imwrite(os.path.join(output_image_dir, img_name), augmented_img)
 
         # Copiar o rótulo correspondente
