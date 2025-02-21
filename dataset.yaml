@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 16
+names: ['Ear Protectors', 'Glasses', 'Gloves', 'Helmet', 'Mask', 'Person', 'Safety_shoes', 'Shoes', 'Vest', 'Without Ear Protectors', 'Without Glass', 'Without Glove', 'Without Helmet', 'Without Mask', 'Without Shoes', 'Without Vest']
+
+roboflow:
+  workspace: bangga
+  project: ppe-0.3
+  version: 1
+  license: Public Domain
+  url: https://universe.roboflow.com/bangga/ppe-0.3/dataset/1
