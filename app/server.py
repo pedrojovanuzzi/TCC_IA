@@ -26,6 +26,10 @@ model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights
 REACT_PUBLIC_DIR = os.path.abspath(os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "videos"))
 os.makedirs(REACT_PUBLIC_DIR, exist_ok=True)  # Cria a pasta se não existir
 
+video_treinado_path = os.path.abspath(os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "video_treinado"))
+img_statica = os.path.abspath(os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "img_statica"))
+img_real_time = os.path.abspath(os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "img_real_time"))
+
 
 if not os.path.exists(model_path_pt):
     raise FileNotFoundError(f"Arquivo não encontrado: {model_path_pt}")
