@@ -13,7 +13,7 @@ import tempfile
 import shutil
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime
-
+import time
 
 
 
@@ -125,10 +125,12 @@ async def inferencia_imagem(file: UploadFile = File(...)):
         return JSONResponse(content={"erro": str(e)}, status_code=500)
     
 
-    
+
 @app.post("/predict_video")
 async def inferencia_video(file: UploadFile = File(...)):
     try:
+        print("Recebendo vídeo para processamento...")
+
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
         modelo_yolo = UltralyticsDetectionModel(
             model_path=model_path_pt,
@@ -136,38 +138,43 @@ async def inferencia_video(file: UploadFile = File(...)):
             device=dispositivo
         )
 
-        # Garante que a pasta existe
-        os.makedirs(video_treinado_path, exist_ok=True)
-
-        # Nome do arquivo original e caminho para salvar na pasta video_treinado
-        video_nome_original = file.filename
-        caminho_video_original = os.path.join(video_treinado_path, video_nome_original)
-
-        # Salvar o vídeo original na pasta video_treinado
-        with open(caminho_video_original, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        # Caminho para salvar o vídeo processado
-        video_nome_processado = f"processado_{video_nome_original}"
+        # Criar nome único para o vídeo processado
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        video_nome_processado = f"processado_{timestamp}.mp4"
         caminho_video_processado = os.path.join(video_treinado_path, video_nome_processado)
 
+        # Salvar o vídeo temporário
+        temp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        with open(temp_video.name, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        print(f"Arquivo salvo temporariamente: {temp_video.name}")
+
         # Abrir vídeo com OpenCV
-        cap = cv2.VideoCapture(caminho_video_original)
+        cap = cv2.VideoCapture(temp_video.name)
+        if not cap.isOpened():
+            raise Exception("Erro ao abrir o vídeo. O arquivo pode estar corrompido ou em formato não suportado.")
+
         fps = int(cap.get(cv2.CAP_PROP_FPS))
         largura = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         altura = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        # Configurar FPS e codec
-        if fps == 0:
-            fps = 30  # Define FPS padrão se não detectado
-        fourcc = cv2.VideoWriter_fourcc(*"avc1")
+        print(f"FPS: {fps}, Largura: {largura}, Altura: {altura}")
 
+        if fps == 0 or largura == 0 or altura == 0:
+            raise Exception("Erro ao obter propriedades do vídeo. O vídeo pode estar corrompido.")
+
+        # Configurar FPS e codec
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")
         out = cv2.VideoWriter(caminho_video_processado, fourcc, fps, (largura, altura))
+
+        print("Iniciando processamento do vídeo...")
 
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
-                break  # Sai do loop quando o vídeo termina
+                print("Finalizando processamento: todos os frames foram lidos.")
+                break
 
             # Inferência YOLOv8 + SAHI
             resultado = get_sliced_prediction(
@@ -190,19 +197,23 @@ async def inferencia_video(file: UploadFile = File(...)):
                 cv2.putText(frame, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
 
+            # Escreve o frame processado no vídeo final
             out.write(frame)
 
         cap.release()
         out.release()
 
-        return JSONResponse(content={
-            "video_original": caminho_video_original,
-            "video_processado": caminho_video_processado
-        })
+        # Remove o vídeo temporário original
+        os.remove(temp_video.name)
+        print(f"Vídeo processado salvo em: {caminho_video_processado}")
+
+        video_url = f"/videos/{video_nome_processado}"
+        return JSONResponse(content={"video_url": video_url})
 
     except Exception as e:
+        print("Erro durante o processamento do vídeo:")
+        traceback.print_exc()
         return JSONResponse(content={"erro": str(e)}, status_code=500)
-
 
 @app.websocket("/ws")
 async def conexao_websocket(websocket: WebSocket):
@@ -214,10 +225,22 @@ async def conexao_websocket(websocket: WebSocket):
         # Garante que a pasta img_real_time existe
         os.makedirs(img_real_time, exist_ok=True)
 
+        # Variável para controlar o tempo da última captura
+        ultimo_tempo = time.time()
+
         while True:
             mensagem_recebida = await websocket.receive_text()
             dados_json = json.loads(mensagem_recebida)
 
+            # Verifica se passou 1 segundo desde o último frame processado
+            tempo_atual = time.time()
+            if tempo_atual - ultimo_tempo < 1.0:
+                continue  # Ignora o frame atual e espera o próximo
+
+            # Atualiza o tempo da última captura
+            ultimo_tempo = tempo_atual
+
+            # Decodifica a imagem do WebSocket
             frame_base64 = base64.b64decode(dados_json["frame"])
             array_bytes = np.frombuffer(frame_base64, np.uint8)
             frame_decodificado = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
@@ -244,13 +267,14 @@ async def conexao_websocket(websocket: WebSocket):
                             (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1
                         )
 
-            # Salva cada frame com o horário e data como nome
+            # Salva apenas o frame processado (1 por segundo)
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]  # Formato YYYY-MM-DD_HH-MM-SS-mmm
             nome_arquivo = f"{timestamp}.jpg"
             caminho_arquivo = os.path.join(img_real_time, nome_arquivo)
 
             cv2.imwrite(caminho_arquivo, frame_decodificado)
 
+            # Codifica a imagem processada para enviar de volta via WebSocket
             _, buffer_codificado = cv2.imencode(".jpg", frame_decodificado)
             frame_enviado_base64 = base64.b64encode(buffer_codificado).decode("utf-8")
 
@@ -262,6 +286,7 @@ async def conexao_websocket(websocket: WebSocket):
     finally:
         print("Cliente desconectado, aguardando novas conexões...")
 
+        
 # Inicia o servidor FastAPI
 if __name__ == "__main__":
     import uvicorn
