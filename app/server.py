@@ -14,6 +14,8 @@ import shutil
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime
 import time
+import gc
+
 
 
 
@@ -124,59 +126,37 @@ async def inferencia_imagem(file: UploadFile = File(...)):
     except Exception as e:
         return JSONResponse(content={"erro": str(e)}, status_code=500)
     
-
-
 @app.post("/predict_video")
 async def inferencia_video(file: UploadFile = File(...)):
     try:
-        print("Recebendo vídeo para processamento...")
-
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
         modelo_yolo = UltralyticsDetectionModel(
             model_path=model_path_pt,
             confidence_threshold=confidence,
             device=dispositivo
         )
-
-        # Criar nome único para o vídeo processado
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         video_nome_processado = f"processado_{timestamp}.mp4"
         caminho_video_processado = os.path.join(video_treinado_path, video_nome_processado)
-
-        # Salvar o vídeo temporário
         temp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
         with open(temp_video.name, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-
-        print(f"Arquivo salvo temporariamente: {temp_video.name}")
-
-        # Abrir vídeo com OpenCV
+        temp_video.close()
         cap = cv2.VideoCapture(temp_video.name)
         if not cap.isOpened():
-            raise Exception("Erro ao abrir o vídeo. O arquivo pode estar corrompido ou em formato não suportado.")
-
+            raise Exception("Erro ao abrir o vídeo.")
         fps = int(cap.get(cv2.CAP_PROP_FPS))
         largura = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         altura = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        print(f"FPS: {fps}, Largura: {largura}, Altura: {altura}")
-
         if fps == 0 or largura == 0 or altura == 0:
-            raise Exception("Erro ao obter propriedades do vídeo. O vídeo pode estar corrompido.")
-
-        # Configurar FPS e codec
+            cap.release()
+            raise Exception("Erro nas propriedades do vídeo.")
         fourcc = cv2.VideoWriter_fourcc(*"avc1")
         out = cv2.VideoWriter(caminho_video_processado, fourcc, fps, (largura, altura))
-
-        print("Iniciando processamento do vídeo...")
-
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
-                print("Finalizando processamento: todos os frames foram lidos.")
                 break
-
-            # Inferência YOLOv8 + SAHI
             resultado = get_sliced_prediction(
                 image=frame,
                 detection_model=modelo_yolo,
@@ -185,33 +165,21 @@ async def inferencia_video(file: UploadFile = File(...)):
                 overlap_height_ratio=0.2,
                 overlap_width_ratio=0.2
             )
-
-            # Desenha as detecções na imagem
             for obj in resultado.object_prediction_list:
                 x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
                 classe_detectada = obj.category.name
                 confianca = obj.score.value
-                cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))
-
+                cor_deteccao = (255, 255, 255)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), cor_deteccao, 2)
-                cv2.putText(frame, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
-
-            # Escreve o frame processado no vídeo final
+                cv2.putText(frame, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
             out.write(frame)
-
         cap.release()
         out.release()
-
-        # Remove o vídeo temporário original
+        time.sleep(1)
         os.remove(temp_video.name)
-        print(f"Vídeo processado salvo em: {caminho_video_processado}")
-
         video_url = f"/videos/{video_nome_processado}"
         return JSONResponse(content={"video_url": video_url})
-
     except Exception as e:
-        print("Erro durante o processamento do vídeo:")
         traceback.print_exc()
         return JSONResponse(content={"erro": str(e)}, status_code=500)
 
@@ -286,7 +254,7 @@ async def conexao_websocket(websocket: WebSocket):
     finally:
         print("Cliente desconectado, aguardando novas conexões...")
 
-        
+
 # Inicia o servidor FastAPI
 if __name__ == "__main__":
     import uvicorn
