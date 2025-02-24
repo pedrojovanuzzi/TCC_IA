@@ -12,6 +12,7 @@ import os
 import tempfile
 import shutil
 from fastapi.staticfiles import StaticFiles
+from datetime import datetime
 
 
 
@@ -72,10 +73,11 @@ async def inferencia_imagem(file: UploadFile = File(...)):
         # Carrega o modelo YOLOv8 com SAHI
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
         modelo_yolo = UltralyticsDetectionModel(
-        model_path=model_path_pt,  # Use .pt para SAHI funcionar
-        confidence_threshold=confidence,
-        device=dispositivo
-)
+            model_path=model_path_pt,  # Use .pt para SAHI funcionar
+            confidence_threshold=confidence,
+            device=dispositivo
+        )
+
         # Lê a imagem enviada
         conteudo_imagem = await file.read()
         array_bytes = np.frombuffer(conteudo_imagem, np.uint8)
@@ -91,7 +93,6 @@ async def inferencia_imagem(file: UploadFile = File(...)):
             overlap_width_ratio=0.2
         )
 
-
         # Desenha as detecções na imagem
         for obj in resultado.object_prediction_list:
             x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
@@ -101,17 +102,30 @@ async def inferencia_imagem(file: UploadFile = File(...)):
             cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))  # Branco se não estiver listado
 
             cv2.rectangle(imagem, (x1, y1), (x2, y2), cor_deteccao, 2)
-            cv2.putText(imagem, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
+            cv2.putText(imagem, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
+
+        # Salvar a imagem já processada na pasta img_statica
+        os.makedirs(img_statica, exist_ok=True)  # Garante que a pasta existe
+
+        # Criar um nome de arquivo com timestamp para evitar conflitos
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]  # Formato YYYY-MM-DD_HH-MM-SS-mmm
+        nome_arquivo = f"detectado_{timestamp}.jpg"
+        caminho_imagem = os.path.join(img_statica, nome_arquivo)
+
+        cv2.imwrite(caminho_imagem, imagem)  # Salva a imagem processada com os labels
 
         # Codifica a imagem processada para base64
         _, buffer_codificado = cv2.imencode(".jpg", imagem)
         imagem_base64 = base64.b64encode(buffer_codificado).decode("utf-8")
 
-        return JSONResponse(content={"frame": imagem_base64})
+        return JSONResponse(content={"frame": imagem_base64, "path": caminho_imagem})
 
     except Exception as e:
         return JSONResponse(content={"erro": str(e)}, status_code=500)
+    
 
+    
 @app.post("/predict_video")
 async def inferencia_video(file: UploadFile = File(...)):
     try:
@@ -122,18 +136,23 @@ async def inferencia_video(file: UploadFile = File(...)):
             device=dispositivo
         )
 
-        # Nome do arquivo de saída
-        video_nome = f"video_processado_{file.filename}"
-        video_path = os.path.join(REACT_PUBLIC_DIR, video_nome)  # Agora salva na pasta do React
+        # Garante que a pasta existe
+        os.makedirs(video_treinado_path, exist_ok=True)
 
+        # Nome do arquivo original e caminho para salvar na pasta video_treinado
+        video_nome_original = file.filename
+        caminho_video_original = os.path.join(video_treinado_path, video_nome_original)
 
-        # Salvar o arquivo original
-        temp_input = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-        with open(temp_input.name, "wb") as buffer:
+        # Salvar o vídeo original na pasta video_treinado
+        with open(caminho_video_original, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
+        # Caminho para salvar o vídeo processado
+        video_nome_processado = f"processado_{video_nome_original}"
+        caminho_video_processado = os.path.join(video_treinado_path, video_nome_processado)
+
         # Abrir vídeo com OpenCV
-        cap = cv2.VideoCapture(temp_input.name)
+        cap = cv2.VideoCapture(caminho_video_original)
         fps = int(cap.get(cv2.CAP_PROP_FPS))
         largura = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         altura = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -143,7 +162,7 @@ async def inferencia_video(file: UploadFile = File(...)):
             fps = 30  # Define FPS padrão se não detectado
         fourcc = cv2.VideoWriter_fourcc(*"avc1")
 
-        out = cv2.VideoWriter(video_path, fourcc, fps, (largura, altura))
+        out = cv2.VideoWriter(caminho_video_processado, fourcc, fps, (largura, altura))
 
         while cap.isOpened():
             ret, frame = cap.read()
@@ -176,30 +195,38 @@ async def inferencia_video(file: UploadFile = File(...)):
         cap.release()
         out.release()
 
-        # Criar URL pública
-        video_url = f"/videos/{video_nome}"  # Caminho relativo ao public/
-        return JSONResponse(content={"video_url": video_url})
-
+        return JSONResponse(content={
+            "video_original": caminho_video_original,
+            "video_processado": caminho_video_processado
+        })
 
     except Exception as e:
         return JSONResponse(content={"erro": str(e)}, status_code=500)
+
 
 @app.websocket("/ws")
 async def conexao_websocket(websocket: WebSocket):
     await websocket.accept()
     try:
         # Carrega o modelo YOLO treinado
-        # modelo_yolo = YOLO("runs/detect/train7/weights/best.pt").to("cuda")
         modelo_yolo = YOLO(model_path_engine)
+
+        # Garante que a pasta img_real_time existe
+        os.makedirs(img_real_time, exist_ok=True)
+
         while True:
             mensagem_recebida = await websocket.receive_text()
             dados_json = json.loads(mensagem_recebida)
-            
+
             frame_base64 = base64.b64decode(dados_json["frame"])
             array_bytes = np.frombuffer(frame_base64, np.uint8)
             frame_decodificado = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
+
             dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-            resultados = modelo_yolo.predict(frame_decodificado, imgsz=640, device=dispositivo, half=True, conf=confidence, stream=True)
+            resultados = modelo_yolo.predict(
+                frame_decodificado, imgsz=640, device=dispositivo, half=True, conf=confidence, stream=True
+            )
+
             for resultado in resultados:
                 if not resultado.boxes:
                     continue
@@ -208,25 +235,32 @@ async def conexao_websocket(websocket: WebSocket):
                     classe_detectada = modelo_yolo.names[int(caixa.cls[0])]
                     confianca = float(caixa.conf[0])
 
-
-                    print(classe_detectada);
-
-                    cor_deteccao = cores_classes.get(classe_detectada)
+                    cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))
 
                     if confianca >= 0.00:
                         cv2.rectangle(frame_decodificado, (x1, y1), (x2, y2), cor_deteccao, 2)
-                        cv2.putText(frame_decodificado, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
+                        cv2.putText(
+                            frame_decodificado, f"{classe_detectada}: {confianca:.2f}",
+                            (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1
+                        )
+
+            # Salva cada frame com o horário e data como nome
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]  # Formato YYYY-MM-DD_HH-MM-SS-mmm
+            nome_arquivo = f"{timestamp}.jpg"
+            caminho_arquivo = os.path.join(img_real_time, nome_arquivo)
+
+            cv2.imwrite(caminho_arquivo, frame_decodificado)
 
             _, buffer_codificado = cv2.imencode(".jpg", frame_decodificado)
             frame_enviado_base64 = base64.b64encode(buffer_codificado).decode("utf-8")
 
-            await websocket.send_text(json.dumps({"frame": frame_enviado_base64}))
+            await websocket.send_text(json.dumps({"frame": frame_enviado_base64, "path": caminho_arquivo}))
+
     except Exception as e:
         print(f"Erro WebSocket: {e}")
         traceback.print_exc()
     finally:
         print("Cliente desconectado, aguardando novas conexões...")
-
 
 # Inicia o servidor FastAPI
 if __name__ == "__main__":
