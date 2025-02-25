@@ -41,7 +41,7 @@ export default function Photo() {
     formData.append("file", file);
 
     try {
-      const response = await axios.post("http://localhost:3001/predict", formData, {
+      const response = await axios.post("http://localhost:3001/api/predict", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -76,7 +76,7 @@ export default function Photo() {
         onDrop={handleDrop}
       >
         {loading ? (
-          <p className="text-gray-600">Processando...</p>
+          <p className="text-gray-600">Processando...</p>/api
         ) : (
           <>
             <svg

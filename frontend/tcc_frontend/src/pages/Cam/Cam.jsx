@@ -6,17 +6,24 @@ export default function Cam() {
   const [frame, setFrame] = useState("");
 
   useEffect(() => {
-    const w = new WebSocket("ws://localhost:3001/ws");
-    w.onopen = () => console.log("WS aberto");
+    const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+    const wsHost = window.location.hostname === "localhost" ? "localhost:3001" : "tcc.wiptelecomunicacoes.com.br";
+    const wsUrl = `${wsProtocol}${wsHost}/api/ws`;
+  
+    const w = new WebSocket(wsUrl);
+    
+    w.onopen = () => console.log("WebSocket conectado!");
     w.onmessage = (e) => {
       const d = JSON.parse(e.data);
       if (d.frame) setFrame(`data:image/jpeg;base64,${d.frame}`);
     };
-    w.onerror = (e) => console.log("WS erro:", e);
-    w.onclose = () => console.log("WS fechado");
+    w.onerror = (e) => console.error("Erro no WebSocket:", e);
+    w.onclose = () => console.log("WebSocket fechado.");
+  
     setWs(w);
     return () => w.close();
   }, []);
+  
 
   useEffect(() => {
     navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
