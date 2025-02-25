@@ -76,7 +76,7 @@ export default function Photo() {
         onDrop={handleDrop}
       >
         {loading ? (
-          <p className="text-gray-600">Processando...</p>/api
+          <p className="text-gray-600">Processando...</p>
         ) : (
           <>
             <svg
