@@ -58,7 +58,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.mount("/api/videos", StaticFiles(directory=video_treinado_path), name="videos")
+app.mount("/videos", StaticFiles(directory=video_treinado_path), name="videos")
 
 cores_classes = {"helmet": (0, 255, 0), "glove": (255, 255, 0), "belt": (0, 165, 255), "head": (255, 0, 0), "glasses": (128, 0, 128), "hands": (0, 255, 255)}
 confidence = 0.327
@@ -67,7 +67,7 @@ class DeleteFileRequest(BaseModel):
     folder: str
     filename: str
 
-@app.delete("/api/delete")
+@app.delete("/delete")
 def delete_file(request: DeleteFileRequest):
     folder_path = os.path.join(IMAGES_DIR, request.folder)
     file_path = os.path.join(folder_path, request.filename)
@@ -79,7 +79,7 @@ def delete_file(request: DeleteFileRequest):
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
 
 
-@app.get("/api/gallery")
+@app.get("/gallery")
 def list_folders():
     try:
         folders = []
@@ -121,7 +121,7 @@ def draw_label(imagem, text, x, y, color):
     )
 
 
-@app.post("/api/predict")
+@app.post("/predict")
 async def inferencia_imagem(file: UploadFile = File(...)):
     try:
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
@@ -148,7 +148,7 @@ async def inferencia_imagem(file: UploadFile = File(...)):
     except Exception as e:
         return JSONResponse(content={"erro": str(e)}, status_code=500)
 
-@app.post("/api/predict_video")
+@app.post("/predict_video")
 async def inferencia_video(file: UploadFile = File(...)):
     try:
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
@@ -194,7 +194,7 @@ async def inferencia_video(file: UploadFile = File(...)):
     except Exception as e:
         return JSONResponse(content={"erro": str(e)}, status_code=500)
 
-@app.websocket("/api/ws")
+@app.websocket("/ws")
 async def conexao_websocket(websocket: WebSocket):
     await websocket.accept()
     modelo_yolo = YOLO(model_path)
