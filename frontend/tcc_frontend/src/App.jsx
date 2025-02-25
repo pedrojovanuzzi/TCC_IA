@@ -16,12 +16,12 @@ export default function App() {
       <Route path="/login" element={<Login />} />
 
       {/* Rotas Protegidas */}
-      <Route path="/" element={<ProtectedRoute element={<Home />} />} />
+      <Route path="/" element={<Home/>}/>
       <Route path="/options" element={<ProtectedRoute element={<Options />} />} />
       <Route path="/video" element={<ProtectedRoute element={<Video />} />} />
       <Route path="/foto" element={<ProtectedRoute element={<Photo />} />} />
       <Route path="/cam" element={<ProtectedRoute element={<Cam />} />} />
-      <Route path="/about" element={<ProtectedRoute element={<About />} />} />
+      <Route path="/about" element={<About />}/>
       <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} />} />
 
       {/* Rota inválida */}
