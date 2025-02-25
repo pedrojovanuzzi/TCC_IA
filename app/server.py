@@ -19,7 +19,7 @@ from pydantic import BaseModel
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 model_path_pt = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.pt")
-model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.engine")
+# model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.engine")
 video_treinado_path = os.path.abspath(os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "video_treinado"))
 img_statica = os.path.abspath(os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "img_statica"))
 img_real_time = os.path.abspath(os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "img_real_time"))
@@ -29,8 +29,8 @@ IMAGES_DIR = os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "image
 
 if not os.path.exists(model_path_pt):
     raise FileNotFoundError(f"Arquivo não encontrado: {model_path_pt}")
-if not os.path.exists(model_path_engine):
-    raise FileNotFoundError(f"Arquivo não encontrado: {model_path_engine}")
+# if not os.path.exists(model_path_engine):
+#     raise FileNotFoundError(f"Arquivo não encontrado: {model_path_engine}")
 
 app = FastAPI()
 app.add_middleware(
@@ -179,7 +179,7 @@ async def inferencia_video(file: UploadFile = File(...)):
 @app.websocket("/ws")
 async def conexao_websocket(websocket: WebSocket):
     await websocket.accept()
-    modelo_yolo = YOLO(model_path_engine)
+    modelo_yolo = YOLO(model_path_pt)
     ultimo_save = 0
     while True:
         mensagem = await websocket.receive_text()
