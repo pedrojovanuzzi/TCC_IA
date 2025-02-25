@@ -16,9 +16,11 @@ import time
 import gc
 from pydantic import BaseModel
 import socket
+from dotenv import load_dotenv
 
+load_dotenv()
 # Determinar se está rodando localmente
-IS_LOCAL = socket.gethostname() in ["localhost", "127.0.0.1"]
+IS_LOCAL = os.getenv("LOCAL") == "true"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -27,6 +29,13 @@ model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights
 
 # Escolher qual modelo usar
 model_path = model_path_engine if IS_LOCAL else model_path_pt
+
+# Debugging: Imprimir status do ambiente
+print(f"🔹 Hostname: {socket.gethostname()}")
+print(f"🔹 Variável LOCAL: {os.getenv('LOCAL')}")
+print(f"🔹 Rodando em Localhost? {'SIM' if IS_LOCAL else 'NÃO'}")
+print(f"✅ Usando modelo: {model_path}")
+
 
 # Verificar se o modelo existe
 if not os.path.exists(model_path):
