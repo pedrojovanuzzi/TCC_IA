@@ -19,6 +19,26 @@ export const Header = () => {
               />
             </a>
           </div>
+          <div className="hidden lg:flex lg:flex-1 lg:justify-center lg:space-x-6">
+            <a
+              href="/"
+              className="font-medium text-gray-900 hover:text-gray-900"
+            >
+              Home
+            </a>
+            <a
+              href="/about"
+              className="font-medium text-gray-900 hover:text-gray-900"
+            >
+              Sobre-nós
+            </a>
+            <a
+              href="/gallery"
+              className="font-medium text-gray-900 hover:text-gray-900"
+            >
+              Galeria
+            </a>
+          </div>
         </nav>
       </header>
     </div>

@@ -21,6 +21,9 @@ model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights
 video_treinado_path = os.path.abspath(os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "video_treinado"))
 img_statica = os.path.abspath(os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "img_statica"))
 img_real_time = os.path.abspath(os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "img_real_time"))
+IMAGES_DIR = os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens")
+
+
 
 if not os.path.exists(model_path_pt):
     raise FileNotFoundError(f"Arquivo não encontrado: {model_path_pt}")
@@ -39,6 +42,20 @@ app.mount("/videos", StaticFiles(directory=video_treinado_path), name="videos")
 
 cores_classes = {"helmet": (0, 255, 0), "glove": (255, 255, 0), "belt": (0, 165, 255), "head": (255, 0, 0), "glasses": (128, 0, 128), "hands": (0, 255, 255)}
 confidence = 0.327
+
+@app.get("/api/gallery")
+def list_folders():
+    try:
+        folders = []
+        for folder in ["video_treinado", "img_statica", "img_real_time"]:
+            folder_path = os.path.join(IMAGES_DIR, folder)
+            if os.path.exists(folder_path) and os.path.isdir(folder_path):
+                files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
+                folders.append({"name": folder, "files": files})
+        return JSONResponse(content={"folders": folders})
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
 
 @app.post("/predict")
 async def inferencia_imagem(file: UploadFile = File(...)):

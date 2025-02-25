@@ -6,6 +6,7 @@ import About from "./pages/About/About";
 import Options from "./pages/Options/Options";
 import Video from "./pages/Video/Video";
 import Photo from "./pages/Photo/Photo";
+import { Gallery } from "./pages/Gallery/Gallery";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/foto" element={<Photo />} />
         <Route path="/Cam" element={<Cam />} />
         <Route path="/about" element={<About />} />
+        <Route path="/gallery" element={<Gallery />} />
         <Route path="/videos"/>
         <Route path="*" element={<NotFound />} />
       </Routes>
