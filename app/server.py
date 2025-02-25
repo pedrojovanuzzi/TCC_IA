@@ -74,6 +74,7 @@ async def inferencia_video(file: UploadFile = File(...)):
         modelo_yolo = UltralyticsDetectionModel(model_path=model_path_pt, confidence_threshold=confidence, device=dispositivo)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         video_nome_processado = f"processado_{timestamp}.mp4"
+        os.makedirs(video_treinado_path, exist_ok=True)
         caminho_video_processado = os.path.join(video_treinado_path, video_nome_processado)
         temp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
         with open(temp_video.name, "wb") as buffer:
@@ -99,7 +100,7 @@ async def inferencia_video(file: UploadFile = File(...)):
                 x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
                 classe_detectada = obj.category.name
                 confianca = obj.score.value
-                cor_deteccao = (255, 255, 255)
+                cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))
                 cv2.rectangle(frame, (x1, y1), (x2, y2), cor_deteccao, 2)
                 cv2.putText(frame, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
             out.write(frame)
@@ -115,42 +116,37 @@ async def inferencia_video(file: UploadFile = File(...)):
 @app.websocket("/ws")
 async def conexao_websocket(websocket: WebSocket):
     await websocket.accept()
-    try:
-        modelo_yolo = YOLO(model_path_engine)
-        os.makedirs(img_real_time, exist_ok=True)
-        ultimo_tempo = time.time()
-        while True:
-            mensagem_recebida = await websocket.receive_text()
-            dados_json = json.loads(mensagem_recebida)
-            tempo_atual = time.time()
-            if tempo_atual - ultimo_tempo < 1.0:
+    modelo_yolo = YOLO(model_path_engine)
+    ultimo_save = 0
+    while True:
+        mensagem = await websocket.receive_text()
+        dados = json.loads(mensagem)
+        frame_base64 = base64.b64decode(dados["frame"])
+        array_bytes = np.frombuffer(frame_base64, np.uint8)
+        frame = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
+        dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
+        resultados = modelo_yolo.predict(frame, imgsz=640, device=dispositivo, half=True, conf=confidence, stream=True)
+        for res in resultados:
+            if not res.boxes:
                 continue
-            ultimo_tempo = tempo_atual
-            frame_base64 = base64.b64decode(dados_json["frame"])
-            array_bytes = np.frombuffer(frame_base64, np.uint8)
-            frame_decodificado = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
-            dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-            resultados = modelo_yolo.predict(frame_decodificado, imgsz=640, device=dispositivo, half=True, conf=confidence, stream=True)
-            for resultado in resultados:
-                if not resultado.boxes:
-                    continue
-                for caixa in resultado.boxes:
-                    x1, y1, x2, y2 = map(int, caixa.xyxy[0])
-                    classe_detectada = modelo_yolo.names[int(caixa.cls[0])]
-                    confianca = float(caixa.conf[0])
-                    cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))
-                    if confianca >= 0.00:
-                        cv2.rectangle(frame_decodificado, (x1, y1), (x2, y2), cor_deteccao, 2)
-                        cv2.putText(frame_decodificado, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
+            for caixa in res.boxes:
+                x1, y1, x2, y2 = map(int, caixa.xyxy[0])
+                classe = modelo_yolo.names[int(caixa.cls[0])]
+                conf = float(caixa.conf[0])
+                cor = cores_classes.get(classe, (255, 255, 255))
+                cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
+                cv2.putText(frame, f"{classe}: {conf:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor, 1)
+        agora = time.time()
+        if agora - ultimo_save >= 1.0:
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+            os.makedirs(img_real_time, exist_ok=True)
             nome_arquivo = f"{timestamp}.jpg"
-            caminho_arquivo = os.path.join(img_real_time, nome_arquivo)
-            cv2.imwrite(caminho_arquivo, frame_decodificado)
-            _, buffer_codificado = cv2.imencode(".jpg", frame_decodificado)
-            frame_enviado_base64 = base64.b64encode(buffer_codificado).decode("utf-8")
-            await websocket.send_text(json.dumps({"frame": frame_enviado_base64, "path": caminho_arquivo}))
-    except Exception as e:
-        pass
+            caminho = os.path.join(img_real_time, nome_arquivo)
+            cv2.imwrite(caminho, frame)
+            ultimo_save = agora
+        _, buffer = cv2.imencode(".jpg", frame)
+        frame_saida = base64.b64encode(buffer).decode("utf-8")
+        await websocket.send_text(json.dumps({"frame": frame_saida}))
 
 if __name__ == "__main__":
     import uvicorn
