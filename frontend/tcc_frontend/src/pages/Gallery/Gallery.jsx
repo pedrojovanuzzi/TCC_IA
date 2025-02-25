@@ -8,7 +8,7 @@ export const Gallery = () => {
   const [fileToDelete, setFileToDelete] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:3001/api/gallery") // Faz a requisição para o backend
+    fetch("http://localhost:3001/api/gallery")
       .then((res) => res.json())
       .then((data) => setFolders(data.folders))
       .catch((err) => console.error("Erro ao buscar pastas:", err));
@@ -46,7 +46,7 @@ export const Gallery = () => {
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setFiles(files.filter((f) => f !== fileToDelete)); // Remove o arquivo da lista sem precisar recarregar a página
+          setFiles(files.filter((f) => f !== fileToDelete));
           setFileToDelete(null);
         } else {
           alert("Erro ao excluir o arquivo.");
@@ -92,6 +92,15 @@ export const Gallery = () => {
                           alt={file}
                           className="w-full h-auto rounded"
                           onClick={() => handleFileClick(file)}
+                        />
+                      ) : file.endsWith(".mp4") || file.endsWith(".webm") || file.endsWith(".mov") ? (
+                        // Se for vídeo, usa um <video> para capturar a primeira frame como thumbnail
+                        <video
+                          src={`/imagens/${selectedFolder}/${file}`}
+                          className="w-full h-auto rounded"
+                          onClick={() => handleFileClick(file)}
+                          onLoadedMetadata={(e) => (e.target.currentTime = 0)}
+                          muted
                         />
                       ) : (
                         <p className="text-center">{file}</p>
