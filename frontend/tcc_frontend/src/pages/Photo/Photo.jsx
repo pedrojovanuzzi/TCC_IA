@@ -41,7 +41,7 @@ export default function Photo() {
     formData.append("file", file);
 
     try {
-      const response = await axios.post(`${import.meta.env.URL}/api/predict`, formData, {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/predict`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

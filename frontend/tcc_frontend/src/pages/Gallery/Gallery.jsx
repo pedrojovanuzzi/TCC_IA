@@ -9,7 +9,7 @@ export const Gallery = () => {
   const [fileToDelete, setFileToDelete] = useState(null);
 
   useEffect(() => {
-    fetch(`${import.meta.env.URL}/api/gallery`)
+    fetch(`${import.meta.env.VITE_API_URL}/api/gallery`)
       .then((res) => res.json())
       .then((data) => setFolders(data.folders))
       .catch((err) => console.error("Erro ao buscar pastas:", err));
@@ -39,7 +39,7 @@ export const Gallery = () => {
 
   const handleDelete = () => {
     if (!fileToDelete) return;
-    fetch(`${import.meta.env.URL}/api/delete`, {
+    fetch(`${import.meta.env.VITE_API_URL}/api/delete`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ folder: selectedFolder, filename: fileToDelete }),

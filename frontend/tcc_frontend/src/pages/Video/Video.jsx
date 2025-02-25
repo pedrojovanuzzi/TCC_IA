@@ -41,11 +41,11 @@ export default function Video() {
     formData.append("file", file);
   
     try {
-      const response = await axios.post(`${import.meta.env.URL}/api/predict_video`, formData);
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/predict_video`, formData);
   
       if (response.data.video_url) {
         // Corrige a URL do vídeo para um caminho absoluto
-        setProcessedVideo(`http://localhost:3001${response.data.video_url}`);
+        setProcessedVideo(`${import.meta.env.VITE_API_URL}${response.data.video_url}`);
       }
     } catch (error) {
       console.error("Erro ao enviar o vídeo:", error);
