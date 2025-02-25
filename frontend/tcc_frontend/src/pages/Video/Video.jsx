@@ -45,7 +45,7 @@ export default function Video() {
   
       if (response.data.video_url) {
         // Corrige a URL do vídeo para um caminho absoluto
-        setProcessedVideo(`${import.meta.env.VITE_API_URL}${response.data.video_url}`);
+        setProcessedVideo(`${import.meta.env.VITE_API_URL}/api${response.data.video_url}`);
       }
     } catch (error) {
       console.error("Erro ao enviar o vídeo:", error);
