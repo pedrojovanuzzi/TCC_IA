@@ -196,17 +196,6 @@ async def inferencia_video(file: UploadFile = File(...)):
 
 @app.websocket("/api/ws")
 async def conexao_websocket(websocket: WebSocket):
-    origin = websocket.headers.get("origin")
-    
-    # Lista de origens permitidas
-    allowed_origins = ["https://tcc.wiptelecomunicacoes.com.br", "http://localhost:3001"]
-
-    if origin and origin not in allowed_origins:
-        print(f"🔴 Conexão rejeitada: {origin}")  # Debug no terminal
-        await websocket.close(code=403)
-        return
-
-    print(f"🟢 Conexão aceita: {origin}")  # Debug no terminal
     await websocket.accept()
     modelo_yolo = YOLO(model_path)
     ultimo_save = 0

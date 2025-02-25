@@ -41,7 +41,7 @@ export default function Video() {
     formData.append("file", file);
   
     try {
-      const response = await axios.post("http://localhost:3001/api/predict_video", formData);
+      const response = await axios.post(`${import.meta.env.URL}/api/predict_video`, formData);
   
       if (response.data.video_url) {
         // Corrige a URL do vídeo para um caminho absoluto
