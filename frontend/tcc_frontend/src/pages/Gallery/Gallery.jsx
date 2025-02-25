@@ -59,9 +59,9 @@ export const Gallery = () => {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Gallery</h1>
-      <div className="flex gap-6">
+      <div className="flex flex-col md:flex-row gap-6">
         {/* Lista de Pastas */}
-        <div className="w-1/4">
+        <div className="w-full md:w-1/4">
           <h2 className="text-lg font-semibold mb-2">Pastas</h2>
           {folders.map((folder) => (
             <button
@@ -75,11 +75,11 @@ export const Gallery = () => {
         </div>
 
         {/* Lista de Arquivos */}
-        <div className="w-3/4">
+        <div className="w-full md:w-3/4">
           {selectedFolder ? (
             <>
               <h2 className="text-lg font-semibold mb-2">Arquivos em {selectedFolder}</h2>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {files.length > 0 ? (
                   files.map((file) => (
                     <div
@@ -91,14 +91,14 @@ export const Gallery = () => {
                         <img
                           src={`/imagens/${selectedFolder}/${file}`}
                           alt={file}
-                          className="w-full h-auto rounded"
+                          className="w-full h-[200px] md:h-[250px] object-cover rounded"
                           onClick={() => handleFileClick(file)}
                         />
                       ) : file.endsWith(".mp4") || file.endsWith(".webm") || file.endsWith(".mov") ? (
                         // Se for vídeo, usa um <video> para capturar a primeira frame como thumbnail
                         <video
                           src={`/imagens/${selectedFolder}/${file}`}
-                          className="w-full h-auto rounded"
+                          className="w-full h-[200px] md:h-[250px] object-cover rounded"
                           onClick={() => handleFileClick(file)}
                           onLoadedMetadata={(e) => (e.target.currentTime = 0)}
                           muted
@@ -110,7 +110,7 @@ export const Gallery = () => {
                       {/* Botão de Excluir */}
                       <button
                         onClick={() => confirmDelete(file)}
-                        className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-sm hover:bg-red-600 transition"
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full text-sm hover:bg-red-600 transition"
                       >
                         <IoIosCloseCircle className="text-2xl" />
                       </button>
