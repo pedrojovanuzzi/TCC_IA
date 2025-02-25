@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, WebSocket
+from fastapi import FastAPI, File, UploadFile, WebSocket, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import cv2, json, base64, numpy as np
@@ -14,6 +14,8 @@ import shutil
 from datetime import datetime
 import time
 import gc
+from pydantic import BaseModel
+
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 model_path_pt = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.pt")
@@ -42,6 +44,22 @@ app.mount("/videos", StaticFiles(directory=video_treinado_path), name="videos")
 
 cores_classes = {"helmet": (0, 255, 0), "glove": (255, 255, 0), "belt": (0, 165, 255), "head": (255, 0, 0), "glasses": (128, 0, 128), "hands": (0, 255, 255)}
 confidence = 0.327
+
+class DeleteFileRequest(BaseModel):
+    folder: str
+    filename: str
+
+@app.delete("/api/delete")
+def delete_file(request: DeleteFileRequest):
+    folder_path = os.path.join(IMAGES_DIR, request.folder)
+    file_path = os.path.join(folder_path, request.filename)
+    
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        return JSONResponse(content={"success": True, "message": "Arquivo excluído com sucesso."})
+    else:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+
 
 @app.get("/api/gallery")
 def list_folders():

@@ -5,6 +5,7 @@ export const Gallery = () => {
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [fileToDelete, setFileToDelete] = useState(null);
 
   useEffect(() => {
     fetch("http://localhost:3001/api/gallery") // Faz a requisição para o backend
@@ -27,28 +28,45 @@ export const Gallery = () => {
     setSelectedFile(null);
   };
 
+  const confirmDelete = (file) => {
+    setFileToDelete(file);
+  };
+
+  const cancelDelete = () => {
+    setFileToDelete(null);
+  };
+
+  const handleDelete = () => {
+    if (!fileToDelete) return;
+    fetch(`http://localhost:3001/api/delete`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folder: selectedFolder, filename: fileToDelete }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setFiles(files.filter((f) => f !== fileToDelete)); // Remove o arquivo da lista sem precisar recarregar a página
+          setFileToDelete(null);
+        } else {
+          alert("Erro ao excluir o arquivo.");
+        }
+      })
+      .catch(() => alert("Erro ao excluir o arquivo."));
+  };
+
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Gallery</h1>
-      <div style={{ display: "flex", gap: "20px", marginTop: "10px" }}>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Gallery</h1>
+      <div className="flex gap-6">
         {/* Lista de Pastas */}
-        <div style={{ width: "25%" }}>
-          <h2>Pastas</h2>
+        <div className="w-1/4">
+          <h2 className="text-lg font-semibold mb-2">Pastas</h2>
           {folders.map((folder) => (
             <button
               key={folder.name}
               onClick={() => handleFolderClick(folder.name)}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "10px",
-                marginTop: "5px",
-                textAlign: "left",
-                background: "#ddd",
-                borderRadius: "5px",
-                border: "none",
-                cursor: "pointer",
-              }}
+              className="w-full p-2 mb-2 bg-gray-200 rounded hover:bg-gray-300 transition"
             >
               {folder.name}
             </button>
@@ -56,54 +74,45 @@ export const Gallery = () => {
         </div>
 
         {/* Lista de Arquivos */}
-        <div style={{ width: "75%" }}>
+        <div className="w-3/4">
           {selectedFolder ? (
             <>
-              <h2>Arquivos em {selectedFolder}</h2>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: "10px",
-                  marginTop: "10px",
-                }}
-              >
+              <h2 className="text-lg font-semibold mb-2">Arquivos em {selectedFolder}</h2>
+              <div className="grid grid-cols-3 gap-4">
                 {files.length > 0 ? (
                   files.map((file) => (
                     <div
                       key={file}
-                      onClick={() => handleFileClick(file)}
-                      style={{
-                        cursor: "pointer",
-                        padding: "10px",
-                        textAlign: "center",
-                        border: "1px solid #ddd",
-                        borderRadius: "5px",
-                        background: "#f9f9f9",
-                      }}
+                      className="relative p-2 border rounded bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
                     >
                       {/* Se for imagem, mostra preview */}
-                      {file.endsWith(".jpg") ||
-                      file.endsWith(".png") ||
-                      file.endsWith(".jpeg") ? (
+                      {file.endsWith(".jpg") || file.endsWith(".png") || file.endsWith(".jpeg") ? (
                         <img
                           src={`/imagens/${selectedFolder}/${file}`}
                           alt={file}
-                          style={{ width: "100%", height: "auto", borderRadius: "5px" }}
+                          className="w-full h-auto rounded"
+                          onClick={() => handleFileClick(file)}
                         />
                       ) : (
-                        // Se for vídeo, mostra apenas o nome
-                        <p>{file}</p>
+                        <p className="text-center">{file}</p>
                       )}
+
+                      {/* Botão de Excluir */}
+                      <button
+                        onClick={() => confirmDelete(file)}
+                        className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-sm hover:bg-red-600 transition"
+                      >
+                        X
+                      </button>
                     </div>
                   ))
                 ) : (
-                  <p>Nenhum arquivo encontrado.</p>
+                  <p className="text-gray-500">Nenhum arquivo encontrado.</p>
                 )}
               </div>
             </>
           ) : (
-            <p>Selecione uma pasta para ver os arquivos.</p>
+            <p className="text-gray-500">Selecione uma pasta para ver os arquivos.</p>
           )}
         </div>
       </div>
@@ -111,67 +120,53 @@ export const Gallery = () => {
       {/* Modal (Popup) */}
       {selectedFile && (
         <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0, 0, 0, 0.8)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 1000,
-          }}
+          className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex justify-center items-center z-50"
           onClick={closeModal}
         >
           <div
-            style={{
-              position: "relative",
-              background: "#fff",
-              padding: "20px",
-              borderRadius: "10px",
-              maxWidth: "90%",
-              maxHeight: "90%",
-              overflow: "auto",
-            }}
+            className="relative bg-white p-1 rounded-lg shadow-lg max-w-4xl max-h-[90vh] overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={closeModal}
-              style={{
-                position: "absolute",
-                top: "10px",
-                right: "10px",
-                background: "red",
-                color: "white",
-                border: "none",
-                padding: "5px 10px",
-                cursor: "pointer",
-                borderRadius: "5px",
-              }}
+              className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
             >
               Fechar
             </button>
             {/* Se for imagem, exibe */}
-            {selectedFile.endsWith(".jpg") ||
-            selectedFile.endsWith(".png") ||
-            selectedFile.endsWith(".jpeg") ? (
-              <img
-                src={selectedFile}
-                alt="Visualização"
-                style={{ maxWidth: "100%", maxHeight: "80vh", borderRadius: "5px" }}
-              />
+            {selectedFile.endsWith(".jpg") || selectedFile.endsWith(".png") || selectedFile.endsWith(".jpeg") ? (
+              <img src={selectedFile} alt="Visualização" className="max-w-full max-h-[80vh] rounded" />
             ) : (
               // Se for vídeo, exibe o player
-              <video
-                controls
-                style={{ maxWidth: "100%", maxHeight: "80vh", borderRadius: "5px" }}
-              >
+              <video controls className="max-w-full max-h-[80vh] rounded">
                 <source src={selectedFile} type="video/mp4" />
                 Seu navegador não suporta vídeos.
               </video>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {fileToDelete && (
+        <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h2 className="text-lg font-semibold">Confirmar Exclusão</h2>
+            <p className="text-gray-700 my-3">Deseja realmente excluir este arquivo?</p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={cancelDelete}
+                className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDelete}
+                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+              >
+                Excluir
+              </button>
+            </div>
           </div>
         </div>
       )}
