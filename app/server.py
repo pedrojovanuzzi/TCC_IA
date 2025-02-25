@@ -75,6 +75,34 @@ def list_folders():
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
+# Função para desenhar rótulos com fundo colorido
+def draw_label(imagem, text, x, y, color):
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 1.0  # Aumentar fonte
+    thickness = 2
+    (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+
+    # Criar fundo atrás do texto
+    cv2.rectangle(
+        imagem,
+        (x, y - text_height - 10),
+        (x + text_width + 10, y),
+        color,
+        -1  # Preenchimento total
+    )
+
+    # Adicionar o texto na imagem (cor preta para melhor visibilidade)
+    cv2.putText(
+        imagem,
+        text,
+        (x + 5, y - 5),
+        font,
+        font_scale,
+        (0, 0, 0),  # Texto preto
+        thickness
+    )
+
+
 @app.post("/predict")
 async def inferencia_imagem(file: UploadFile = File(...)):
     try:
@@ -90,7 +118,7 @@ async def inferencia_imagem(file: UploadFile = File(...)):
             confianca = obj.score.value
             cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))
             cv2.rectangle(imagem, (x1, y1), (x2, y2), cor_deteccao, 2)
-            cv2.putText(imagem, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
+            draw_label(imagem, f"{classe_detectada}: {confianca:.2f}", x1, y1, cor_deteccao)
         os.makedirs(img_statica, exist_ok=True)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
         nome_arquivo = f"detectado_{timestamp}.jpg"
@@ -137,7 +165,7 @@ async def inferencia_video(file: UploadFile = File(...)):
                 confianca = obj.score.value
                 cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))
                 cv2.rectangle(frame, (x1, y1), (x2, y2), cor_deteccao, 2)
-                cv2.putText(frame, f"{classe_detectada}: {confianca:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor_deteccao, 1)
+                draw_label(frame, f"{classe_detectada}: {confianca:.2f}", x1, y1, cor_deteccao)
             out.write(frame)
         cap.release()
         out.release()
@@ -170,7 +198,7 @@ async def conexao_websocket(websocket: WebSocket):
                 conf = float(caixa.conf[0])
                 cor = cores_classes.get(classe, (255, 255, 255))
                 cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
-                cv2.putText(frame, f"{classe}: {conf:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor, 1)
+                draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
         agora = time.time()
         if agora - ultimo_save >= 1.0:
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
