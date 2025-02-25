@@ -10,3 +10,6 @@ augmented/*
 *.onnx
 *.engine
 
+/frontend/tcc_frontend/public/imagens/img_real_time
+/frontend/tcc_frontend/public/imagens/img_statica
+/frontend/tcc_frontend/public/imagens/video_treinado
