@@ -1,5 +1,6 @@
 import React from "react";
 import img2 from "../assets/imgs/hero2.png";
+import Logout from "./Logout";
 
 export const Header = () => {
   return (
@@ -38,6 +39,7 @@ export const Header = () => {
             >
               Galeria
             </a>
+            <Logout/>
           </div>
         </nav>
       </header>
