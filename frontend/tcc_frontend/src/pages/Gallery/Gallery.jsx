@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { IoIosCloseCircle } from "react-icons/io";
 
 export const Gallery = () => {
   const [folders, setFolders] = useState([]);
@@ -111,7 +112,7 @@ export const Gallery = () => {
                         onClick={() => confirmDelete(file)}
                         className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-sm hover:bg-red-600 transition"
                       >
-                        X
+                        <IoIosCloseCircle className="text-2xl" />
                       </button>
                     </div>
                   ))
@@ -132,21 +133,23 @@ export const Gallery = () => {
           className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex justify-center items-center z-50"
           onClick={closeModal}
         >
-          <div
-            className="relative bg-white p-1 rounded-lg shadow-lg max-w-4xl max-h-[90vh] overflow-auto"
-            onClick={(e) => e.stopPropagation()}
+          {/* Botão Fechar fixado no topo */}
+          <button
+            onClick={closeModal}
+            className="absolute top-4 right-6 bg-red-500 text-white px-4 py-2 rounded-full text-lg hover:bg-red-600 transition"
           >
-            <button
-              onClick={closeModal}
-              className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
-            >
-              Fechar
-            </button>
+            <IoIosCloseCircle className="text-2xl" />
+          </button>
+
+          <div
+            className="relative bg-white p-4 rounded-lg shadow-lg max-w-4xl max-h-[90vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()} // Previne o fechamento ao clicar dentro do modal
+          >
             {/* Se for imagem, exibe */}
             {selectedFile.endsWith(".jpg") || selectedFile.endsWith(".png") || selectedFile.endsWith(".jpeg") ? (
               <img src={selectedFile} alt="Visualização" className="max-w-full max-h-[80vh] rounded" />
             ) : (
-              // Se for vídeo, exibe o player
+              // Se for vídeo, exibe o player corretamente
               <video controls className="max-w-full max-h-[80vh] rounded">
                 <source src={selectedFile} type="video/mp4" />
                 Seu navegador não suporta vídeos.
