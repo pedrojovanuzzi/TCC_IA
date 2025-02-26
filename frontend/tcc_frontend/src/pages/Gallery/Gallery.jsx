@@ -141,7 +141,7 @@ export const Gallery = () => {
                 {files.length > 0 && (
                   <button
                     onClick={confirmBatchDeleted}
-                    className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
+                    className="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 transition"
                   >
                     Excluir todos
                   </button>
