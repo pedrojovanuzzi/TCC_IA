@@ -1,7 +1,0 @@
-train: ../train/images
-val: ../valid/images
-test: ../test/images
-
-nc: 6
-names: ['head', 'helmet', 'glove', 'hands', 'glasses', "belt"]
-task: detect

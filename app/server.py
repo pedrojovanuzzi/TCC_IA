@@ -61,7 +61,7 @@ app.add_middleware(
 app.mount("/api/videos", StaticFiles(directory=video_treinado_path), name="videos")
 
 cores_classes = {"helmet": (0, 255, 0), "glove": (255, 255, 0), "belt": (0, 165, 255), "head": (255, 0, 0), "glasses": (128, 0, 128), "hands": (0, 255, 255)}
-confidence = 0.327
+confidence = 0.7
 
 class DeleteFileRequest(BaseModel):
     folder: str
@@ -129,7 +129,14 @@ async def inferencia_imagem(file: UploadFile = File(...)):
         conteudo_imagem = await file.read()
         array_bytes = np.frombuffer(conteudo_imagem, np.uint8)
         imagem = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
-        resultado = get_sliced_prediction(image=imagem, detection_model=modelo_yolo, slice_height=640, slice_width=640, overlap_height_ratio=0.2, overlap_width_ratio=0.2)
+        resultado = get_sliced_prediction(
+            image=imagem,
+            detection_model=modelo_yolo,
+            slice_height=800,  # Aumentar tamanho do slice para capturar mais contexto
+            slice_width=800,
+            overlap_height_ratio=0.1,  # Reduzir sobreposição para evitar duplicações
+            overlap_width_ratio=0.1
+        )
         for obj in resultado.object_prediction_list:
             x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
             classe_detectada = obj.category.name
@@ -176,7 +183,14 @@ async def inferencia_video(file: UploadFile = File(...)):
             ret, frame = cap.read()
             if not ret:
                 break
-            resultado = get_sliced_prediction(image=frame, detection_model=modelo_yolo, slice_height=640, slice_width=640, overlap_height_ratio=0.2, overlap_width_ratio=0.2)
+            resultado = get_sliced_prediction(
+                image=frame,
+                detection_model=modelo_yolo,
+                slice_height=800,  # Aumentar tamanho do slice para capturar mais contexto
+                slice_width=800,
+                overlap_height_ratio=0.1,  # Reduzir sobreposição para evitar duplicações
+                overlap_width_ratio=0.1
+            )
             for obj in resultado.object_prediction_list:
                 x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
                 classe_detectada = obj.category.name
