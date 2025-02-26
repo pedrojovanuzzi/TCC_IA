@@ -7,6 +7,7 @@ export default function Photo() {
   const [dragging, setDragging] = useState(false);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const backendIP = window.location.hostname;
 
   const handleDragOver = (event) => {
     event.preventDefault();
@@ -41,7 +42,7 @@ export default function Photo() {
     formData.append("file", file);
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/predict`, formData, {
+      const response = await axios.post(`${backendIP}/api/predict`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

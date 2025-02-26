@@ -7,6 +7,7 @@ export default function Video() {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [processedVideo, setProcessedVideo] = useState(null);
+  const backendIP = window.location.hostname;
 
   const handleDragOver = (event) => {
     event.preventDefault();
@@ -41,11 +42,11 @@ export default function Video() {
     formData.append("file", file);
   
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/predict_video`, formData);
+      const response = await axios.post(`${backendIP}/api/predict_video`, formData);
   
       if (response.data.video_url) {
         // Corrige a URL do vídeo para um caminho absoluto
-        setProcessedVideo(`${import.meta.env.VITE_API_URL}/api${response.data.video_url}`);
+        setProcessedVideo(`${backendIP}/api${response.data.video_url}`);
       }
     } catch (error) {
       console.error("Erro ao enviar o vídeo:", error);

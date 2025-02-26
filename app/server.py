@@ -268,6 +268,9 @@ async def conexao_websocket(websocket: WebSocket):
         frame_saida = base64.b64encode(buffer).decode("utf-8")
         await websocket.send_text(json.dumps({"frame": frame_saida}))
 
+# Obtém o IP da máquina
+host_ip = socket.gethostbyname(socket.gethostname())
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=3001)
+    uvicorn.run(app, host=host_ip, port=3001)

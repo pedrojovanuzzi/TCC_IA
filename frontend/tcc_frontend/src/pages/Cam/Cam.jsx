@@ -6,9 +6,8 @@ export default function Cam() {
   const [frame, setFrame] = useState("");
 
   useEffect(() => {
-    const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-    const wsHost = window.location.hostname === "localhost" ? "localhost:3001" : "tcc.wiptelecomunicacoes.com.br";
-    const wsUrl = `${wsProtocol}${wsHost}/api/ws`;
+    const backendIP = window.location.hostname;
+    const wsUrl = `ws://${backendIP}/api/ws`;
   
     const w = new WebSocket(wsUrl);
     

@@ -9,9 +9,10 @@ export const Gallery = () => {
   const [fileToDelete, setFileToDelete] = useState(null);
   const [folderToDelete, setFolderToDelete] = useState(null);
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
+  const backendIP = window.location.hostname;
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/gallery`)
+    fetch(`${backendIP}/api/gallery`)
       .then(res => res.json())
       .then(data => setFolders(data.folders))
       .catch(() => {});
@@ -57,7 +58,7 @@ export const Gallery = () => {
 
   const handleBatchDelete = () => {
     if (!selectedFolder) return;
-    fetch(`${import.meta.env.VITE_API_URL}/api/delete-batch`, {
+    fetch(`${backendIP}/api/delete-batch`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ folder: selectedFolder, filenames: files }),
@@ -77,7 +78,7 @@ export const Gallery = () => {
 
   const handleDelete = () => {
     if (!fileToDelete) return;
-    fetch(`${import.meta.env.VITE_API_URL}/api/delete`, {
+    fetch(`${backendIP}/api/delete`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ folder: selectedFolder, filename: fileToDelete }),
@@ -97,7 +98,7 @@ export const Gallery = () => {
 
   const handleDeleteCategory = () => {
     if (!folderToDelete) return;
-    fetch(`${import.meta.env.VITE_API_URL}/api/delete-folder`, {
+    fetch(`${backendIP}/api/delete-folder`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ folder: folderToDelete }),
