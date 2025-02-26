@@ -8,7 +8,7 @@ export default function Video() {
   const [uploading, setUploading] = useState(false);
   const [processedVideo, setProcessedVideo] = useState(null);
   const backendIP = window.location.hostname;
-  const API_URL = `http://${backendIP}:3001/api`;
+  const API_URL = `http://${backendIP}:3001`;
 
 
   const handleDragOver = (event) => {

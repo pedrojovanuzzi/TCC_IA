@@ -17,6 +17,8 @@ import gc
 from pydantic import BaseModel
 import socket
 from dotenv import load_dotenv
+import requests
+
 
 load_dotenv()
 # Determinar se está rodando localmente
@@ -24,8 +26,8 @@ IS_LOCAL = os.getenv("LOCAL") == "true"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-model_path_pt = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.pt")
-model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.engine")
+model_path_pt = os.path.join(BASE_DIR, "runs", "detect", "train14", "weights", "best.pt")
+model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train14", "weights", "best.engine")
 
 # Escolher qual modelo usar
 model_path = model_path_engine if IS_LOCAL else model_path_pt
@@ -268,9 +270,30 @@ async def conexao_websocket(websocket: WebSocket):
         frame_saida = base64.b64encode(buffer).decode("utf-8")
         await websocket.send_text(json.dumps({"frame": frame_saida}))
 
-# Obtém o IP da máquina
-host_ip = socket.gethostbyname(socket.gethostname())
+def find_vite_host():
+    possible_ips = ["192.168.7.65", "192.168.56.1", "192.168.21.154"]
+    
+    for ip in possible_ips:
+        url = f"http://{ip}:5173/"
+        try:
+            response = requests.get(url, timeout=1)
+            if response.status_code == 200:
+                return ip
+        except requests.exceptions.ConnectionError:
+            continue
+    return None
+
+vite_host = find_vite_host()
+if vite_host:
+    print(f"Vite está rodando em: {vite_host}")
+else:
+    print("Não foi possível encontrar o IP do Vite.")
+
+vite_host = find_vite_host()
+if vite_host:
+    vite_url = f"http://{vite_host}:5173/"
+    print(f"Frontend disponível em: {vite_url}")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host=host_ip, port=3001)
+    uvicorn.run(app, host=vite_host, port=3001)

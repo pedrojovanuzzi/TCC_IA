@@ -10,7 +10,7 @@ export const Gallery = () => {
   const [folderToDelete, setFolderToDelete] = useState(null);
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
   const backendIP = window.location.hostname;
-  const API_URL = `http://${backendIP}:3001/api`;
+  const API_URL = `http://${backendIP}:3001`;
 
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export const Gallery = () => {
 
   const handleBatchDelete = () => {
     if (!selectedFolder) return;
-    fetch(`${backendIP}/api/delete-batch`, {
+    fetch(`${API_URL}/api/delete-batch`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ folder: selectedFolder, filenames: files }),
@@ -80,7 +80,7 @@ export const Gallery = () => {
 
   const handleDelete = () => {
     if (!fileToDelete) return;
-    fetch(`${backendIP}/api/delete`, {
+    fetch(`${API_URL}/api/delete`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ folder: selectedFolder, filename: fileToDelete }),
@@ -100,7 +100,7 @@ export const Gallery = () => {
 
   const handleDeleteCategory = () => {
     if (!folderToDelete) return;
-    fetch(`${backendIP}/api/delete-folder`, {
+    fetch(`${API_URL}/api/delete-folder`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ folder: folderToDelete }),

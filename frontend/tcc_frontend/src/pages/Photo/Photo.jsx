@@ -8,7 +8,7 @@ export default function Photo() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const backendIP = window.location.hostname;
-  const API_URL = `http://${backendIP}:3001/api`;
+  const API_URL = `http://${backendIP}:3001`;
 
   console.log(backendIP);
   
