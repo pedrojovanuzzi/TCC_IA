@@ -7,7 +7,7 @@ export default function Cam() {
 
   useEffect(() => {
     const backendIP = window.location.hostname;
-    const wsUrl = `ws://${backendIP}/api/ws`;
+    const wsUrl = `ws://${backendIP}:3001/api/ws`;
   
     const w = new WebSocket(wsUrl);
     

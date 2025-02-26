@@ -10,9 +10,11 @@ export const Gallery = () => {
   const [folderToDelete, setFolderToDelete] = useState(null);
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
   const backendIP = window.location.hostname;
+  const API_URL = `http://${backendIP}:3001/api`;
+
 
   useEffect(() => {
-    fetch(`${backendIP}/api/gallery`)
+    fetch(`${API_URL}/api/gallery`)
       .then(res => res.json())
       .then(data => setFolders(data.folders))
       .catch(() => {});
