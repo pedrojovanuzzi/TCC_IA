@@ -156,10 +156,10 @@ async def inferencia_imagem(file: UploadFile = File(...)):
         resultado = get_sliced_prediction(
             image=imagem,
             detection_model=modelo_yolo,
-            slice_height=800,  # Aumentar tamanho do slice para capturar mais contexto
-            slice_width=800,
-            overlap_height_ratio=0.1,  # Reduzir sobreposição para evitar duplicações
-            overlap_width_ratio=0.1
+            slice_height=256,  # Aumentar tamanho do slice para capturar mais contexto
+            slice_width=256,
+            overlap_height_ratio=0.2,  # Reduzir sobreposição para evitar duplicações
+            overlap_width_ratio=0.2
         )
         for obj in resultado.object_prediction_list:
             x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
@@ -210,10 +210,10 @@ async def inferencia_video(file: UploadFile = File(...)):
             resultado = get_sliced_prediction(
                 image=frame,
                 detection_model=modelo_yolo,
-                slice_height=800,  # Aumentar tamanho do slice para capturar mais contexto
-                slice_width=800,
-                overlap_height_ratio=0.1,  # Reduzir sobreposição para evitar duplicações
-                overlap_width_ratio=0.1
+                slice_height=256,  # Aumentar tamanho do slice para capturar mais contexto
+                slice_width=256,
+                overlap_height_ratio=0.2,  # Reduzir sobreposição para evitar duplicações
+                overlap_width_ratio=0.2
             )
             for obj in resultado.object_prediction_list:
                 x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
