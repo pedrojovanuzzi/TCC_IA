@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, WebSocket, HTTPException
+from fastapi import FastAPI, File, UploadFile, WebSocket, HTTPException, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import cv2, json, base64, numpy as np
@@ -63,7 +63,7 @@ app.add_middleware(
 app.mount("/api/videos", StaticFiles(directory=video_treinado_path), name="videos")
 
 cores_classes = {"helmet": (0, 255, 0), "glove": (255, 255, 0), "belt": (0, 165, 255), "head": (255, 0, 0), "glasses": (128, 0, 128), "hands": (0, 255, 255)}
-confidence = 0.327
+confidence = 0.5
 
 class DeleteFileRequest(BaseModel):
     folder: str
@@ -240,60 +240,48 @@ async def conexao_websocket(websocket: WebSocket):
     await websocket.accept()
     modelo_yolo = YOLO(model_path)
     ultimo_save = 0
-    while True:
-        mensagem = await websocket.receive_text()
-        dados = json.loads(mensagem)
-        frame_base64 = base64.b64decode(dados["frame"])
-        array_bytes = np.frombuffer(frame_base64, np.uint8)
-        frame = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
-        dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-        resultados = modelo_yolo.predict(frame, imgsz=640, device=dispositivo, half=True, conf=confidence, stream=True)
-        for res in resultados:
-            if not res.boxes:
-                continue
-            for caixa in res.boxes:
-                x1, y1, x2, y2 = map(int, caixa.xyxy[0])
-                classe = modelo_yolo.names[int(caixa.cls[0])]
-                conf = float(caixa.conf[0])
-                cor = cores_classes.get(classe, (255, 255, 255))
-                cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
-                draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
-        agora = time.time()
-        if agora - ultimo_save >= 1.0:
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
-            os.makedirs(img_real_time, exist_ok=True)
-            nome_arquivo = f"{timestamp}.jpg"
-            caminho = os.path.join(img_real_time, nome_arquivo)
-            cv2.imwrite(caminho, frame)
-            ultimo_save = agora
-        _, buffer = cv2.imencode(".jpg", frame)
-        frame_saida = base64.b64encode(buffer).decode("utf-8")
-        await websocket.send_text(json.dumps({"frame": frame_saida}))
+    try:
+        while True:
+            mensagem = await websocket.receive_text()
+            dados = json.loads(mensagem)
+            frame_base64 = base64.b64decode(dados["frame"])
+            array_bytes = np.frombuffer(frame_base64, np.uint8)
+            frame = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
+            dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
+            resultados = modelo_yolo.predict(frame, imgsz=640, device=dispositivo, half=True, conf=confidence, stream=True)
+            
+            for res in resultados:
+                if not res.boxes:
+                    continue
+                for caixa in res.boxes:
+                    x1, y1, x2, y2 = map(int, caixa.xyxy[0])
+                    classe = modelo_yolo.names[int(caixa.cls[0])]
+                    conf = float(caixa.conf[0])
+                    cor = cores_classes.get(classe, (255, 255, 255))
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
+                    draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
 
-def find_vite_host():
-    possible_ips = ["192.168.7.65", "192.168.56.1", "192.168.21.154"]
-    
-    for ip in possible_ips:
-        url = f"http://{ip}:5173/"
-        try:
-            response = requests.get(url, timeout=1)
-            if response.status_code == 200:
-                return ip
-        except requests.exceptions.ConnectionError:
-            continue
-    return None
+            agora = time.time()
+            if agora - ultimo_save >= 1.0:
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+                os.makedirs(img_real_time, exist_ok=True)
+                nome_arquivo = f"{timestamp}.jpg"
+                caminho = os.path.join(img_real_time, nome_arquivo)
+                cv2.imwrite(caminho, frame)
+                ultimo_save = agora
 
-vite_host = find_vite_host()
-if vite_host:
-    print(f"Vite está rodando em: {vite_host}")
-else:
-    print("Não foi possível encontrar o IP do Vite.")
+            _, buffer = cv2.imencode(".jpg", frame)
+            frame_saida = base64.b64encode(buffer).decode("utf-8")
+            await websocket.send_text(json.dumps({"frame": frame_saida}))
 
-vite_host = find_vite_host()
-if vite_host:
-    vite_url = f"http://{vite_host}:5173/"
-    print(f"Frontend disponível em: {vite_url}")
+    except WebSocketDisconnect:
+        print("Cliente WebSocket desconectado.")
+    except Exception as e:
+        print(f"Erro no WebSocket: {e}")
+    finally:
+        await websocket.close()
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host=vite_host, port=3001)
+    uvicorn.run(app, host="0.0.0.0", port=3001)

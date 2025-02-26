@@ -9,7 +9,7 @@ export const Gallery = () => {
   const [fileToDelete, setFileToDelete] = useState(null);
   const [folderToDelete, setFolderToDelete] = useState(null);
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
-  const backendIP = window.location.hostname;
+  const backendIP = "localhost";
   const API_URL = `http://${backendIP}:3001`;
 
 
