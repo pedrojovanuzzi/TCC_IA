@@ -76,14 +76,18 @@ class DeleteRequest(BaseModel):
 async def delete_batch(request: DeleteRequest):
     if not request.folder or not request.filenames:
         raise HTTPException(status_code=400, detail="Pasta ou arquivos não informados")
-
     deleted_files = []
     for filename in request.filenames:
         file_path = os.path.join(IMAGES_DIR, request.folder, filename)
         if os.path.exists(file_path):
-            os.remove(file_path)
-            deleted_files.append(filename)
-
+            for _ in range(5):
+                try:
+                    os.remove(file_path)
+                    deleted_files.append(filename)
+                    break
+                except PermissionError:
+                    time.sleep(1)
+                    gc.collect()
     return {"success": True, "deleted": deleted_files}
 
 
@@ -222,6 +226,7 @@ async def inferencia_video(file: UploadFile = File(...)):
         cap.release()
         out.release()
         time.sleep(1)
+        cv2.destroyAllWindows()
         os.remove(temp_video.name)
         video_url = f"/videos/{video_nome_processado}"
         return JSONResponse(content={"video_url": video_url})

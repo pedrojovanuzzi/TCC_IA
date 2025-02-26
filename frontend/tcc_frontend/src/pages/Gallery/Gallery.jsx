@@ -67,6 +67,7 @@ export const Gallery = () => {
         if (data.success) {
           setFiles([]);
           setConfirmBatchDelete(false);
+          window.location.reload();
         } else {
           alert("Erro ao excluir a pasta.");
         }
@@ -86,6 +87,7 @@ export const Gallery = () => {
         if (data.success) {
           setFiles(files.filter(f => f !== fileToDelete));
           setFileToDelete(null);
+          window.location.reload();
         } else {
           alert("Erro ao excluir o arquivo.");
         }
@@ -109,6 +111,7 @@ export const Gallery = () => {
             setFiles([]);
           }
           setFolderToDelete(null);
+          window.location.reload();
         } else {
           alert("Erro ao excluir a categoria.");
         }
