@@ -61,11 +61,31 @@ app.add_middleware(
 app.mount("/api/videos", StaticFiles(directory=video_treinado_path), name="videos")
 
 cores_classes = {"helmet": (0, 255, 0), "glove": (255, 255, 0), "belt": (0, 165, 255), "head": (255, 0, 0), "glasses": (128, 0, 128), "hands": (0, 255, 255)}
-confidence = 0.7
+confidence = 0.327
 
 class DeleteFileRequest(BaseModel):
     folder: str
     filename: str
+
+
+class DeleteRequest(BaseModel):
+    folder: str
+    filenames: list[str]
+
+@app.delete("/api/delete-batch")
+async def delete_batch(request: DeleteRequest):
+    if not request.folder or not request.filenames:
+        raise HTTPException(status_code=400, detail="Pasta ou arquivos não informados")
+
+    deleted_files = []
+    for filename in request.filenames:
+        file_path = os.path.join(IMAGES_DIR, request.folder, filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            deleted_files.append(filename)
+
+    return {"success": True, "deleted": deleted_files}
+
 
 @app.delete("/api/delete")
 def delete_file(request: DeleteFileRequest):
