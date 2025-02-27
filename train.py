@@ -6,14 +6,6 @@ from sahi.predict import get_sliced_prediction
 # NANO yolov12n / MEDIUM yolov11m
 model_path = "./yolo12n.pt"
 
-# Caminho do modelo treinado
-# script_dir = os.path.dirname(os.path.abspath(__file__))
-# model_path = os.path.join(script_dir, "runs", "detect", "train13", "weights", "best.pt")
-
-# # # Confirma se o arquivo do modelo existe
-# if not os.path.exists(model_path):
-#     raise FileNotFoundError(f"Arquivo não encontrado: {model_path}")
-
 # Treinamento do modelo (se necessário)
 if __name__ == '__main__':
     YOLO(model_path).train(
