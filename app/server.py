@@ -26,8 +26,8 @@ IS_LOCAL = os.getenv("LOCAL") == "true"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-model_path_pt = os.path.join(BASE_DIR, "runs", "detect", "train14", "weights", "best.pt")
-model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train14", "weights", "best.engine")
+model_path_pt = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.pt")
+model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.engine")
 
 # Escolher qual modelo usar
 model_path = model_path_engine if IS_LOCAL else model_path_pt
@@ -158,8 +158,8 @@ async def inferencia_imagem(file: UploadFile = File(...)):
         resultado = get_sliced_prediction(
             image=imagem,
             detection_model=modelo_yolo,
-            slice_height=256,  # Aumentar tamanho do slice para capturar mais contexto
-            slice_width=256,
+            slice_height=512,  # Aumentar tamanho do slice para capturar mais contexto
+            slice_width=512,
             overlap_height_ratio=0.2,  # Reduzir sobreposição para evitar duplicações
             overlap_width_ratio=0.2
         )
@@ -212,8 +212,8 @@ async def inferencia_video(file: UploadFile = File(...)):
             resultado = get_sliced_prediction(
                 image=frame,
                 detection_model=modelo_yolo,
-                slice_height=256,  # Aumentar tamanho do slice para capturar mais contexto
-                slice_width=256,
+                slice_height=512,  # Aumentar tamanho do slice para capturar mais contexto
+                slice_width=512,
                 overlap_height_ratio=0.2,  # Reduzir sobreposição para evitar duplicações
                 overlap_width_ratio=0.2
             )
