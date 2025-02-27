@@ -1,11 +1,11 @@
 task: detect
 mode: train
-model: yolov8n.pt
+model: ./yolo11m.pt
 data: dataset.yaml
-epochs: 30
+epochs: 100
 time: null
-patience: 10
-batch: 32
+patience: 20
+batch: -1
 imgsz: 640
 save: true
 save_period: -1
@@ -13,10 +13,10 @@ cache: disk
 device: 0
 workers: 4
 project: null
-name: train7
+name: train13
 exist_ok: false
 pretrained: true
-optimizer: AdamW
+optimizer: auto
 verbose: true
 seed: 0
 deterministic: true
@@ -103,4 +103,4 @@ erasing: 0.4
 crop_fraction: 1.0
 cfg: null
 tracker: botsort.yaml
-save_dir: runs\detect\train7
+save_dir: runs\detect\train13
