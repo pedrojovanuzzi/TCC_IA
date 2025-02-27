@@ -3,8 +3,6 @@ import os
 from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 
-train = "train14"
-
 # NANO yolov12n / MEDIUM yolov11m
 model_path = "./yolo12n.pt"
 
@@ -21,7 +19,6 @@ if __name__ == '__main__':
         patience=20,
         half=True,
         amp=True,
-        name=train
     )
 
 

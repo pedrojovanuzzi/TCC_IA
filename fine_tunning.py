@@ -26,7 +26,6 @@ if __name__ == '__main__':
         patience=20,
         half=True,
         amp=True,
-        name=train
     )
 
 

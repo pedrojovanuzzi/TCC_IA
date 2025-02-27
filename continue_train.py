@@ -1,7 +1,5 @@
 from ultralytics import YOLO
 import os
-from sahi import AutoDetectionModel
-from sahi.predict import get_sliced_prediction
 
 train = "train14"
 
@@ -27,8 +25,7 @@ if __name__ == '__main__':
         half=True,
         amp=True,
         resume=True,
-        name=train
+        project="runs/detect",  # Define a pasta principal
     )
-
 
 print("Modelo pronto para inferência com SAHI!")
