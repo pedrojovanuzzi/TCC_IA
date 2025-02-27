@@ -2,10 +2,10 @@ import os
 
 # Configurações
 base_path = "./"  # Altere se necessário
-max_samples = 2000  # Máximo de arquivos a manter por classe
+max_samples = 0  # Máximo de arquivos a manter por classe
 
 # Perguntar ao usuário qual classe deseja reduzir
-class_to_reduce = 1 
+class_to_reduce = 0
 class_to_reduce = str(class_to_reduce)  # Converte para string
 
 # Função para remover excessos
