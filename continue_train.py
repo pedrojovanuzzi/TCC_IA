@@ -9,7 +9,7 @@ train = "train14"
 script_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(script_dir, "runs", "detect", train, "weights", "best.pt")
 
-# # # Confirma se o arquivo do modelo existe
+# Confirma se o arquivo do modelo existe
 if not os.path.exists(model_path):
     raise FileNotFoundError(f"Arquivo não encontrado: {model_path}")
 
@@ -26,7 +26,8 @@ if __name__ == '__main__':
         patience=20,
         half=True,
         amp=True,
-        resume=True
+        resume=True,
+        name=train
     )
 
 
