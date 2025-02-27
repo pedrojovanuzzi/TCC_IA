@@ -7,7 +7,7 @@ train = "train14"
 
 # Caminho do modelo pausado
 script_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(script_dir, "runs", "detect", train, "weights", "best.pt")
+model_path = os.path.join(script_dir, "runs", "detect", train, "weights", "last.pt")
 
 # Confirma se o arquivo do modelo existe
 if not os.path.exists(model_path):
