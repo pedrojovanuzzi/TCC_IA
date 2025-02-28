@@ -4,7 +4,7 @@ from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 
 # NANO yolov12n / MEDIUM yolov11m
-model_path = "./yolo12n.pt"
+model_path = "./yolo12m.pt"
 
 # Treinamento do modelo (se necessário)
 if __name__ == '__main__':
