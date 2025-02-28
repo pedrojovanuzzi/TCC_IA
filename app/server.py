@@ -5,7 +5,9 @@ import cv2, json, base64, numpy as np
 from ultralytics import YOLO
 import torch
 from sahi.predict import get_sliced_prediction
-from sahi.models.ultralytics import UltralyticsDetectionModel
+from sahi.predict import get_prediction
+
+from sahi import AutoDetectionModel
 from io import BytesIO
 from starlette.responses import JSONResponse, FileResponse
 import os
@@ -24,10 +26,12 @@ load_dotenv()
 # Determinar se está rodando localmente
 IS_LOCAL = os.getenv("LOCAL") == "true"
 
+train = "train3"
+
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-model_path_pt = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.pt")
-model_path_engine = os.path.join(BASE_DIR, "runs", "detect", "train13", "weights", "best.engine")
+model_path_pt = os.path.join(BASE_DIR, "runs", "detect", train, "weights", "best.pt")
+model_path_engine = os.path.join(BASE_DIR, "runs", "detect", train, "weights", "best.engine")
 
 # Escolher qual modelo usar
 model_path = model_path_engine if IS_LOCAL else model_path_pt
@@ -151,17 +155,15 @@ def draw_label(imagem, text, x, y, color):
 async def inferencia_imagem(file: UploadFile = File(...)):
     try:
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-        modelo_yolo = UltralyticsDetectionModel(model_path=model_path_pt, confidence_threshold=confidence, device=dispositivo)
+        modelo_yolo = AutoDetectionModel.from_pretrained(model_type="ultralytics",model_path=model_path_pt, confidence_threshold=confidence, device=dispositivo)
         conteudo_imagem = await file.read()
         array_bytes = np.frombuffer(conteudo_imagem, np.uint8)
         imagem = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
-        resultado = get_sliced_prediction(
+        resultado = get_prediction(
             image=imagem,
             detection_model=modelo_yolo,
-            slice_height=512,  # Aumentar tamanho do slice para capturar mais contexto
-            slice_width=512,
-            overlap_height_ratio=0.2,  # Reduzir sobreposição para evitar duplicações
-            overlap_width_ratio=0.2
+            # slice_height=640,  # Aumentar tamanho do slice para capturar mais contexto
+            # slice_width=640
         )
         for obj in resultado.object_prediction_list:
             x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
@@ -185,7 +187,7 @@ async def inferencia_imagem(file: UploadFile = File(...)):
 async def inferencia_video(file: UploadFile = File(...)):
     try:
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-        modelo_yolo = UltralyticsDetectionModel(model_path=model_path_pt, confidence_threshold=confidence, device=dispositivo)
+        modelo_yolo = AutoDetectionModel.from_pretrained(model_type="ultralytics",model_path=model_path_pt, confidence_threshold=confidence, device=dispositivo)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         video_nome_processado = f"processado_{timestamp}.mp4"
         os.makedirs(video_treinado_path, exist_ok=True)
@@ -209,13 +211,11 @@ async def inferencia_video(file: UploadFile = File(...)):
             ret, frame = cap.read()
             if not ret:
                 break
-            resultado = get_sliced_prediction(
+            resultado = get_prediction(
                 image=frame,
                 detection_model=modelo_yolo,
-                slice_height=512,  # Aumentar tamanho do slice para capturar mais contexto
-                slice_width=512,
-                overlap_height_ratio=0.2,  # Reduzir sobreposição para evitar duplicações
-                overlap_width_ratio=0.2
+                # slice_height=640,  # Aumentar tamanho do slice para capturar mais contexto
+                # slice_width=640
             )
             for obj in resultado.object_prediction_list:
                 x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
