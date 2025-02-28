@@ -3,5 +3,5 @@ val: ../valid/images
 test: ../test/images
 
 nc: 6
-names: ['head', 'helmet', 'glove', 'hands', 'glasses', "belt"]
+names: ['glasses', 'helmet', 'glove', 'hands', 'head', "belt"]
 task: detect
