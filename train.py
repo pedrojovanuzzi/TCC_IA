@@ -16,7 +16,7 @@ if __name__ == '__main__':
         optimizer='auto',
         device=0,
         cache="disk",
-        patience=100,
+        patience=50,
         half=True,
         amp=True,
     )

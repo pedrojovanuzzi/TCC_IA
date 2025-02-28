@@ -2,7 +2,7 @@ import os
 import random
 
 # 🔹 Novo ID para substituir na classe dos labels
-novo_id = 0  # Altere conforme necessário
+novo_id = 5  # Altere conforme necessário
 
 # 🔹 Caminho do dataset (modifique conforme necessário)
 dataset_path = "./corrigir_labels"
@@ -11,7 +11,7 @@ dataset_path = "./corrigir_labels"
 folders = ["train", "valid", "test"]
 
 # 🔹 Número máximo de imagens/labels a manter
-max_files = 10000
+max_files = 30000
 
 # 🔹 Extensões de imagem suportadas
 image_extensions = (".jpg", ".jpeg", ".png", ".bmp", ".webp")
