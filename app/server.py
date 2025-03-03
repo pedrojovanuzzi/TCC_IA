@@ -26,7 +26,7 @@ load_dotenv()
 # Determinar se está rodando localmente
 IS_LOCAL = os.getenv("LOCAL") == "true"
 
-train = "train3"
+train = "train10"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -185,55 +185,56 @@ async def inferencia_imagem(file: UploadFile = File(...)):
 
 @app.post("/api/predict_video")
 async def inferencia_video(file: UploadFile = File(...)):
-    try:
-        dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-        modelo_yolo = AutoDetectionModel.from_pretrained(model_type="ultralytics",model_path=model_path_pt, confidence_threshold=confidence, device=dispositivo)
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        video_nome_processado = f"processado_{timestamp}.mp4"
-        os.makedirs(video_treinado_path, exist_ok=True)
-        caminho_video_processado = os.path.join(video_treinado_path, video_nome_processado)
-        temp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-        with open(temp_video.name, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        temp_video.close()
-        cap = cv2.VideoCapture(temp_video.name)
-        if not cap.isOpened():
-            raise Exception("Erro ao abrir o vídeo.")
-        fps = int(cap.get(cv2.CAP_PROP_FPS))
-        largura = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        altura = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        if fps == 0 or largura == 0 or altura == 0:
-            cap.release()
-            raise Exception("Erro nas propriedades do vídeo.")
-        fourcc = cv2.VideoWriter_fourcc(*"avc1")
-        out = cv2.VideoWriter(caminho_video_processado, fourcc, fps, (largura, altura))
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-            resultado = get_prediction(
-                image=frame,
-                detection_model=modelo_yolo,
-                # slice_height=640,  # Aumentar tamanho do slice para capturar mais contexto
-                # slice_width=640
-            )
-            for obj in resultado.object_prediction_list:
-                x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
-                classe_detectada = obj.category.name
-                confianca = obj.score.value
-                cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))
-                cv2.rectangle(frame, (x1, y1), (x2, y2), cor_deteccao, 2)
-                draw_label(frame, f"{classe_detectada}: {confianca:.2f}", x1, y1, cor_deteccao)
-            out.write(frame)
+    dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
+    modelo_yolo = AutoDetectionModel.from_pretrained(
+        model_type="ultralytics",
+        model_path=model_path_pt,
+        confidence_threshold=confidence,
+        device=dispositivo
+    )
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    video_nome_processado = f"processado_{timestamp}.mp4"
+    os.makedirs(video_treinado_path, exist_ok=True)
+    caminho_video_processado = os.path.join(video_treinado_path, video_nome_processado)
+    temp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    with open(temp_video.name, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    temp_video.close()
+    cap = cv2.VideoCapture(temp_video.name)
+    if not cap.isOpened():
+        return JSONResponse(content={"erro": "Vídeo inválido"}, status_code=400)
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    largura = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    altura = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    if fps == 0 or largura == 0 or altura == 0:
         cap.release()
-        out.release()
-        time.sleep(1)
-        cv2.destroyAllWindows()
+        return JSONResponse(content={"erro": "Propriedades inválidas"}, status_code=400)
+    fourcc = cv2.VideoWriter_fourcc(*"avc1")
+    out = cv2.VideoWriter(caminho_video_processado, fourcc, fps, (largura, altura))
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        resultado = get_prediction(image=frame, detection_model=modelo_yolo)
+        for obj in resultado.object_prediction_list:
+            x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
+            classe_detectada = obj.category.name
+            confianca = obj.score.value
+            cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))
+            cv2.rectangle(frame, (x1, y1), (x2, y2), cor_deteccao, 2)
+            draw_label(frame, f"{classe_detectada}: {confianca:.2f}", x1, y1, cor_deteccao)
+        out.write(frame)
+    cap.release()
+    out.release()
+    time.sleep(1)
+    cv2.destroyAllWindows()
+    try:
         os.remove(temp_video.name)
-        video_url = f"/videos/{video_nome_processado}"
-        return JSONResponse(content={"video_url": video_url})
-    except Exception as e:
-        return JSONResponse(content={"erro": str(e)}, status_code=500)
+    except:
+        pass
+    video_url = f"/videos/{video_nome_processado}"
+    return JSONResponse(content={"video_url": video_url})
+
 
 @app.websocket("/api/ws")
 async def conexao_websocket(websocket: WebSocket):
