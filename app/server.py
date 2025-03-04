@@ -263,7 +263,7 @@ async def conexao_websocket(websocket: WebSocket):
                     draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
 
             agora = time.time()
-            if agora - ultimo_save >= 1.0:
+            if agora - ultimo_save >= 3.0:
                 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
                 os.makedirs(img_real_time, exist_ok=True)
                 nome_arquivo = f"{timestamp}.jpg"
