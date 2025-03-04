@@ -249,7 +249,7 @@ async def conexao_websocket(websocket: WebSocket):
             array_bytes = np.frombuffer(frame_base64, np.uint8)
             frame = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
             dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-            resultados = modelo_yolo.predict(frame, imgsz=320, device=dispositivo, half=True, conf=confidence, stream=True)
+            resultados = modelo_yolo.predict(frame, imgsz=416, device=dispositivo, half=True, conf=confidence, stream=True)
             
             for res in resultados:
                 if not res.boxes:
