@@ -26,7 +26,7 @@ load_dotenv()
 # Determinar se está rodando localmente
 IS_LOCAL = os.getenv("LOCAL") == "true"
 
-train = "train10"
+train = "train11"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -67,7 +67,7 @@ app.add_middleware(
 app.mount("/api/videos", StaticFiles(directory=video_treinado_path), name="videos")
 
 cores_classes = {"helmet": (0, 255, 0), "glove": (255, 255, 0), "belt": (0, 165, 255), "head": (255, 0, 0), "glasses": (128, 0, 128), "hands": (0, 255, 255)}
-confidence = 0.5
+confidence = 0.1
 
 class DeleteFileRequest(BaseModel):
     folder: str
