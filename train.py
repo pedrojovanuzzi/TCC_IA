@@ -18,6 +18,7 @@ if __name__ == '__main__':
         cache="disk",
         patience=50,
         half=True,
+        multi_scale=True,
         amp=True,
     )
 
