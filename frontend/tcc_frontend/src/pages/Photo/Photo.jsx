@@ -62,11 +62,14 @@ export default function Photo() {
 
   const startCamera = async () => {
     setCameraActive(true);
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      video: { width: { ideal: 1920 }, height: { ideal: 1080 } } // Solicita 1080p
+    });
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
     }
   };
+  
 
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current) {

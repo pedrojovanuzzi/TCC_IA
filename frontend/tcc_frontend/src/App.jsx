@@ -9,6 +9,7 @@ import Photo from "./pages/Photo/Photo";
 import { Gallery } from "./pages/Gallery/Gallery";
 import Login from "./pages/Login/Login";
 import ProtectedRoute from "./components/Protected";
+import CamSahi from "./pages/CamSahi/CamSahi";
 export default function App() {
   return (
     <Routes>
@@ -21,6 +22,7 @@ export default function App() {
       <Route path="/video" element={<ProtectedRoute element={<Video />} />} />
       <Route path="/foto" element={<ProtectedRoute element={<Photo />} />} />
       <Route path="/cam" element={<ProtectedRoute element={<Cam />} />} />
+      <Route path="/camsahi" element={<ProtectedRoute element={<CamSahi />} />} />
       <Route path="/about" element={<About />}/>
       <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} />} />
 

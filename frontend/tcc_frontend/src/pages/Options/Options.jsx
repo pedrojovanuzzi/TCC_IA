@@ -56,6 +56,31 @@ export default function Options() {
                     type="button"
                     className="mt-5 px-20 py-5 sm:w-1/2 self-center cursor-pointer rounded-md bg-indigo-500 sm:px-3 sm:py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
                     onClick={() => {
+                      navigate("/camsahi");
+                    }}>Acessar</button>
+                <div className="flex flex-1 items-center justify-center px-8 max-lg:pb-12 max-lg:pt-10 sm:px-10 lg:pb-2">
+                  <img
+                    className="w-full max-lg:max-w-xs"
+                    src={galeria}
+                    alt=""
+                  />
+                </div>
+              </div>
+              <div className="pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 max-lg:rounded-t-[2rem]"></div>
+            </div>
+            <div className="relative max-lg:row-start-1 row-span-2">
+              <div className="absolute inset-px rounded-lg bg-white max-lg:rounded-t-[2rem]"></div>
+              <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)]">
+                <div className="px-8 pt-8 sm:px-10 sm:pt-10">
+                  <p className="mt-2 text-lg font-medium tracking-tight text-gray-950 max-lg:text-center">Fotos</p>
+                  <p className="mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center">
+                    coloque uma foto e deixe o aplicativo rastrear os objetos para você
+                  </p>
+                </div>
+                <button
+                    type="button"
+                    className="mt-5 px-20 py-5 sm:w-1/2 self-center cursor-pointer rounded-md bg-indigo-500 sm:px-3 sm:py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                    onClick={() => {
                       navigate("/foto");
                     }}>Acessar</button>
                 <div className="flex flex-1 items-center justify-center px-8 max-lg:pb-12 max-lg:pt-10 sm:px-10 lg:pb-2">

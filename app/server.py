@@ -187,7 +187,6 @@ async def inferencia_imagem(file: UploadFile = File(...)):
         return JSONResponse(content={"erro": str(e)}, status_code=500)
 
 
-import subprocess
 
 @app.post("/api/predict_video")
 async def inferencia_video(file: UploadFile = File(...)):
@@ -281,8 +280,6 @@ async def inferencia_video(file: UploadFile = File(...)):
     video_url = f"/videos/{os.path.basename(caminho_video_processado)}"
     return JSONResponse(content={"video_url": video_url, "path": caminho_video_processado})
 
-
-
 @app.websocket("/api/ws")
 async def conexao_websocket(websocket: WebSocket):
     await websocket.accept()
@@ -328,6 +325,70 @@ async def conexao_websocket(websocket: WebSocket):
         print(f"Erro no WebSocket: {e}")
     finally:
         await websocket.close()
+
+@app.websocket("/api/ws_sahi")
+async def conexao_websocket_sahi(websocket: WebSocket):
+    await websocket.accept()
+
+    dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
+    modelo_yolo = AutoDetectionModel.from_pretrained(
+        model_type="ultralytics",
+        model_path=model_path,
+        confidence_threshold=confidence,
+        device=dispositivo
+    )
+
+    ultimo_envio = 0
+
+    try:
+        while True:
+            mensagem = await websocket.receive_text()
+            dados = json.loads(mensagem)
+
+            agora = time.time()
+            if agora - ultimo_envio < 1.0:
+                continue
+
+            frame_base64 = base64.b64decode(dados["frame"])
+            array_bytes = np.frombuffer(frame_base64, np.uint8)
+            frame = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
+
+            resultado = get_sliced_prediction(
+                image=frame,
+                detection_model=modelo_yolo,
+                slice_height=640,
+                slice_width=640,
+                overlap_height_ratio=0.3,
+                overlap_width_ratio=0.3,
+            )
+
+            for obj in resultado.object_prediction_list:
+                x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
+                classe = obj.category.name
+                conf = obj.score.value
+                cor = cores_classes.get(classe, (255, 255, 255))
+                cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
+                draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+            os.makedirs(img_real_time, exist_ok=True)
+            nome_arquivo = f"{timestamp}.jpg"
+            caminho = os.path.join(img_real_time, nome_arquivo)
+            cv2.imwrite(caminho, frame)
+
+            _, buffer = cv2.imencode(".jpg", frame)
+            frame_saida = base64.b64encode(buffer).decode("utf-8")
+
+            await websocket.send_text(json.dumps({"frame": frame_saida}))
+            ultimo_envio = agora
+
+    except WebSocketDisconnect:
+        print("Cliente WebSocket desconectado.")
+    except Exception as e:
+        print(f"Erro no WebSocket: {e}")
+    finally:
+        await websocket.close()
+
 
 
 if __name__ == "__main__":
