@@ -68,7 +68,7 @@ app.add_middleware(
 app.mount("/api/videos", StaticFiles(directory=video_treinado_path), name="videos")
 
 cores_classes = {"helmet": (0, 255, 0), "glove": (255, 255, 0), "belt": (0, 165, 255), "head": (255, 0, 0), "glasses": (128, 0, 128), "hands": (0, 255, 255)}
-confidence = 0.1
+confidence = 0.5
 
 class DeleteFileRequest(BaseModel):
     folder: str
@@ -163,8 +163,10 @@ async def inferencia_imagem(file: UploadFile = File(...)):
         resultado = get_sliced_prediction(
             image=imagem,
             detection_model=modelo_yolo,
-            slice_height=416,  # Aumentar tamanho do slice para capturar mais contexto
-            slice_width=416
+            slice_height=416,
+            slice_width=416,
+            overlap_height_ratio=0.3,  # Valor recomendado entre 0.2 e 0.4
+            overlap_width_ratio=0.3,
         )
         for obj in resultado.object_prediction_list:
             x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
@@ -234,7 +236,10 @@ async def inferencia_video(file: UploadFile = File(...)):
 
         resultado = get_sliced_prediction(
             image=frame, detection_model=modelo_yolo,
-            slice_height=416, slice_width=416
+            slice_height=416,
+            slice_width=416,
+            overlap_height_ratio=0.3,  # Valor recomendado entre 0.2 e 0.4
+            overlap_width_ratio=0.3,
         )
 
         for obj in resultado.object_prediction_list:
