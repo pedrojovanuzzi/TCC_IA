@@ -2,49 +2,41 @@ import requests
 import os
 import base64
 
-# Obtém o diretório do script para garantir que a pasta seja criada no lugar correto
 script_dir = os.path.dirname(os.path.abspath(__file__))
 output_dir = os.path.join(script_dir, "imagens_geradas")
 os.makedirs(output_dir, exist_ok=True)
 
 url = "http://127.0.0.1:7860/sdapi/v1/img2img"
 
-# Caminho da imagem de entrada
-script_dir = os.path.dirname(os.path.abspath(__file__))
-image_path = os.path.join(script_dir, "luva.jpg")
+obj = "luva"
 
-# Converte a imagem para Base64
+image_path = os.path.join(script_dir, obj + ".jpg")
+
 with open(image_path, "rb") as image_file:
     base64_image = base64.b64encode(image_file.read()).decode("utf-8")
 
 data = {
-    "init_images": [f"data:image/png;base64,{base64_image}"],  # Usa a imagem como base
+    "init_images": [f"data:image/png;base64,{base64_image}"],
     "prompt": "A detailed, realistic image of a person wearing a safety harness, professional photography, high-resolution, well-lit, full-body shot, construction worker or industrial worker, wearing proper safety equipment, standing in a neutral pose, facing the camera.",
     "negative_prompt": "blurry, low quality, extra limbs, distorted face, watermark, text, cartoon, anime, painting, unrealistic proportions, helmet without harness, climbing poles, background clutter",
     "steps": 50,
-    "denoising_strength": 0.7,  # Controla o quanto a IA altera a imagem original (0.5-0.8 recomendado)
+    "denoising_strength": 0.7,
     "cfg_scale": 7,
     "width": 768,
     "height": 768,
     "sampler_index": "Euler a"
 }
 
-
-
-
 for i in range(2000):
     response = requests.post(url, json=data)
-    print(response.status_code, response.text)
 
-    # Verifica se a API retornou imagens
     image_data = response.json().get("images", [])
     if not image_data:
-        print(f"Erro: Nenhuma imagem retornada para a tentativa {i+1}.")
-        continue  # Continua o loop ao invés de sair completamente
+        print(f"Erro: Nenhuma imagem retornada na tentativa {i+1}.")
+        continue
 
-    # Decodifica e salva a imagem
-    image_path = os.path.join(output_dir, f"cinto_{i+1}.png")
-    with open(image_path, "wb") as f:
+    image_save_path = os.path.join(output_dir, obj + f"_{i+1}.png")
+    with open(image_save_path, "wb") as f:
         f.write(base64.b64decode(image_data[0]))
-    
-    print(f"Imagem {i+1}/2000 salva em {image_path}")
+
+    print(f"Imagem {i+1}/2000 salva em {image_save_path}")
