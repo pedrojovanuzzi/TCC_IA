@@ -256,7 +256,6 @@ async def inferencia_video(file: UploadFile = File(...)):
     video_convertido = caminho_video_processado.replace(".mp4", "_web.mp4")
     caminho_ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()  # Pega o executável interno do FFmpeg
 
-    video_convertido = caminho_video_processado.replace(".mp4", "_web.mp4")
     cmd = [
         caminho_ffmpeg, "-i", caminho_video_processado, "-c:v", "libx264",
         "-preset", "fast", "-crf", "23", "-movflags", "+faststart", video_convertido
