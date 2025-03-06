@@ -27,7 +27,7 @@ load_dotenv()
 # Determinar se está rodando localmente
 IS_LOCAL = os.getenv("LOCAL") == "true"
 
-train = "train12"
+train = "train11"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -236,8 +236,8 @@ async def inferencia_video(file: UploadFile = File(...)):
 
         resultado = get_sliced_prediction(
             image=frame, detection_model=modelo_yolo,
-            slice_height=416,
-            slice_width=416,
+            slice_height=640,
+            slice_width=640,
             overlap_height_ratio=0.3,  # Valor recomendado entre 0.2 e 0.4
             overlap_width_ratio=0.3,
         )
