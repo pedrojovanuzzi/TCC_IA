@@ -6,7 +6,7 @@ from ultralytics import YOLO
 import torch
 from sahi.predict import get_sliced_prediction
 from sahi.predict import get_prediction
-
+import subprocess
 from sahi import AutoDetectionModel
 from io import BytesIO
 from starlette.responses import JSONResponse, FileResponse
@@ -20,13 +20,14 @@ from pydantic import BaseModel
 import socket
 from dotenv import load_dotenv
 import requests
-
+import imageio_ffmpeg
+import subprocess
 
 load_dotenv()
 # Determinar se está rodando localmente
 IS_LOCAL = os.getenv("LOCAL") == "true"
 
-train = "train11"
+train = "train12"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -159,11 +160,11 @@ async def inferencia_imagem(file: UploadFile = File(...)):
         conteudo_imagem = await file.read()
         array_bytes = np.frombuffer(conteudo_imagem, np.uint8)
         imagem = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
-        resultado = get_prediction(
+        resultado = get_sliced_prediction(
             image=imagem,
             detection_model=modelo_yolo,
-            # slice_height=640,  # Aumentar tamanho do slice para capturar mais contexto
-            # slice_width=640
+            slice_height=416,  # Aumentar tamanho do slice para capturar mais contexto
+            slice_width=416
         )
         for obj in resultado.object_prediction_list:
             x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
@@ -183,6 +184,9 @@ async def inferencia_imagem(file: UploadFile = File(...)):
     except Exception as e:
         return JSONResponse(content={"erro": str(e)}, status_code=500)
 
+
+import subprocess
+
 @app.post("/api/predict_video")
 async def inferencia_video(file: UploadFile = File(...)):
     dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
@@ -192,30 +196,47 @@ async def inferencia_video(file: UploadFile = File(...)):
         confidence_threshold=confidence,
         device=dispositivo
     )
+
+    os.makedirs(video_treinado_path, exist_ok=True)
+
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     video_nome_processado = f"processado_{timestamp}.mp4"
-    os.makedirs(video_treinado_path, exist_ok=True)
-    caminho_video_processado = os.path.join(video_treinado_path, video_nome_processado)
+    caminho_video_processado = os.path.abspath(os.path.join(video_treinado_path, video_nome_processado))
+
     temp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     with open(temp_video.name, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     temp_video.close()
+
     cap = cv2.VideoCapture(temp_video.name)
     if not cap.isOpened():
         return JSONResponse(content={"erro": "Vídeo inválido"}, status_code=400)
+
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     largura = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     altura = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
     if fps == 0 or largura == 0 or altura == 0:
         cap.release()
         return JSONResponse(content={"erro": "Propriedades inválidas"}, status_code=400)
-    fourcc = cv2.VideoWriter_fourcc(*"avc1")
-    out = cv2.VideoWriter(caminho_video_processado, fourcc, fps, (largura, altura))
+
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+
+    try:
+        out = cv2.VideoWriter(caminho_video_processado, fourcc, fps, (largura, altura))
+    except Exception as e:
+        return JSONResponse(content={"erro": f"Erro ao criar VideoWriter: {str(e)}"}, status_code=500)
+
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
-        resultado = get_prediction(image=frame, detection_model=modelo_yolo)
+
+        resultado = get_sliced_prediction(
+            image=frame, detection_model=modelo_yolo,
+            slice_height=416, slice_width=416
+        )
+
         for obj in resultado.object_prediction_list:
             x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
             classe_detectada = obj.category.name
@@ -223,17 +244,39 @@ async def inferencia_video(file: UploadFile = File(...)):
             cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))
             cv2.rectangle(frame, (x1, y1), (x2, y2), cor_deteccao, 2)
             draw_label(frame, f"{classe_detectada}: {confianca:.2f}", x1, y1, cor_deteccao)
+
         out.write(frame)
+
     cap.release()
     out.release()
-    time.sleep(1)
-    cv2.destroyAllWindows()
+
+    time.sleep(1)  # Tempo para garantir que o arquivo foi salvo corretamente
+
+    # Caminho do vídeo convertido para H.264
+    video_convertido = caminho_video_processado.replace(".mp4", "_web.mp4")
+    caminho_ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()  # Pega o executável interno do FFmpeg
+
+    video_convertido = caminho_video_processado.replace(".mp4", "_web.mp4")
+    cmd = [
+        caminho_ffmpeg, "-i", caminho_video_processado, "-c:v", "libx264",
+        "-preset", "fast", "-crf", "23", "-movflags", "+faststart", video_convertido
+    ]
+    subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # Verifica se a conversão foi bem-sucedida e substitui o arquivo original
+    if os.path.exists(video_convertido):
+        os.remove(caminho_video_processado)  # Remove o vídeo original
+        caminho_video_processado = video_convertido  # Atualiza o caminho do vídeo salvo
+
     try:
         os.remove(temp_video.name)
     except:
         pass
-    video_url = f"/videos/{video_nome_processado}"
-    return JSONResponse(content={"video_url": video_url})
+
+    # Retorna o caminho correto do vídeo salvo
+    video_url = f"/videos/{os.path.basename(caminho_video_processado)}"
+    return JSONResponse(content={"video_url": video_url, "path": caminho_video_processado})
+
 
 
 @app.websocket("/api/ws")
