@@ -11,7 +11,7 @@ url = "http://127.0.0.1:7860/sdapi/v1/img2img"
 
 # Caminho da imagem de entrada
 script_dir = os.path.dirname(os.path.abspath(__file__))
-image_path = os.path.join(script_dir, "cinto.png")
+image_path = os.path.join(script_dir, "luva.jpg")
 
 # Converte a imagem para Base64
 with open(image_path, "rb") as image_file:
@@ -32,7 +32,7 @@ data = {
 
 
 
-for i in range(300):
+for i in range(2000):
     response = requests.post(url, json=data)
     print(response.status_code, response.text)
 
@@ -47,4 +47,4 @@ for i in range(300):
     with open(image_path, "wb") as f:
         f.write(base64.b64decode(image_data[0]))
     
-    print(f"Imagem {i+1}/300 salva em {image_path}")
+    print(f"Imagem {i+1}/2000 salva em {image_path}")
