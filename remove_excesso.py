@@ -2,11 +2,10 @@ import os
 
 # Configurações
 base_path = "./"  # Altere se necessário
-max_samples = 0  # Máximo de arquivos a manter por classe
+max_samples = 10  # Máximo de arquivos a manter por classe
 
 # Perguntar ao usuário qual classe deseja reduzir
-class_to_reduce = 0
-class_to_reduce = str(class_to_reduce)  # Converte para string
+class_to_reduce = "5"  # Convertido para string
 
 # Função para remover excessos
 def clean_dataset(split):
@@ -18,33 +17,30 @@ def clean_dataset(split):
         print(f"Pasta {split} não encontrada, pulando...")
         return
 
-    # Criar dicionário para contar instâncias de cada classe
-    class_instances = {}
+    # Dicionário para armazenar os arquivos que contêm a classe escolhida
+    class_files = []
 
     # Listar arquivos de labels
     label_files = [f for f in os.listdir(labels_path) if f.endswith(".txt")]
 
-    # Contar quantas labels existem para cada classe
+    # Identificar arquivos que possuem a classe escolhida
     for label_file in label_files:
         label_path = os.path.join(labels_path, label_file)
         with open(label_path, "r") as file:
             lines = file.readlines()
         
-        for line in lines:
-            class_num = line.split()[0]  # Pega o primeiro número (classe)
-            if class_num not in class_instances:
-                class_instances[class_num] = []
-            class_instances[class_num].append(label_file)
+        # Verifica se a classe escolhida está no arquivo
+        if any(line.split()[0] == class_to_reduce for line in lines):
+            class_files.append(label_file)
 
     # Verificar se a classe escolhida tem mais do que o limite permitido
-    if class_to_reduce in class_instances and len(class_instances[class_to_reduce]) > max_samples:
-        excess_files = class_instances[class_to_reduce][max_samples:]  # Seleciona os que devem ser removidos
+    if len(class_files) > max_samples:
+        excess_files = class_files[max_samples:]  # Seleciona os que devem ser removidos
 
         print(f"Removendo {len(excess_files)} arquivos da classe {class_to_reduce} em {split}...")
 
         for label_file in excess_files:
             label_path = os.path.join(labels_path, label_file)
-            # Assume que a imagem pode ser .jpg ou .png
             image_path_jpg = os.path.join(images_path, label_file.replace(".txt", ".jpg"))
             image_path_png = os.path.join(images_path, label_file.replace(".txt", ".png"))
 
