@@ -1,7 +1,7 @@
 from ultralytics import YOLO
 import os
 
-train = "train11"
+train = "train12"
 
 # Caminho do modelo pausado
 script_dir = os.path.dirname(os.path.abspath(__file__))
