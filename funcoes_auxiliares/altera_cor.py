@@ -80,8 +80,9 @@ def adjust_image(image):
 
 # Processar todas as imagens
 for base in base_dirs:
-    image_dir = os.path.join(base, "images")
-    label_dir = os.path.join(base, "labels")
+    image_dir = os.path.join("..", base, "images")  # Sobe um nível para acessar train/valid/test corretamente
+    label_dir = os.path.join("..", base, "labels")
+
     output_image_dir = os.path.join(output_folder, base, "images")
     output_label_dir = os.path.join(output_folder, base, "labels")
 

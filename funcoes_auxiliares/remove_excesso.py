@@ -1,11 +1,15 @@
 import os
 
-# Configurações
-base_path = "./"  # Altere se necessário
-max_samples = 10  # Máximo de arquivos a manter por classe
+# Obtém automaticamente o diretório onde o script está sendo executado
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Caminho base relativo ao script
+base_path = os.path.abspath(os.path.join(script_dir, ".."))  # Sobe um nível para acessar train, valid, test
+
+max_samples = 1842  # Máximo de arquivos a manter por classe
 
 # Perguntar ao usuário qual classe deseja reduzir
-class_to_reduce = "5"  # Convertido para string
+class_to_reduce = "1"  # Convertido para string
 
 # Função para remover excessos
 def clean_dataset(split):

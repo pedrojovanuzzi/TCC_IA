@@ -4,8 +4,11 @@ import random
 # 🔹 Novo ID para substituir na classe dos labels
 novo_id = 5  # Altere conforme necessário
 
-# 🔹 Caminho do dataset (modifique conforme necessário)
-dataset_path = "./corrigir_labels"
+# Obtém automaticamente o diretório onde o script está sendo executado
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Caminho base relativo ao script
+dataset_path = os.path.abspath(os.path.join(script_dir, ".."))  # Sobe um nível para acessar train, valid, test
 
 # 🔹 Pastas que precisam ser processadas
 folders = ["train", "valid", "test"]
