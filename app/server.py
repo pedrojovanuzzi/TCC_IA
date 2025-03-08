@@ -27,7 +27,7 @@ load_dotenv()
 # Determinar se está rodando localmente
 IS_LOCAL = os.getenv("LOCAL") == "true"
 
-train = "train11"
+train = "train12"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -345,9 +345,9 @@ async def conexao_websocket_sahi(websocket: WebSocket):
             mensagem = await websocket.receive_text()
             dados = json.loads(mensagem)
 
-            agora = time.time()
-            if agora - ultimo_envio < 1.0:
-                continue
+            # agora = time.time()
+            # if agora - ultimo_envio < 1.0:
+            #     continue
 
             frame_base64 = base64.b64decode(dados["frame"])
             array_bytes = np.frombuffer(frame_base64, np.uint8)
@@ -380,7 +380,7 @@ async def conexao_websocket_sahi(websocket: WebSocket):
             frame_saida = base64.b64encode(buffer).decode("utf-8")
 
             await websocket.send_text(json.dumps({"frame": frame_saida}))
-            ultimo_envio = agora
+            # ultimo_envio = agora
 
     except WebSocketDisconnect:
         print("Cliente WebSocket desconectado.")
