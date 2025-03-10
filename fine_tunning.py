@@ -3,7 +3,7 @@ import os
 from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 
-train = "train10"
+train = "train13"
 
 # Caminho do modelo treinado
 script_dir = os.path.dirname(os.path.abspath(__file__))
