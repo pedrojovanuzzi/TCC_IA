@@ -27,7 +27,7 @@ load_dotenv()
 # Determinar se está rodando localmente
 IS_LOCAL = os.getenv("LOCAL") == "true"
 
-train = "train15"
+train = "train17"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
