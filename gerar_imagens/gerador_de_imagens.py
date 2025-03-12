@@ -27,7 +27,7 @@ negative_prompt = (
     "blurry, low quality, distorted, watermark, text, cartoon, anime, 3D render, CGI, unrealistic proportions, extra fingers, deformed hands, oversaturated, poorly drawn face"
 )
 
-for i in range(2000):
+for i in range(100):
     prompt_variado = random.choice(cenarios)
 
     data = {
@@ -53,4 +53,4 @@ for i in range(2000):
     with open(image_save_path, "wb") as f:
         f.write(base64.b64decode(image_data[0]))
 
-    print(f"Imagem {i+1}/2000 salva em {image_save_path}")
+    print(f"Imagem {i+1}/100 salva em {image_save_path}")
