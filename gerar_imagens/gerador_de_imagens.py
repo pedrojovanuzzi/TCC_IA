@@ -9,37 +9,38 @@ os.makedirs(output_dir, exist_ok=True)
 
 url = "http://127.0.0.1:7860/sdapi/v1/img2img"
 
-obj = "luva"
-image_path = os.path.join(script_dir, obj + ".jpg")
+modelo = "realisticVisionV60B1_v51HyperVAE"  # Nome exato do arquivo .safetensors
+
+obj = "face_olhos"
+image_path = os.path.join(script_dir, obj + ".png")
 
 with open(image_path, "rb") as image_file:
     base64_image = base64.b64encode(image_file.read()).decode("utf-8")
 
 cenarios = [
-    "construction worker wearing {} in safety scenario, realistic full-body",
-    "engineer wearing {} inspecting equipment, professional photography",
-    "industrial worker actively using {}, detailed image, realistic",
-    "safety instructor demonstrating use of {}, well-lit photography",
-    "person wearing {} at construction site, high-detail",
-    "technician with {} in maintenance operation, realistic environment",
-    "worker displaying correct use of {}, realistic professional shot",
+    "Ultra-realistic close-up portrait of a person, highly detailed skin, cinematic lighting, shot on a Canon EOS R5 with 85mm f/1.2 lens, RAW photo, photorealistic",
+    "Professional studio portrait of a human face, ultra-detailed skin texture, natural lighting, realistic depth of field, 8K resolution",
+    "Realistic high-resolution photography of a person’s face, professional retouching, perfect color grading, DSLR shot"
 ]
 
-negative_prompt = "blurry, low quality, distorted, watermark, text, cartoon, anime, unrealistic proportions"
+negative_prompt = (
+    "blurry, low quality, distorted, watermark, text, cartoon, anime, 3D render, CGI, unrealistic proportions, extra fingers, deformed hands, oversaturated, poorly drawn face"
+)
 
 for i in range(2000):
-    prompt_variado = random.choice(cenarios).format(obj)
+    prompt_variado = random.choice(cenarios)
 
     data = {
         "init_images": [f"data:image/png;base64,{base64_image}"],
         "prompt": prompt_variado,
         "negative_prompt": negative_prompt,
         "steps": 50,
-        "denoising_strength": round(random.uniform(0.8, 0.95), 2),
-        "cfg_scale": 7,
+        "denoising_strength": round(random.uniform(0.4, 0.7), 2),  # Preserva melhor o rosto original
+        "cfg_scale": 7.5,
         "width": 768,
         "height": 768,
-        "sampler_index": "Euler a"
+        "sampler_index": "DPM++ 2M Karras",
+        "override_settings": {"sd_model_checkpoint": modelo}
     }
 
     response = requests.post(url, json=data)
