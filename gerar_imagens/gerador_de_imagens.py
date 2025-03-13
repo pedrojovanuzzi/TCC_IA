@@ -45,9 +45,10 @@ def gerar_imagens():
 
     # 🔹 Prompts para variação (com e sem óculos, close nos olhos e nariz)
     cenarios = [
-        "Ultra-realistic close-up of a person's face, only eyes and part of the nose visible, wearing stylish glasses, DSLR, high detail, sharp focus, soft lighting, 8K, Fujifilm XT3",
-        "Ultra-realistic close-up of a person's face, only eyes and part of the nose visible, no glasses, high detail, cinematic lighting, professional portrait, 8K, film grain, Canon EOS R5"
+        "Extreme close-up of a man's eyes and the upper bridge of the nose, only eyes and part of the nose visible, mature skin with natural wrinkles, realistic skin texture, soft natural lighting, ultra-sharp focus, photorealistic, professional DSLR, 8K",
+        "Extreme close-up of a man's eyes and the upper bridge of the nose, only eyes and part of the nose visible, mature skin with natural wrinkles, realistic skin texture, soft natural lighting, wearing stylish eyeglasses with a thin metallic frame, ultra-sharp focus, photorealistic, professional DSLR, 8K"
     ]
+
 
     negative_prompt = (
         "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, "
@@ -57,20 +58,20 @@ def gerar_imagens():
         "missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck"
     )
 
-    for i in range(100):
+    for i in range(300):
         prompt_variado = random.choice(cenarios)
 
         data = {
             "prompt": prompt_variado,
             "negative_prompt": negative_prompt,
-            "steps": 70,
-            "cfg_scale": 10,
+            "steps": random.randint(10, 12),  # 🔹 Hyper Model optimization
+            "cfg_scale": round(random.uniform(1.5, 2.0), 2),  # 🔹 Lower value = more mutations, less contrast
             "width": 768,
             "height": 768,
-            "sampler_index": "Euler a",
+            "sampler_index": "DPM++ SDE Karras",  # 🔹 Recommended sampler for Hyper
             "seed": random.randint(1, 9999999),
             "restore_faces": True,
-            "override_settings": {"sd_model_checkpoint": modelo_checkpoint}  # 🔹 Certifica que está usando o modelo correto
+            "override_settings": {"sd_model_checkpoint": modelo_checkpoint}  # 🔹 Ensure correct model is used
         }
 
         response = requests.post(url_txt2img, json=data)
