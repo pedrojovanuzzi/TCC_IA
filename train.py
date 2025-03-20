@@ -10,12 +10,12 @@ model_path = "./yolo12m.pt"
 if __name__ == '__main__':
     YOLO(model_path).train(
         data="dataset.yaml",
-        epochs=300,
+        epochs=1200,
         imgsz=416,
         batch=-1,
         optimizer='auto',
         device=0,
-        patience=50,
+        patience=100,
         half=True,
         amp=True,
     )
