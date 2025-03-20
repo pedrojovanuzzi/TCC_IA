@@ -3,6 +3,6 @@ val: ../valid/images
 test: ../test/images
 
 nc: 7
-names: ['glasses', 'helmet', 'glove', 'hands', 'head', "belt", "no_glasses"]
-        # 0        1         2        3        4        5       6
+names: ['glasses', 'helmet', 'glove', 'hands', 'head', "belt", "no_glasses", "no_belt", "boots", "no_boots"]
+        # 0        1         2        3        4        5       6            7               8        9
 task: detect
