@@ -4,10 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import cv2, json, base64, numpy as np
 from ultralytics import YOLO
 import torch
-from sahi.predict import get_sliced_prediction
-from sahi.predict import get_prediction
 import subprocess
-from sahi import AutoDetectionModel
 from io import BytesIO
 from starlette.responses import JSONResponse, FileResponse
 import os
@@ -27,7 +24,7 @@ load_dotenv()
 # Determinar se está rodando localmente
 IS_LOCAL = os.getenv("LOCAL") == "true"
 
-train = "train17"
+train = "train20"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -67,8 +64,19 @@ app.add_middleware(
 )
 app.mount("/api/videos", StaticFiles(directory=video_treinado_path), name="videos")
 
-cores_classes = {"helmet": (0, 255, 0), "glove": (255, 255, 0), "belt": (0, 165, 255), "head": (255, 0, 0), "glasses": (128, 0, 128), "hands": (0, 255, 255)}
-confidence = 0.1
+cores_classes = {
+    "glasses": (128, 0, 128),
+    "helmet": (0, 255, 0),
+    "glove": (255, 255, 0),
+    "hands": (0, 255, 255),
+    "head": (255, 0, 0),
+    "belt": (0, 165, 255),
+    "no_glasses": (255, 0, 255),
+    "no_belt": (0, 0, 255),
+    "boots": (255, 128, 0),
+    "no_boots": (128, 128, 128)
+}
+confidence = 0.6
 
 class DeleteFileRequest(BaseModel):
     folder: str
@@ -156,25 +164,20 @@ def draw_label(imagem, text, x, y, color):
 async def inferencia_imagem(file: UploadFile = File(...)):
     try:
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-        modelo_yolo = AutoDetectionModel.from_pretrained(model_type="ultralytics",model_path=model_path_pt, confidence_threshold=confidence, device=dispositivo)
+        modelo_yolo = YOLO(model_path)
         conteudo_imagem = await file.read()
         array_bytes = np.frombuffer(conteudo_imagem, np.uint8)
         imagem = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
-        resultado = get_sliced_prediction(
-            image=imagem,
-            detection_model=modelo_yolo,
-            # slice_height=416,
-            # slice_width=416,
-            overlap_height_ratio=0.3,  # Valor recomendado entre 0.2 e 0.4
-            overlap_width_ratio=0.3,
-        )
-        for obj in resultado.object_prediction_list:
-            x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
-            classe_detectada = obj.category.name
-            confianca = obj.score.value
-            cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))
-            cv2.rectangle(imagem, (x1, y1), (x2, y2), cor_deteccao, 2)
-            draw_label(imagem, f"{classe_detectada}: {confianca:.2f}", x1, y1, cor_deteccao)
+        resultado = modelo_yolo.predict(imagem, imgsz=416, device=dispositivo, half=True, conf=confidence)[0]
+
+        for caixa in resultado.boxes:
+            x1, y1, x2, y2 = map(int, caixa.xyxy[0])
+            classe = resultado.names[int(caixa.cls[0])]
+            conf = float(caixa.conf[0])
+            cor = cores_classes.get(classe, (255, 255, 255))
+            cv2.rectangle(imagem, (x1, y1), (x2, y2), cor, 2)
+            draw_label(imagem, f"{classe}: {conf:.2f}", x1, y1, cor)
+
         os.makedirs(img_statica, exist_ok=True)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
         nome_arquivo = f"detectado_{timestamp}.jpg"
@@ -191,12 +194,7 @@ async def inferencia_imagem(file: UploadFile = File(...)):
 @app.post("/api/predict_video")
 async def inferencia_video(file: UploadFile = File(...)):
     dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-    modelo_yolo = AutoDetectionModel.from_pretrained(
-        model_type="ultralytics",
-        model_path=model_path_pt,
-        confidence_threshold=confidence,
-        device=dispositivo
-    )
+    modelo_yolo = YOLO(model_path)
 
     os.makedirs(video_treinado_path, exist_ok=True)
 
@@ -233,21 +231,17 @@ async def inferencia_video(file: UploadFile = File(...)):
         if not ret:
             break
 
-        resultado = get_sliced_prediction(
-            image=frame, detection_model=modelo_yolo,
-            slice_height=640,
-            slice_width=640,
-            overlap_height_ratio=0.3,  # Valor recomendado entre 0.2 e 0.4
-            overlap_width_ratio=0.3,
-        )
+        resultado = modelo_yolo.predict(frame, imgsz=416, device=dispositivo, half=True, conf=confidence)[0]
 
-        for obj in resultado.object_prediction_list:
-            x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
-            classe_detectada = obj.category.name
-            confianca = obj.score.value
-            cor_deteccao = cores_classes.get(classe_detectada, (255, 255, 255))
-            cv2.rectangle(frame, (x1, y1), (x2, y2), cor_deteccao, 2)
-            draw_label(frame, f"{classe_detectada}: {confianca:.2f}", x1, y1, cor_deteccao)
+
+        for caixa in resultado.boxes:
+            x1, y1, x2, y2 = map(int, caixa.xyxy[0])
+            classe = resultado.names[int(caixa.cls[0])]
+            conf = float(caixa.conf[0])
+            cor = cores_classes.get(classe, (255, 255, 255))
+            cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
+            draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
+
 
         out.write(frame)
 
@@ -325,70 +319,6 @@ async def conexao_websocket(websocket: WebSocket):
         print(f"Erro no WebSocket: {e}")
     finally:
         await websocket.close()
-
-@app.websocket("/api/ws_sahi")
-async def conexao_websocket_sahi(websocket: WebSocket):
-    await websocket.accept()
-
-    dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-    modelo_yolo = AutoDetectionModel.from_pretrained(
-        model_type="ultralytics",
-        model_path=model_path,
-        confidence_threshold=confidence,
-        device=dispositivo
-    )
-
-    ultimo_envio = 0
-
-    try:
-        while True:
-            mensagem = await websocket.receive_text()
-            dados = json.loads(mensagem)
-
-            # agora = time.time()
-            # if agora - ultimo_envio < 1.0:
-            #     continue
-
-            frame_base64 = base64.b64decode(dados["frame"])
-            array_bytes = np.frombuffer(frame_base64, np.uint8)
-            frame = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
-
-            resultado = get_sliced_prediction(
-                image=frame,
-                detection_model=modelo_yolo,
-                # slice_height=640,
-                # slice_width=640,
-                overlap_height_ratio=0.3,
-                overlap_width_ratio=0.3,
-            )
-
-            for obj in resultado.object_prediction_list:
-                x1, y1, x2, y2 = map(int, obj.bbox.to_xyxy())
-                classe = obj.category.name
-                conf = obj.score.value
-                cor = cores_classes.get(classe, (255, 255, 255))
-                cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
-                draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
-
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
-            os.makedirs(img_real_time, exist_ok=True)
-            nome_arquivo = f"{timestamp}.jpg"
-            caminho = os.path.join(img_real_time, nome_arquivo)
-            cv2.imwrite(caminho, frame)
-
-            _, buffer = cv2.imencode(".jpg", frame)
-            frame_saida = base64.b64encode(buffer).decode("utf-8")
-
-            await websocket.send_text(json.dumps({"frame": frame_saida}))
-            # ultimo_envio = agora
-
-    except WebSocketDisconnect:
-        print("Cliente WebSocket desconectado.")
-    except Exception as e:
-        print(f"Erro no WebSocket: {e}")
-    finally:
-        await websocket.close()
-
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ export default function Options() {
         <p className="mx-auto mt-2 max-w-lg text-balance text-center text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
           Escolha qual modelo usar
         </p>
-        <div className="mt-10 flex flex-col sm:grid gap-5 sm:mt-16 sm:grid-cols-4 sm:grid-rows-2">
+        <div className="mt-10 flex flex-col sm:grid gap-5 sm:mt-16 sm:grid-cols-3 sm:grid-rows-2">
           <div className="relative lg:row-span-2">
             <div className="absolute inset-px rounded-lg bg-white lg:rounded-l-[2rem]"></div>
             <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] lg:rounded-l-[calc(2rem+1px)]">
@@ -37,13 +37,13 @@ export default function Options() {
               >
                 Acessar
               </button>
-              <div className="flex flex-1 items-center justify-center px-8 max-lg:pb-12 max-lg:pt-10 sm:px-10 lg:pb-2">
-                <img className=" object-cover object-top" src={webcam} alt="" />
+              <div className="flex flex-1 items-center justify-center px-14 ">
+                <img className=" object-cover object-top " src={webcam} alt="" />
               </div>
             </div>
             <div className="pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 lg:rounded-l-[2rem]"></div>
           </div>
-          <div className="relative max-lg:row-start-1 row-span-2">
+          {/* <div className="relative max-lg:row-start-1 row-span-2">
             <div className="absolute inset-px rounded-lg bg-white max-lg:rounded-t-[2rem]"></div>
             <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)]">
               <div className="px-8 pt-8 sm:px-10 sm:pt-10">
@@ -69,7 +69,7 @@ export default function Options() {
               </div>
             </div>
             <div className="pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 max-lg:rounded-t-[2rem]"></div>
-          </div>
+          </div> */}
           <div className="relative max-lg:row-start-1 row-span-2">
             <div className="absolute inset-px rounded-lg bg-white max-lg:rounded-t-[2rem]"></div>
             <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)]">
