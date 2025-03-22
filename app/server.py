@@ -274,6 +274,47 @@ async def inferencia_video(file: UploadFile = File(...)):
     video_url = f"/videos/{os.path.basename(caminho_video_processado)}"
     return JSONResponse(content={"video_url": video_url, "path": caminho_video_processado})
 
+
+@app.get("/api/rtsp-stream")
+def rtsp_inferencia():
+    modelo_yolo = YOLO(model_path)
+    dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Substitua abaixo pelo link RTSP real da câmera Intelbras
+    rtsp_url = "rtsp://usuario:senha@ip_da_camera:porta/caminho"
+
+    cap = cv2.VideoCapture(rtsp_url)
+    if not cap.isOpened():
+        raise HTTPException(status_code=400, detail="Não foi possível conectar à câmera")
+
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            resultados = modelo_yolo.predict(frame, imgsz=416, device=dispositivo, half=True, conf=confidence)[0]
+
+            for caixa in resultados.boxes:
+                x1, y1, x2, y2 = map(int, caixa.xyxy[0])
+                classe = modelo_yolo.names[int(caixa.cls[0])]
+                conf = float(caixa.conf[0])
+                cor = cores_classes.get(classe, (255, 255, 255))
+                cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
+                draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
+
+            # Aqui você pode salvar o frame, enviar por WebSocket, ou só exibir/salvar localmente
+            cv2.imshow("Detecção em tempo real - RTSP", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+
+        cap.release()
+        cv2.destroyAllWindows()
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.websocket("/api/ws")
 async def conexao_websocket(websocket: WebSocket):
     await websocket.accept()

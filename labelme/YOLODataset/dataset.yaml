@@ -1,7 +1,0 @@
-path: \\?\C:\GitHub\TCC_IA\labelme\YOLODataset
-train: images/train
-val: images/val
-test:
-
-names:
-    0: celular
