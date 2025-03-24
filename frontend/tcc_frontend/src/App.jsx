@@ -28,7 +28,7 @@ export default function App() {
       <Route path="/about" element={<About />}/>
       <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} />} />
       <Route path="/monitoring" element={<ProtectedRoute element={<Monitoring />} />} />
-      <Route path="/monitoring/:cam" element={<ProtectedRoute element={<MonitoringCam />} />} />
+      <Route path="/monitoring/:id" element={<ProtectedRoute element={<MonitoringCam />} />} />
 
       {/* Rota inválida */}
       <Route path="*" element={<NotFound />} />

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 export const Monitoring = () => {
   const [cameras, setCameras] = useState([]);
   const [name, setName] = useState('');
   const [ip, setIp] = useState('');
   const [editingId, setEditingId] = useState(null);
-
+  const navigate = useNavigate();
   // 🔄 Buscar lista de câmeras do backend
   const fetchCameras = async () => {
     try {
@@ -38,6 +39,11 @@ export const Monitoring = () => {
       console.error('Erro ao salvar câmera:', error);
     }
   };
+  
+  const handleView = (id) => {
+    navigate(`/monitoring/${id}`);
+  };
+  
 
   const handleEdit = (camera) => {
     setName(camera.name);
@@ -107,6 +113,13 @@ export const Monitoring = () => {
                 >
                   Remover
                 </button>
+                <button
+                className="text-green-600"
+                onClick={() => handleView(cam.ip)}
+                >
+                Visualizar
+                </button>
+
               </div>
             </div>
           ))
