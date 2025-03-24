@@ -10,6 +10,8 @@ import { Gallery } from "./pages/Gallery/Gallery";
 import Login from "./pages/Login/Login";
 import ProtectedRoute from "./components/Protected";
 import CamSahi from "./pages/CamSahi/CamSahi";
+import { Monitoring } from "./pages/Monitoring/Monitoring";
+import { MonitoringCam } from "./pages/Monitoring/MonitoringCam";
 export default function App() {
   return (
     <Routes>
@@ -25,6 +27,8 @@ export default function App() {
       <Route path="/camsahi" element={<ProtectedRoute element={<CamSahi />} />} />
       <Route path="/about" element={<About />}/>
       <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} />} />
+      <Route path="/monitoring" element={<ProtectedRoute element={<Monitoring />} />} />
+      <Route path="/monitoring/:cam" element={<ProtectedRoute element={<MonitoringCam />} />} />
 
       {/* Rota inválida */}
       <Route path="*" element={<NotFound />} />

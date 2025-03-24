@@ -14,9 +14,9 @@ export default function Options() {
           YOLOV12
         </h2>
         <p className="mx-auto mt-2 max-w-lg text-balance text-center text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
-          Escolha qual modelo usar
+          Escolha qual modo usar
         </p>
-        <div className="mt-10 flex flex-col sm:grid gap-5 sm:mt-16 sm:grid-cols-3 sm:grid-rows-2">
+        <div className="mt-10 flex flex-col sm:grid gap-5 sm:mt-16 sm:grid-cols-4 sm:grid-rows-2">
           <div className="relative lg:row-span-2">
             <div className="absolute inset-px rounded-lg bg-white lg:rounded-l-[2rem]"></div>
             <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] lg:rounded-l-[calc(2rem+1px)]">
@@ -43,23 +43,22 @@ export default function Options() {
             </div>
             <div className="pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 lg:rounded-l-[2rem]"></div>
           </div>
-          {/* <div className="relative max-lg:row-start-1 row-span-2">
+          <div className="relative max-lg:row-start-1 row-span-2">
             <div className="absolute inset-px rounded-lg bg-white max-lg:rounded-t-[2rem]"></div>
             <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)]">
               <div className="px-8 pt-8 sm:px-10 sm:pt-10">
                 <p className="mt-2 text-lg font-medium tracking-tight text-gray-950 max-lg:text-center">
-                  Web Cam com SAHI
+                  Monitoramento
                 </p>
                 <p className="mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center">
-                Utilize sua webcam para acessar e fazer o teste ao vivo, bem mais lento que a em tempo real, mas
-                mais precisa
+                  Vizualize, Adicione, Modifique ou Remova Câmeras de Monitoramento
                 </p>
               </div>
               <button
                 type="button"
                 className="mt-5 px-20 py-5 sm:w-1/2 self-center cursor-pointer rounded-md bg-indigo-500 sm:px-3 sm:py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
                 onClick={() => {
-                  navigate("/camsahi");
+                  navigate("/monitoring");
                 }}
               >
                 Acessar
@@ -69,7 +68,7 @@ export default function Options() {
               </div>
             </div>
             <div className="pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 max-lg:rounded-t-[2rem]"></div>
-          </div> */}
+          </div>
           <div className="relative max-lg:row-start-1 row-span-2">
             <div className="absolute inset-px rounded-lg bg-white max-lg:rounded-t-[2rem]"></div>
             <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)]">

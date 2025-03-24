@@ -1,3 +1,7 @@
+import mysql.connector
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from fastapi import FastAPI, File, UploadFile, WebSocket, HTTPException, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +23,7 @@ from dotenv import load_dotenv
 import requests
 import imageio_ffmpeg
 import subprocess
+from dotenv import load_dotenv
 
 load_dotenv()
 # Determinar se está rodando localmente
@@ -62,6 +67,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+
 app.mount("/api/videos", StaticFiles(directory=video_treinado_path), name="videos")
 
 cores_classes = {
@@ -82,10 +90,86 @@ class DeleteFileRequest(BaseModel):
     folder: str
     filename: str
 
-
 class DeleteRequest(BaseModel):
     folder: str
     filenames: list[str]
+
+class Camera(BaseModel):
+    name: str
+    ip: str
+
+class CameraOut(Camera):
+    id: int
+
+
+def get_connection():
+    import os
+    host = os.getenv("DB_HOST")
+    user = os.getenv("DB_USER")
+    password = os.getenv("DB_PASSWORD")
+    database = os.getenv("DB_NAME")
+
+    # print("🔎 DEBUG VARIÁVEIS DE AMBIENTE:")
+    # print("HOST:", host)
+    # print("USER:", user)
+    # print("PASSWORD:", f"(vazio)" if password == "" else password)
+    # print("DATABASE:", database)
+
+    if not all([host, user, password is not None, database]):
+        raise Exception("❌ Variáveis de ambiente do banco não configuradas corretamente")
+
+    import mysql.connector
+    return mysql.connector.connect(
+        host=host,
+        user=user,
+        password=password,
+        database=database
+    )
+
+
+
+@app.get("/api/cameras", response_model=list[CameraOut])
+def list_cameras():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, ip FROM cameras")
+    rows = cursor.fetchall()
+    conn.close()
+    return [{"id": row[0], "name": row[1], "ip": row[2]} for row in rows]
+
+@app.post("/api/cameras", response_model=CameraOut)
+def add_camera(camera: Camera):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO cameras (name, ip) VALUES (%s, %s)", (camera.name, camera.ip))
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return {"id": new_id, **camera.dict()}
+
+@app.put("/api/cameras/{camera_id}", response_model=CameraOut)
+def update_camera(camera_id: int, camera: Camera):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE cameras SET name = %s, ip = %s WHERE id = %s", (camera.name, camera.ip, camera_id))
+    if cursor.rowcount == 0:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Câmera não encontrada")
+    conn.commit()
+    conn.close()
+    return {"id": camera_id, **camera.dict()}
+
+@app.delete("/api/cameras/{camera_id}")
+def delete_camera(camera_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM cameras WHERE id = %s", (camera_id,))
+    if cursor.rowcount == 0:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Câmera não encontrada")
+    conn.commit()
+    conn.close()
+    return {"message": "Câmera removida com sucesso"}
 
 @app.delete("/api/delete-batch")
 async def delete_batch(request: DeleteRequest):
