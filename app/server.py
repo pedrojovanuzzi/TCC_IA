@@ -171,6 +171,50 @@ def delete_camera(camera_id: int):
     conn.close()
     return {"message": "Câmera removida com sucesso"}
 
+
+@app.websocket("/api/ws/{ip}")
+async def conexao_websocket_camera(websocket: WebSocket, ip: str):
+    await websocket.accept()
+    modelo_yolo = YOLO(model_path)
+    dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
+    ip_decodificado = ip.replace("_", ".")
+
+    rtsp_url = f"rtsp://{ip_decodificado}"
+    cap = cv2.VideoCapture(rtsp_url)
+
+    if not cap.isOpened():
+        await websocket.send_text(json.dumps({"erro": "Não foi possível conectar à câmera."}))
+        await websocket.close()
+        return
+
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            resultados = modelo_yolo.predict(frame, imgsz=416, device=dispositivo, half=True)[0]
+
+            for caixa in resultados.boxes:
+                x1, y1, x2, y2 = map(int, caixa.xyxy[0])
+                classe = modelo_yolo.names[int(caixa.cls[0])]
+                conf = float(caixa.conf[0])
+                cor = cores_classes.get(classe, (255, 255, 255))
+                cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
+                draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
+
+            _, buffer = cv2.imencode(".jpg", frame)
+            frame_saida = base64.b64encode(buffer).decode("utf-8")
+            await websocket.send_text(json.dumps({"frame": frame_saida}))
+
+    except Exception as e:
+        print(f"Erro na conexão com câmera {ip_decodificado}: {e}")
+    finally:
+        cap.release()
+        await websocket.close()
+
+
+
 @app.delete("/api/delete-batch")
 async def delete_batch(request: DeleteRequest):
     if not request.folder or not request.filenames:
