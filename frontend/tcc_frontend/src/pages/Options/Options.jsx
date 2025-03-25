@@ -25,7 +25,7 @@ export default function Options() {
                   Web Cam em tempo real
                 </p>
                 <p className="mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center">
-                  Utilize sua webcam para acessar e fazer o teste ao vivo
+                  Utilize sua webcam para acessar e fazer a inferência ao vivo
                 </p>
               </div>
               <button
@@ -78,7 +78,7 @@ export default function Options() {
                   Fotos
                 </p>
                 <p className="mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center">
-                  coloque uma foto e deixe o aplicativo rastrear os objetos para
+                  Coloque uma foto e deixe o aplicativo rastrear os objetos para
                   você
                 </p>
               </div>
