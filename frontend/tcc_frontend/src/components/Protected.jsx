@@ -2,12 +2,13 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const ProtectedRoute = ({ element, minPermission = 2 }) => {
-  const { isAuthenticated, permissionLevel } = useAuth();
+const ProtectedRoute = ({ element, minPermission = 1 }) => {
+  const { isAuthenticated, nivel } = useAuth();
 
-  const hasPermission = isAuthenticated && permissionLevel >= minPermission;
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (nivel < minPermission) return <Navigate to="/acesso-negado" />;
 
-  return hasPermission ? element : <Navigate to="/login" />;
+  return element;
 };
 
 export default ProtectedRoute;

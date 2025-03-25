@@ -13,6 +13,7 @@ import CamSahi from "./pages/CamSahi/CamSahi";
 import { Monitoring } from "./pages/Monitoring/Monitoring";
 import { MonitoringCam } from "./pages/Monitoring/MonitoringCam";
 import { Users } from "./pages/Users/Users";
+import AcessoNegado from "./pages/AcessoNegado/AcessoNegado";
 export default function App() {
   return (
     <Routes>
@@ -21,6 +22,7 @@ export default function App() {
 
       {/* Rotas Protegidas */}
       <Route path="/" element={<Home/>}/>
+      <Route path="/acesso-negado" element={<AcessoNegado/>}/>
       <Route path="/options" element={<ProtectedRoute element={<Options />} />} />
       <Route path="/video" element={<ProtectedRoute element={<Video />} />} />
       <Route path="/foto" element={<ProtectedRoute element={<Photo />} />} />
