@@ -37,6 +37,9 @@ export const Header = () => {
                 <a href="/gallery" className="font-medium text-gray-900 hover:text-gray-900">
                   Galeria
                 </a>
+                <a href="/users" className="font-medium text-gray-900 hover:text-gray-900">
+                  Usuarios
+                </a>
                 <Logout />
               </>
             )}

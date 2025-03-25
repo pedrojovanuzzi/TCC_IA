@@ -191,6 +191,41 @@ def login(data: dict = Body(...)):
     else:
         return JSONResponse(content={"success": False, "message": "Login ou senha inválidos"}, status_code=401)
 
+@app.get("/api/users")
+def listar_usuarios():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, login FROM users where login != 'admin'")
+    users = [{"id": row[0], "login": row[1]} for row in cursor.fetchall()]
+    conn.close()
+    return users
+
+@app.post("/api/users")
+def criar_usuario(user: dict = Body(...)):
+    import hashlib
+    login = user.get("login")
+    password = user.get("password")
+
+    if not login or not password:
+        raise HTTPException(status_code=400, detail="Login e senha obrigatórios.")
+
+    senha_hash = hashlib.sha256(password.encode()).hexdigest()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO users (login, password) VALUES (%s, %s)", (login, senha_hash))
+    conn.commit()
+    conn.close()
+    return {"success": True}
+
+@app.delete("/api/users/{user_id}")
+def deletar_usuario(user_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+    conn.commit()
+    conn.close()
+    return {"success": True}
+
 
 
 @app.get("/api/cameras", response_model=list[CameraOut])

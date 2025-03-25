@@ -12,6 +12,7 @@ import ProtectedRoute from "./components/Protected";
 import CamSahi from "./pages/CamSahi/CamSahi";
 import { Monitoring } from "./pages/Monitoring/Monitoring";
 import { MonitoringCam } from "./pages/Monitoring/MonitoringCam";
+import { Users } from "./pages/Users/Users";
 export default function App() {
   return (
     <Routes>
@@ -27,6 +28,7 @@ export default function App() {
       <Route path="/camsahi" element={<ProtectedRoute element={<CamSahi />} />} />
       <Route path="/about" element={<About />}/>
       <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} />} />
+      <Route path="/users" element={<ProtectedRoute element={<Users />} />} />
       <Route path="/monitoring" element={<ProtectedRoute element={<Monitoring />} />} />
       <Route path="/monitoring/:id" element={<ProtectedRoute element={<MonitoringCam />} />} />
 
