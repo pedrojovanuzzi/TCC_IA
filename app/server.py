@@ -79,7 +79,7 @@ async def lifespan(app: FastAPI):
             senha = os.getenv("ADMIN_PASSWORD")
             senha_hash = hashlib.sha256(senha.encode()).hexdigest()
 
-            cursor.execute("INSERT INTO users (login, password) VALUES (%s, %s)", ("admin", senha_hash))
+            cursor.execute("INSERT INTO users (login, password, nivel) VALUES (%s, %s, 3)", ("admin", senha_hash))
             conn.commit()
             print("✅ Usuário admin criado com sucesso.")
         else:
@@ -169,27 +169,32 @@ from fastapi import Body
 @app.post("/api/login")
 def login(data: dict = Body(...)):
     import hashlib
-    username = data.get("username")
+    login = data.get("username")
     password = data.get("password")
 
-    if not username or not password:
-        raise HTTPException(status_code=400, detail="Usuário e senha são obrigatórios")
+    if not login or not password:
+        raise HTTPException(status_code=400, detail="Login e senha obrigatórios")
 
     senha_hash = hashlib.sha256(password.encode()).hexdigest()
     
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT COUNT(*) FROM users WHERE login = %s AND password = %s",
-        (username, senha_hash),
+        "SELECT id, nivel FROM users WHERE login = %s AND password = %s",
+        (login, senha_hash),
     )
-    result = cursor.fetchone()[0]
+    row = cursor.fetchone()
     conn.close()
 
-    if result > 0:
-        return {"success": True}
+    if row:
+        return {
+            "success": True,
+            "user_id": row[0],
+            "nivel": row[1]
+        }
     else:
         return JSONResponse(content={"success": False, "message": "Login ou senha inválidos"}, status_code=401)
+
 
 @app.get("/api/users")
 def listar_usuarios():
@@ -222,6 +227,34 @@ def deletar_usuario(user_id: int):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+    conn.commit()
+    conn.close()
+    return {"success": True}
+
+@app.put("/api/users/{user_id}")
+def atualizar_usuario(user_id: int, user: dict = Body(...)):
+    conn = get_connection()
+    cursor = conn.cursor()
+    updates = []
+    values = []
+
+    if "login" in user:
+        updates.append("login = %s")
+        values.append(user["login"])
+    if "password" in user:
+        senha_hash = hashlib.sha256(user["password"].encode()).hexdigest()
+        updates.append("password = %s")
+        values.append(senha_hash)
+    if "nivel" in user:
+        updates.append("nivel = %s")
+        values.append(user["nivel"])
+
+    if not updates:
+        raise HTTPException(status_code=400, detail="Nada para atualizar.")
+
+    query = f"UPDATE users SET {', '.join(updates)} WHERE id = %s"
+    values.append(user_id)
+    cursor.execute(query, tuple(values))
     conn.commit()
     conn.close()
     return {"success": True}

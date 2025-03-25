@@ -1,10 +1,10 @@
 import React from "react";
 import img2 from "../assets/imgs/hero2.png";
 import Logout from "./Logout";
-import { useAuth } from "../context/AuthContext"; // 👈 importa o hook
+import { useAuth } from "../context/AuthContext";
 
 export const Header = () => {
-  const { isAuthenticated } = useAuth(); // 👈 pega info de login
+  const { isAuthenticated, nivel } = useAuth();
 
   return (
     <div>
@@ -30,18 +30,18 @@ export const Header = () => {
             <a href="/about" className="font-medium text-gray-900 hover:text-gray-900">
               Sobre-nós
             </a>
-
-            {/* ✅ Condicional: só mostra se estiver logado */}
             {isAuthenticated && (
               <>
-                <a href="/gallery" className="font-medium text-gray-900 hover:text-gray-900">
-                  Galeria
-                </a>
-                <a href="/users" className="font-medium text-gray-900 hover:text-gray-900">
-                  Usuarios
-                </a>
                 <Logout />
               </>
+            )}
+            {isAuthenticated && nivel > 2 && (
+            <><a href="/gallery" className="text-sm font-semibold text-indigo-700 underline">
+                Galeria
+              </a><a href="/users" className="font-medium text-gray-900 hover:text-gray-900">
+                Usuarios
+              </a>
+            </>
             )}
           </div>
         </nav>
