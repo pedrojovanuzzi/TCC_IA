@@ -24,6 +24,9 @@ import requests
 import imageio_ffmpeg
 import subprocess
 from dotenv import load_dotenv
+import hashlib
+from contextlib import asynccontextmanager
+
 
 load_dotenv()
 # Determinar se está rodando localmente
@@ -59,7 +62,38 @@ IMAGES_DIR = os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "image
 # Print para verificar qual modelo foi carregado
 print(f"✅ Usando modelo: {model_path}")
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Cria usuário admin ao iniciar
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT COUNT(*) FROM users WHERE login = %s", ("admin",))
+        existe = cursor.fetchone()[0]
+
+        if existe == 0:
+            import hashlib
+            senha = "50687"
+            senha_hash = hashlib.sha256(senha.encode()).hexdigest()
+
+            cursor.execute("INSERT INTO users (login, password) VALUES (%s, %s)", ("admin", senha_hash))
+            conn.commit()
+            print("✅ Usuário admin criado com sucesso.")
+        else:
+            print("🔒 Usuário admin já existe. Nenhuma ação necessária.")
+
+        conn.close()
+    except Exception as e:
+        print(f"❌ Erro ao criar usuário admin: {e}")
+
+    yield  # Aqui libera para o app continuar rodando
+
+
+
+
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -100,6 +134,8 @@ class Camera(BaseModel):
 
 class CameraOut(Camera):
     id: int
+
+
 
 
 def get_connection():
