@@ -8,7 +8,7 @@ const LogoutButton = () => {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/");
   };
 
   return <button className="font-medium text-gray-900 hover:text-gray-900 cursor-pointer" onClick={handleLogout}>Sair</button>;
