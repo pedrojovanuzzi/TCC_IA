@@ -292,11 +292,20 @@ def list_folders():
         for folder in ["video_treinado", "img_statica", "img_real_time"]:
             folder_path = os.path.join(IMAGES_DIR, folder)
             if os.path.exists(folder_path) and os.path.isdir(folder_path):
-                files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
+                files = []
+                for f in os.listdir(folder_path):
+                    path = os.path.join(folder_path, f)
+                    if os.path.isfile(path):
+                        mtime = os.path.getmtime(path)
+                        files.append({
+                            "name": f,
+                            "date": datetime.fromtimestamp(mtime).strftime("%d/%m/%Y %H:%M")
+                        })
                 folders.append({"name": folder, "files": files})
         return JSONResponse(content={"folders": folders})
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
 
 
 # Função para desenhar rótulos com fundo colorido
