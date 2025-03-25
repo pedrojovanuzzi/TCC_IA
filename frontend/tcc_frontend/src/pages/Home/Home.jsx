@@ -1,12 +1,21 @@
 import img from "../../assets/imgs/hero1.webp";
 import { Header } from "../../components/Header";
 import { Footer } from "../../components/Footer";
+import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function Home() {
+  const { isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <div className="bg-white">
-    <Header/>
+      <Header />
       <div className="relative isolate overflow-hidden bg-gradient-to-b from-indigo-100/20 pt-14">
         <div
           aria-hidden="true"
@@ -21,7 +30,7 @@ export default function Home() {
               <p className="text-pretty text-lg font-medium text-gray-500 sm:text-xl/8">
                 Utilize de nosso modelo treinado para verificar se seus colaboradores estão utilizando o EPI com a câmera
               </p>
-              <div className="mt-10 flex items-center gap-x-6">
+              <div className="mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-x-6 gap-y-4">
                 <a
                   href="/options"
                   className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
@@ -31,6 +40,23 @@ export default function Home() {
                 <a href="/about" className="text-sm/6 font-semibold text-gray-900">
                   Ler Mais <span aria-hidden="true">→</span>
                 </a>
+
+                {isAuthenticated && (
+                  <>
+                    <a
+                      href="/gallery"
+                      className="text-sm/6 font-semibold text-indigo-700 underline"
+                    >
+                      Galeria
+                    </a>
+                    <button
+                      onClick={handleLogout}
+                      className="text-sm/6 font-semibold text-red-600 hover:underline"
+                    >
+                      Sair
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             <img
@@ -42,7 +68,7 @@ export default function Home() {
         </div>
         <div className="absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-t from-white sm:h-32" />
       </div>
-    <Footer/>
+      <Footer />
     </div>
-  )
+  );
 }
