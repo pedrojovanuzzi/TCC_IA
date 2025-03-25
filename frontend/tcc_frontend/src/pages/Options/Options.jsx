@@ -37,8 +37,8 @@ export default function Options() {
               >
                 Acessar
               </button>
-              <div className="flex flex-1 items-center justify-center px-14 ">
-                <img className=" object-cover object-top " src={webcam} alt="" />
+              <div className="flex flex-1 items-center justify-center px-8 max-lg:pb-12 max-lg:pt-10 mt-4 sm:px-10 lg:pb-2">
+                <img className="w-full max-lg:max-w-xs" src={webcam} alt="" />
               </div>
             </div>
             <div className="pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 lg:rounded-l-[2rem]"></div>
@@ -63,7 +63,7 @@ export default function Options() {
               >
                 Acessar
               </button>
-              <div className="flex flex-1 items-center justify-center px-8 max-lg:pb-12 max-lg:pt-10 sm:px-10 lg:pb-2">
+              <div className="flex flex-1 items-center justify-center px-8 max-lg:pb-12 max-lg:pt-10 mt-4 sm:px-10 lg:pb-2">
                 <img className="w-full max-lg:max-w-xs" src={precision} alt="" />
               </div>
             </div>
@@ -90,7 +90,7 @@ export default function Options() {
               >
                 Acessar
               </button>
-              <div className="flex flex-1 items-center justify-center px-8 max-lg:pb-12 max-lg:pt-10 sm:px-10 lg:pb-2">
+              <div className="flex flex-1 items-center justify-center px-8 max-lg:pb-12 max-lg:pt-10 mt-4 sm:px-10 lg:pb-2">
                 <img className="w-full max-lg:max-w-xs" src={galeria} alt="" />
               </div>
             </div>
@@ -117,7 +117,7 @@ export default function Options() {
               >
                 Acessar
               </button>
-              <div className="flex flex-1 items-center justify-center px-8 max-lg:pb-12 max-lg:pt-10 sm:px-10 lg:pb-2">
+              <div className="flex flex-1 items-center justify-center px-8 max-lg:pb-12 max-lg:pt-10 mt-4 sm:px-10 lg:pb-2">
                 <img className="w-full max-lg:max-w-xs" src={video} alt="" />
               </div>
             </div>
