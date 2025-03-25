@@ -4,7 +4,8 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [nivel, setNivel] = useState(null); // Agora o nível padrão é null
+  const [nivel, setNivel] = useState(null);
+  const [isLoading, setIsLoading] = useState(true); // 👈 novo
 
   useEffect(() => {
     const auth = localStorage.getItem("isAuthenticated") === "true";
@@ -12,6 +13,7 @@ export const AuthProvider = ({ children }) => {
 
     setIsAuthenticated(auth);
     setNivel(auth && nivelSalvo ? parseInt(nivelSalvo) : null);
+    setIsLoading(false); // 👈 terminou de carregar
   }, []);
 
   const login = async (username, password) => {
@@ -47,7 +49,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, nivel, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, nivel, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
