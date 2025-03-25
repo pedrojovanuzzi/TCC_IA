@@ -16,7 +16,7 @@ export default function Options() {
         <p className="mx-auto mt-2 max-w-lg text-balance text-center text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
           Escolha qual modo usar
         </p>
-        <div className="mt-10 flex flex-col sm:grid gap-5 sm:mt-16 sm:grid-cols-4 sm:grid-rows-2">
+        <div className="mt-10 flex flex-col sm:grid gap-2 sm:mt-10 sm:grid-cols-4 sm:grid-rows-2">
           <div className="relative lg:row-span-2">
             <div className="absolute inset-px rounded-lg bg-white lg:rounded-l-[2rem]"></div>
             <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] lg:rounded-l-[calc(2rem+1px)]">
@@ -43,6 +43,7 @@ export default function Options() {
             </div>
             <div className="pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 lg:rounded-l-[2rem]"></div>
           </div>
+          
           <div className="relative max-lg:row-start-1 row-span-2">
             <div className="absolute inset-px rounded-lg bg-white max-lg:rounded-t-[2rem]"></div>
             <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)]">
