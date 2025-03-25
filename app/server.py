@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI):
 
         if existe == 0:
             import hashlib
-            senha = "50687"
+            senha = os.getenv("ADMIN_PASSWORD")
             senha_hash = hashlib.sha256(senha.encode()).hexdigest()
 
             cursor.execute("INSERT INTO users (login, password) VALUES (%s, %s)", ("admin", senha_hash))
