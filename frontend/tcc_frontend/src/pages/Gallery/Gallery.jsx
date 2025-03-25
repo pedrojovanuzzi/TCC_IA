@@ -12,68 +12,45 @@ export const Gallery = () => {
   const backendIP = "localhost";
   const API_URL = `http://${backendIP}:3001`;
 
-
   useEffect(() => {
     fetch(`${API_URL}/api/gallery`)
-      .then(res => res.json())
-      .then(data => setFolders(data.folders))
+      .then(r => r.json())
+      .then(d => setFolders(d.folders || []))
       .catch(() => {});
   }, []);
 
   const handleFolderClick = folder => {
     setSelectedFolder(folder);
-    const foundFolder = folders.find(f => f.name === folder);
-    setFiles(foundFolder ? foundFolder.files : []);
+    const found = folders.find(f => f.name === folder);
+    setFiles(found ? found.files || [] : []);
   };
 
-  const handleFileClick = file => {
-    setSelectedFile(`/imagens/${selectedFolder}/${file}`);
+  const handleFileClick = fileName => {
+    setSelectedFile(`/imagens/${selectedFolder}/${fileName}`);
   };
 
-  const closeModal = () => {
-    setSelectedFile(null);
-  };
-
-  const confirmDelete = file => {
-    setFileToDelete(file);
-  };
-
-  const cancelDelete = () => {
-    setFileToDelete(null);
-  };
-
-  const confirmDeleteCategory = folderName => {
-    setFolderToDelete(folderName);
-  };
-
-  const cancelDeleteCategory = () => {
-    setFolderToDelete(null);
-  };
-
-  const confirmBatchDeleted = () => {
-    setConfirmBatchDelete(true);
-  };
-
-  const cancelBatchDelete = () => {
-    setConfirmBatchDelete(false);
-  };
+  const closeModal = () => setSelectedFile(null);
+  const confirmDelete = fileName => setFileToDelete(fileName);
+  const cancelDelete = () => setFileToDelete(null);
+  const confirmDeleteCategory = folderName => setFolderToDelete(folderName);
+  const cancelDeleteCategory = () => setFolderToDelete(null);
+  const confirmBatchDeleted = () => setConfirmBatchDelete(true);
+  const cancelBatchDelete = () => setConfirmBatchDelete(false);
 
   const handleBatchDelete = () => {
     if (!selectedFolder) return;
     fetch(`${API_URL}/api/delete-batch`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ folder: selectedFolder, filenames: files }),
+      body: JSON.stringify({ folder: selectedFolder, filenames: files.map(f => f.name) }),
     })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
           setFiles([]);
           setConfirmBatchDelete(false);
           window.location.reload();
-        } else {
-          alert("Erro ao excluir a pasta.");
-        }
+        } else alert("Erro ao excluir a pasta.");
       })
       .catch(() => alert("Erro ao excluir a pasta."));
   };
@@ -85,15 +62,13 @@ export const Gallery = () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ folder: selectedFolder, filename: fileToDelete }),
     })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setFiles(files.filter(f => f !== fileToDelete));
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          setFiles(files.filter(f => f.name !== fileToDelete));
           setFileToDelete(null);
           window.location.reload();
-        } else {
-          alert("Erro ao excluir o arquivo.");
-        }
+        } else alert("Erro ao excluir o arquivo.");
       })
       .catch(() => alert("Erro ao excluir o arquivo."));
   };
@@ -105,9 +80,9 @@ export const Gallery = () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ folder: folderToDelete }),
     })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
           setFolders(folders.filter(f => f.name !== folderToDelete));
           if (selectedFolder === folderToDelete) {
             setSelectedFolder(null);
@@ -115,9 +90,7 @@ export const Gallery = () => {
           }
           setFolderToDelete(null);
           window.location.reload();
-        } else {
-          alert("Erro ao excluir a categoria.");
-        }
+        } else alert("Erro ao excluir a categoria.");
       })
       .catch(() => alert("Erro ao excluir a categoria."));
   };
@@ -156,35 +129,32 @@ export const Gallery = () => {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {files.length > 0 ? (
                   files.map(file => (
-                    <div
-                      key={file}
-                      className="relative p-2 border rounded bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
-                    >
-                      {/\.(jpg|jpeg|png)$/i.test(file) ? (
+                    <div key={file.name} className="relative p-2 border rounded bg-gray-100 hover:bg-gray-200 transition cursor-pointer">
+                      {/\.(jpg|jpeg|png)$/i.test(file.name) ? (
                         <img
-                          src={`/imagens/${selectedFolder}/${file}`}
-                          alt={file}
+                          src={`/imagens/${selectedFolder}/${file.name}`}
+                          alt={file.name}
                           className="w-full h-[200px] md:h-[250px] object-cover rounded"
-                          onClick={() => handleFileClick(file)}
+                          onClick={() => handleFileClick(file.name)}
                         />
-                      ) : /\.(mp4|webm|mov)$/i.test(file) ? (
+                      ) : /\.(mp4|webm|mov)$/i.test(file.name) ? (
                         <video
-                          src={`/imagens/${selectedFolder}/${file}`}
+                          src={`/imagens/${selectedFolder}/${file.name}`}
                           className="w-full h-[200px] md:h-[250px] object-cover rounded"
-                          onClick={() => handleFileClick(file)}
+                          onClick={() => handleFileClick(file.name)}
                           onLoadedMetadata={e => (e.target.currentTime = 0)}
                           muted
                         />
                       ) : (
-                        <p className="text-center">{file}</p>
+                        <p className="text-center">{file.name}</p>
                       )}
                       <button
-                        onClick={() => confirmDelete(file)}
+                        onClick={() => confirmDelete(file.name)}
                         className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full text-sm hover:bg-red-600 transition"
                       >
                         <IoIosCloseCircle className="text-2xl" />
                       </button>
-                      <p className="text-center">{file}</p>
+                      <p className="text-center">{file.name}</p>
                     </div>
                   ))
                 ) : (
@@ -208,10 +178,7 @@ export const Gallery = () => {
           >
             <IoIosCloseCircle className="text-2xl" />
           </button>
-          <div
-            className="relative bg-white p-4 rounded-lg shadow-lg max-w-4xl max-h-[90vh] overflow-auto"
-            onClick={e => e.stopPropagation()}
-          >
+          <div className="relative bg-white p-4 rounded-lg shadow-lg max-w-4xl max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
             {/\.(jpg|jpeg|png)$/i.test(selectedFile) ? (
               <img src={selectedFile} alt="Visualização" className="max-w-full max-h-[80vh] rounded" />
             ) : (
