@@ -94,7 +94,7 @@ export const Monitoring = () => {
           cameras.map(cam => (
             <div
               key={cam.id}
-              className="flex items-center justify-between border p-2 rounded"
+              className="border p-5 rounded"
             >
               <div>
                 <p className="font-semibold">{cam.name}</p>
@@ -102,19 +102,19 @@ export const Monitoring = () => {
               </div>
               <div className="flex gap-2">
                 <button
-                  className="text-blue-500"
+                  className="text-blue-500 cursor-pointer p-3"
                   onClick={() => handleEdit(cam)}
                 >
                   Editar
                 </button>
                 <button
-                  className="text-red-500"
+                  className="text-red-500 cursor-pointer p-3"
                   onClick={() => handleDelete(cam.id)}
                 >
                   Remover
                 </button>
                 <button
-                className="text-green-600"
+                className="text-green-600 cursor-pointer p-3"
                 onClick={() => handleView(cam.id)}
                 >
                 Visualizar

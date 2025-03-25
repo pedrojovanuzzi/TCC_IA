@@ -189,7 +189,7 @@ def delete_camera(camera_id: int):
 async def conexao_websocket_camera(websocket: WebSocket, camera_id: int):
     await websocket.accept()
 
-    # Busca IP da câmera no banco:
+    # Buscar IP da câmera no banco
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT ip FROM cameras WHERE id = %s", (camera_id,))
@@ -201,8 +201,8 @@ async def conexao_websocket_camera(websocket: WebSocket, camera_id: int):
         await websocket.close()
         return
 
-    ip = row[0]  # IP direto do banco
-    rtsp_url = ip  # ou montar com usuário/senha se quiser
+    ip = row[0]
+    rtsp_url = ip
 
     cap = cv2.VideoCapture(rtsp_url)
     if not cap.isOpened():
@@ -212,6 +212,7 @@ async def conexao_websocket_camera(websocket: WebSocket, camera_id: int):
 
     dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
     modelo_yolo = YOLO(model_path)
+    ultimo_save = 0
 
     try:
         while True:
@@ -220,6 +221,7 @@ async def conexao_websocket_camera(websocket: WebSocket, camera_id: int):
                 break
 
             resultados = modelo_yolo.predict(frame, imgsz=416, device=dispositivo, half=True)[0]
+
             for caixa in resultados.boxes:
                 x1, y1, x2, y2 = map(int, caixa.xyxy[0])
                 classe = modelo_yolo.names[int(caixa.cls[0])]
@@ -227,6 +229,16 @@ async def conexao_websocket_camera(websocket: WebSocket, camera_id: int):
                 cor = cores_classes.get(classe, (255, 255, 255))
                 cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
                 draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
+
+            # 🧠 Salvar a cada 3 segundos
+            agora = time.time()
+            if agora - ultimo_save >= 3.0:
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+                os.makedirs(img_real_time, exist_ok=True)
+                nome_arquivo = f"cam{camera_id}_{timestamp}.jpg"
+                caminho = os.path.join(img_real_time, nome_arquivo)
+                cv2.imwrite(caminho, frame)
+                ultimo_save = agora
 
             _, buffer = cv2.imencode(".jpg", frame)
             frame_saida = base64.b64encode(buffer).decode("utf-8")
@@ -237,6 +249,7 @@ async def conexao_websocket_camera(websocket: WebSocket, camera_id: int):
     finally:
         cap.release()
         await websocket.close()
+
 
 
 
@@ -427,46 +440,6 @@ async def inferencia_video(file: UploadFile = File(...)):
     # Retorna o caminho correto do vídeo salvo
     video_url = f"/videos/{os.path.basename(caminho_video_processado)}"
     return JSONResponse(content={"video_url": video_url, "path": caminho_video_processado})
-
-
-@app.get("/api/rtsp-stream")
-def rtsp_inferencia():
-    modelo_yolo = YOLO(model_path)
-    dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-
-    # Substitua abaixo pelo link RTSP real da câmera Intelbras
-    rtsp_url = "rtsp://usuario:senha@ip_da_camera:porta/caminho"
-
-    cap = cv2.VideoCapture(rtsp_url)
-    if not cap.isOpened():
-        raise HTTPException(status_code=400, detail="Não foi possível conectar à câmera")
-
-    try:
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-
-            resultados = modelo_yolo.predict(frame, imgsz=416, device=dispositivo, half=True, conf=confidence)[0]
-
-            for caixa in resultados.boxes:
-                x1, y1, x2, y2 = map(int, caixa.xyxy[0])
-                classe = modelo_yolo.names[int(caixa.cls[0])]
-                conf = float(caixa.conf[0])
-                cor = cores_classes.get(classe, (255, 255, 255))
-                cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
-                draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
-
-            # Aqui você pode salvar o frame, enviar por WebSocket, ou só exibir/salvar localmente
-            cv2.imshow("Detecção em tempo real - RTSP", frame)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
-
-        cap.release()
-        cv2.destroyAllWindows()
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.websocket("/api/ws")
