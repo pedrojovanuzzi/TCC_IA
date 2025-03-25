@@ -115,7 +115,7 @@ export const Monitoring = () => {
                 </button>
                 <button
                 className="text-green-600"
-                onClick={() => handleView(cam.ip)}
+                onClick={() => handleView(cam.id)}
                 >
                 Visualizar
                 </button>

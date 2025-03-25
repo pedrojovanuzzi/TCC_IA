@@ -159,6 +159,19 @@ def update_camera(camera_id: int, camera: Camera):
     conn.close()
     return {"id": camera_id, **camera.dict()}
 
+@app.get("/api/cameras/{camera_id}", response_model=CameraOut)
+def get_camera_by_id(camera_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, ip FROM cameras WHERE id = %s", (camera_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"id": row[0], "name": row[1], "ip": row[2]}
+    else:
+        raise HTTPException(status_code=404, detail="Câmera não encontrada")
+
+
 @app.delete("/api/cameras/{camera_id}")
 def delete_camera(camera_id: int):
     conn = get_connection()
@@ -172,20 +185,33 @@ def delete_camera(camera_id: int):
     return {"message": "Câmera removida com sucesso"}
 
 
-@app.websocket("/api/ws/{ip}")
-async def conexao_websocket_camera(websocket: WebSocket, ip: str):
+@app.websocket("/api/ws/camera/{camera_id}")
+async def conexao_websocket_camera(websocket: WebSocket, camera_id: int):
     await websocket.accept()
-    modelo_yolo = YOLO(model_path)
-    dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-    ip_decodificado = ip.replace("_", ".")
 
-    rtsp_url = f"rtsp://{ip_decodificado}"
+    # Busca IP da câmera no banco:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT ip FROM cameras WHERE id = %s", (camera_id,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        await websocket.send_text(json.dumps({"erro": "Câmera não encontrada no banco."}))
+        await websocket.close()
+        return
+
+    ip = row[0]  # IP direto do banco
+    rtsp_url = ip  # ou montar com usuário/senha se quiser
+
     cap = cv2.VideoCapture(rtsp_url)
-
     if not cap.isOpened():
         await websocket.send_text(json.dumps({"erro": "Não foi possível conectar à câmera."}))
         await websocket.close()
         return
+
+    dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
+    modelo_yolo = YOLO(model_path)
 
     try:
         while True:
@@ -194,7 +220,6 @@ async def conexao_websocket_camera(websocket: WebSocket, ip: str):
                 break
 
             resultados = modelo_yolo.predict(frame, imgsz=416, device=dispositivo, half=True)[0]
-
             for caixa in resultados.boxes:
                 x1, y1, x2, y2 = map(int, caixa.xyxy[0])
                 classe = modelo_yolo.names[int(caixa.cls[0])]
@@ -208,10 +233,11 @@ async def conexao_websocket_camera(websocket: WebSocket, ip: str):
             await websocket.send_text(json.dumps({"frame": frame_saida}))
 
     except Exception as e:
-        print(f"Erro na conexão com câmera {ip_decodificado}: {e}")
+        print(f"Erro na câmera {camera_id}: {e}")
     finally:
         cap.release()
         await websocket.close()
+
 
 
 
