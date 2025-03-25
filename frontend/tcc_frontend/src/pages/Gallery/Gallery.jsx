@@ -184,6 +184,7 @@ export const Gallery = () => {
                       >
                         <IoIosCloseCircle className="text-2xl" />
                       </button>
+                      <p className="text-center">{file}</p>
                     </div>
                   ))
                 ) : (
