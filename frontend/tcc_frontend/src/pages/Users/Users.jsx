@@ -15,10 +15,13 @@ export const Users = () => {
 
   const adicionarOuAtualizarUsuario = async (e) => {
     e.preventDefault();
-    if (!login || !password) return alert("Preencha todos os campos");
-
-    const payload = { login, password, nivel: Number(nivel) };
-
+    if (!login) return alert("Preencha o login");
+  
+    const payload = {};
+    if (login) payload.login = login;
+    if (password) payload.password = password;
+    if (nivel) payload.nivel = Number(nivel);
+  
     if (editandoId) {
       const res = await fetch(`http://localhost:3001/api/users/${editandoId}`, {
         method: "PUT",
@@ -32,6 +35,7 @@ export const Users = () => {
         alert("Erro ao atualizar usuário");
       }
     } else {
+      if (!password) return alert("Senha é obrigatória ao criar um usuário");
       const res = await fetch("http://localhost:3001/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -45,6 +49,7 @@ export const Users = () => {
       }
     }
   };
+  
 
   const resetarForm = () => {
     setLogin("");
@@ -115,28 +120,33 @@ export const Users = () => {
       </form>
 
       <ul className="space-y-2">
-        {usuarios.map((user) => (
-          <li key={user.id} className="flex justify-between items-center border-b pb-2">
-            <span>
-              {user.login} — <span className="text-sm text-gray-500">Nível {user.nivel}</span>
-            </span>
-            <div className="space-x-2">
-              <button
-                onClick={() => editarUsuario(user)}
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Editar
-              </button>
-              <button
-                onClick={() => removerUsuario(user.id)}
-                className="text-sm text-red-600 hover:underline"
-              >
-                Remover
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+  {usuarios.map((user) => (
+    <li
+      key={user.id}
+      className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-2"
+    >
+      <div>
+        <span className="font-medium">{user.login}</span>{" "}
+        <span className="text-sm text-gray-500">— Nível {user.nivel}</span>
+      </div>
+      <div className="mt-2 sm:mt-0 space-x-2">
+        <button
+          onClick={() => editarUsuario(user)}
+          className="text-sm text-blue-600 hover:underline"
+        >
+          Editar
+        </button>
+        <button
+          onClick={() => removerUsuario(user.id)}
+          className="text-sm text-red-600 hover:underline"
+        >
+          Remover
+        </button>
+      </div>
+    </li>
+  ))}
+</ul>
+
     </div>
   );
 };

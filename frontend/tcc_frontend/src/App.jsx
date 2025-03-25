@@ -24,15 +24,15 @@ export default function App() {
       <Route path="/" element={<Home/>}/>
       <Route path="/acesso-negado" element={<AcessoNegado/>}/>
       <Route path="/options" element={<ProtectedRoute element={<Options />} />} />
-      <Route path="/video" element={<ProtectedRoute element={<Video />} />} />
-      <Route path="/foto" element={<ProtectedRoute element={<Photo />} />} />
+      <Route path="/video" element={<ProtectedRoute element={<Video />} minPermission={2}  />} />
+      <Route path="/foto" element={<ProtectedRoute element={<Photo />} minPermission={2}  />} />
       <Route path="/cam" element={<ProtectedRoute element={<Cam />} />} />
       <Route path="/camsahi" element={<ProtectedRoute element={<CamSahi />} />} />
       <Route path="/about" element={<About />}/>
       <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} minPermission={3} />} />
       <Route path="/users" element={<ProtectedRoute element={<Users />} minPermission={3}  />} />
-      <Route path="/monitoring" element={<ProtectedRoute element={<Monitoring />} />} />
-      <Route path="/monitoring/:id" element={<ProtectedRoute element={<MonitoringCam />} />} />
+      <Route path="/monitoring" element={<ProtectedRoute element={<Monitoring />} minPermission={2}  />} />
+      <Route path="/monitoring/:id" element={<ProtectedRoute element={<MonitoringCam />} minPermission={2}  />} />
 
       {/* Rota inválida */}
       <Route path="*" element={<NotFound />} />

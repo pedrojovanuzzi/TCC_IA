@@ -200,8 +200,8 @@ def login(data: dict = Body(...)):
 def listar_usuarios():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, login FROM users where login != 'admin'")
-    users = [{"id": row[0], "login": row[1]} for row in cursor.fetchall()]
+    cursor.execute("SELECT id, login, nivel FROM users WHERE login != 'admin'")
+    users = [{"id": row[0], "login": row[1], "nivel": row[2]} for row in cursor.fetchall()]
     conn.close()
     return users
 
@@ -232,33 +232,40 @@ def deletar_usuario(user_id: int):
     return {"success": True}
 
 @app.put("/api/users/{user_id}")
-def atualizar_usuario(user_id: int, user: dict = Body(...)):
+def atualizar_usuario(user_id: int, data: dict = Body(...)):
     conn = get_connection()
     cursor = conn.cursor()
+
+    login = data.get("login")
+    password = data.get("password")
+    nivel = data.get("nivel")
+
     updates = []
     values = []
 
-    if "login" in user:
+    if login:
         updates.append("login = %s")
-        values.append(user["login"])
-    if "password" in user:
-        senha_hash = hashlib.sha256(user["password"].encode()).hexdigest()
+        values.append(login)
+
+    if password:
+        import hashlib
+        senha_hash = hashlib.sha256(password.encode()).hexdigest()
         updates.append("password = %s")
         values.append(senha_hash)
-    if "nivel" in user:
+
+    if nivel is not None:
         updates.append("nivel = %s")
-        values.append(user["nivel"])
+        values.append(nivel)
 
     if not updates:
-        raise HTTPException(status_code=400, detail="Nada para atualizar.")
+        raise HTTPException(status_code=400, detail="Nenhum dado para atualizar.")
 
-    query = f"UPDATE users SET {', '.join(updates)} WHERE id = %s"
     values.append(user_id)
-    cursor.execute(query, tuple(values))
+    query = f"UPDATE users SET {', '.join(updates)} WHERE id = %s"
+    cursor.execute(query, values)
     conn.commit()
     conn.close()
     return {"success": True}
-
 
 
 @app.get("/api/cameras", response_model=list[CameraOut])
