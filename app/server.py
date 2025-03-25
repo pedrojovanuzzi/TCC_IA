@@ -26,6 +26,7 @@ import subprocess
 from dotenv import load_dotenv
 import hashlib
 from contextlib import asynccontextmanager
+from fastapi import Body
 
 
 load_dotenv()
@@ -161,6 +162,34 @@ def get_connection():
         password=password,
         database=database
     )
+
+
+from fastapi import Body
+
+@app.post("/api/login")
+def login(data: dict = Body(...)):
+    import hashlib
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Usuário e senha são obrigatórios")
+
+    senha_hash = hashlib.sha256(password.encode()).hexdigest()
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT COUNT(*) FROM users WHERE login = %s AND password = %s",
+        (username, senha_hash),
+    )
+    result = cursor.fetchone()[0]
+    conn.close()
+
+    if result > 0:
+        return {"success": True}
+    else:
+        return JSONResponse(content={"success": False, "message": "Login ou senha inválidos"}, status_code=401)
 
 
 

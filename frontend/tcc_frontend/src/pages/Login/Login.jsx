@@ -3,16 +3,18 @@ import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (login(password)) {
-      navigate("/"); // Redireciona para a home após login
+    const sucesso = await login(username, password);
+    if (sucesso) {
+      navigate("/");
     } else {
-      alert("Senha incorreta!");
+      alert("Login ou senha incorretos!");
     }
   };
 
@@ -22,8 +24,15 @@ const Login = () => {
         <h2 className="text-2xl text-white font-semibold text-center mb-4">Login</h2>
         <form onSubmit={handleSubmit} className="flex flex-col">
           <input
+            type="text"
+            placeholder="Usuário"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="p-3 mb-4 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
             type="password"
-            placeholder="Digite a senha"
+            placeholder="Senha"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="p-3 mb-4 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -8,16 +8,32 @@ export const AuthProvider = ({ children }) => {
     () => localStorage.getItem("isAuthenticated") === "true"
   );
 
-  const login = (password) => {
-    const envPassword = import.meta.env.VITE_APP_PASS;
-
-    if (password === envPassword) {
-      setIsAuthenticated(true);
-      localStorage.setItem("isAuthenticated", "true"); // Salva no localStorage
-      return true;
+  const login = async (username, password) => {
+    try {
+      const response = await fetch("http://localhost:3001/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }), // envia os dois
+      });
+  
+      if (response.ok) {
+        setIsAuthenticated(true);
+        localStorage.setItem("isAuthenticated", "true");
+        return true;
+      } else {
+        const data = await response.json();
+        console.error("Erro:", data.message);
+        return false;
+      }
+    } catch (error) {
+      console.error("Erro na requisição:", error);
+      return false;
     }
-    return false;
   };
+  
+  
 
   const logout = () => {
     setIsAuthenticated(false);
