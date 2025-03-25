@@ -27,8 +27,8 @@ export default function App() {
       <Route path="/cam" element={<ProtectedRoute element={<Cam />} />} />
       <Route path="/camsahi" element={<ProtectedRoute element={<CamSahi />} />} />
       <Route path="/about" element={<About />}/>
-      <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} />} />
-      <Route path="/users" element={<ProtectedRoute element={<Users />} />} />
+      <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} minPermission={3} />} />
+      <Route path="/users" element={<ProtectedRoute element={<Users />} minPermission={3}  />} />
       <Route path="/monitoring" element={<ProtectedRoute element={<Monitoring />} />} />
       <Route path="/monitoring/:id" element={<ProtectedRoute element={<MonitoringCam />} />} />
 

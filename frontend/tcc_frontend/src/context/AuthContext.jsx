@@ -1,17 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [nivel, setNivel] = useState(1);
+  const [nivel, setNivel] = useState(null); // Agora o nível padrão é null
 
   useEffect(() => {
     const auth = localStorage.getItem("isAuthenticated") === "true";
-    const nivelSalvo = parseInt(localStorage.getItem("nivel") || "1");
+    const nivelSalvo = localStorage.getItem("nivel");
+
     setIsAuthenticated(auth);
-    setNivel(nivelSalvo);
+    setNivel(auth && nivelSalvo ? parseInt(nivelSalvo) : null);
   }, []);
 
   const login = async (username, password) => {
@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setIsAuthenticated(false);
-    setNivel(1);
+    setNivel(null);
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("nivel");
   };

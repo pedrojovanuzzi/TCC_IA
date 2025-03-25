@@ -36,7 +36,7 @@ export const Header = () => {
               </>
             )}
             {isAuthenticated && nivel > 2 && (
-            <><a href="/gallery" className="text-sm font-semibold text-indigo-700 underline">
+            <><a href="/gallery" className="font-medium text-gray-900 hover:text-gray-900">
                 Galeria
               </a><a href="/users" className="font-medium text-gray-900 hover:text-gray-900">
                 Usuarios
