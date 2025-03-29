@@ -367,7 +367,7 @@ async def conexao_websocket_camera(websocket: WebSocket, camera_id: int):
                 classe = modelo_yolo.names[int(caixa.cls[0])]
                 conf = float(caixa.conf[0])
                 cor = cores_classes.get(classe, (255, 255, 255))
-                cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 1)
                 draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
 
             # 🧠 Salvar a cada 3 segundos
@@ -451,8 +451,8 @@ def list_folders():
 # Função para desenhar rótulos com fundo colorido
 def draw_label(imagem, text, x, y, color):
     font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 1.0  # Aumentar fonte
-    thickness = 2
+    font_scale = 0.2  # Aumentar fonte
+    thickness = 1
     (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
 
     # Criar fundo atrás do texto
@@ -461,7 +461,7 @@ def draw_label(imagem, text, x, y, color):
         (x, y - text_height - 10),
         (x + text_width + 10, y),
         color,
-        -1  # Preenchimento total
+        -1  # -1 Preenchimento total
     )
 
     # Adicionar o texto na imagem (cor preta para melhor visibilidade)
@@ -491,7 +491,7 @@ async def inferencia_imagem(file: UploadFile = File(...)):
             classe = resultado.names[int(caixa.cls[0])]
             conf = float(caixa.conf[0])
             cor = cores_classes.get(classe, (255, 255, 255))
-            cv2.rectangle(imagem, (x1, y1), (x2, y2), cor, 2)
+            cv2.rectangle(imagem, (x1, y1), (x2, y2), cor, 1)
             draw_label(imagem, f"{classe}: {conf:.2f}", x1, y1, cor)
 
         os.makedirs(img_statica, exist_ok=True)
@@ -555,7 +555,7 @@ async def inferencia_video(file: UploadFile = File(...)):
             classe = resultado.names[int(caixa.cls[0])]
             conf = float(caixa.conf[0])
             cor = cores_classes.get(classe, (255, 255, 255))
-            cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 1)
             draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
 
 
@@ -614,7 +614,7 @@ async def conexao_websocket(websocket: WebSocket):
                     classe = modelo_yolo.names[int(caixa.cls[0])]
                     conf = float(caixa.conf[0])
                     cor = cores_classes.get(classe, (255, 255, 255))
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 1)
                     draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
 
             agora = time.time()
