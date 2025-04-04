@@ -1,7 +1,6 @@
 from ultralytics import YOLO
 import os
-from sahi import AutoDetectionModel
-from sahi.predict import get_sliced_prediction
+
 
 train = "train15"
 
