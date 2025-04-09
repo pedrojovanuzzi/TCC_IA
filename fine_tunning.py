@@ -18,7 +18,7 @@ if __name__ == '__main__':
         data="dataset.yaml",
         epochs=300,
         imgsz=416,
-        batch=-1,
+        batch=32,
         optimizer='auto',
         device=0,
         cache="disk",
