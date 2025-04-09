@@ -1,6 +1,10 @@
+# train: ../train/images
+# val: ../valid/images
+# test: ../test/images
+
 train: ../train/images
-val: ../valid/images
-test: ../test/images
+val: ../train/images
+test: 
 
 nc: 10
 names: ['glasses', 'helmet', 'glove', 'hands', 'head', "belt", "no_glasses", "no_belt", "boots", "no_boots"]
