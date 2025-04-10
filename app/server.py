@@ -33,7 +33,7 @@ load_dotenv()
 # Determinar se está rodando localmente
 IS_LOCAL = os.getenv("LOCAL") == "true"
 
-train = "train20"
+train = "train23"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -119,7 +119,7 @@ cores_classes = {
     "boots": (255, 128, 0),
     "no_boots": (128, 128, 128)
 }
-confidence = 0.6
+confidence = 0.4
 
 class DeleteFileRequest(BaseModel):
     folder: str
