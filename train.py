@@ -13,7 +13,6 @@ if __name__ == '__main__':
         batch=32,
         optimizer='auto',
         device=0,
-        patience=30,
         half=True,
         amp=True,
     )
