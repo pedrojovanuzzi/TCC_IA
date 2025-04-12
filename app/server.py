@@ -33,7 +33,7 @@ load_dotenv()
 # Determinar se está rodando localmente
 IS_LOCAL = os.getenv("LOCAL") == "true"
 
-train = "train3"
+train = "train5"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -117,9 +117,10 @@ cores_classes = {
     "no_glasses": (255, 0, 255),
     "no_belt": (0, 0, 255),
     "boots": (255, 128, 0),
-    "no_boots": (128, 128, 128)
 }
-confidence = 0.4
+
+confidence = 0.24
+img_size = 640
 
 class DeleteFileRequest(BaseModel):
     folder: str
@@ -360,7 +361,7 @@ async def conexao_websocket_camera(websocket: WebSocket, camera_id: int):
             if not ret:
                 break
 
-            resultados = modelo_yolo.predict(frame, imgsz=416, device=dispositivo, half=True)[0]
+            resultados = modelo_yolo.predict(frame, imgsz=img_size, device=dispositivo, half=True)[0]
 
             for caixa in resultados.boxes:
                 x1, y1, x2, y2 = map(int, caixa.xyxy[0])
@@ -484,7 +485,7 @@ async def inferencia_imagem(file: UploadFile = File(...)):
         conteudo_imagem = await file.read()
         array_bytes = np.frombuffer(conteudo_imagem, np.uint8)
         imagem = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
-        resultado = modelo_yolo.predict(imagem, imgsz=416, device=dispositivo, half=True, conf=confidence)[0]
+        resultado = modelo_yolo.predict(imagem, imgsz=img_size, device=dispositivo, half=True, conf=confidence)[0]
 
         for caixa in resultado.boxes:
             x1, y1, x2, y2 = map(int, caixa.xyxy[0])
@@ -547,7 +548,7 @@ async def inferencia_video(file: UploadFile = File(...)):
         if not ret:
             break
 
-        resultado = modelo_yolo.predict(frame, imgsz=416, device=dispositivo, half=True, conf=confidence)[0]
+        resultado = modelo_yolo.predict(frame, imgsz=img_size, device=dispositivo, half=True, conf=confidence)[0]
 
 
         for caixa in resultado.boxes:
@@ -604,7 +605,7 @@ async def conexao_websocket(websocket: WebSocket):
             array_bytes = np.frombuffer(frame_base64, np.uint8)
             frame = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
             dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-            resultados = modelo_yolo.predict(frame, imgsz=416, device=dispositivo, half=True, conf=confidence, stream=True)
+            resultados = modelo_yolo.predict(frame, imgsz=img_size, device=dispositivo, half=True, conf=confidence, stream=True)
             
             for res in resultados:
                 if not res.boxes:
