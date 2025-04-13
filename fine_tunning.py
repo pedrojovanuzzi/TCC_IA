@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import os
 
 
-train = "train21"
+train = "train6"
 
 # Caminho do modelo treinado
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -17,8 +17,8 @@ if __name__ == '__main__':
     YOLO(model_path).train(
         data="dataset.yaml",
         epochs=300,
-        imgsz=416,
-        batch=32,
+        imgsz=640,
+        batch=-1,
         optimizer='auto',
         device=0,
         cache="disk",
