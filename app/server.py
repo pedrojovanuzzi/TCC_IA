@@ -33,7 +33,7 @@ load_dotenv()
 # Determinar se está rodando localmente
 IS_LOCAL = os.getenv("LOCAL") == "true"
 
-train = "train5"
+train = "train7"
 
 # Definir caminho do modelo com base no ambiente
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -119,7 +119,7 @@ cores_classes = {
     "boots": (255, 128, 0),
 }
 
-confidence = 0.24
+confidence = 0.5
 img_size = 640
 
 class DeleteFileRequest(BaseModel):

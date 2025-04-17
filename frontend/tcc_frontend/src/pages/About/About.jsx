@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { Dialog, DialogPanel } from '@headlessui/react'
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+
 import { Footer } from '../../components/Footer'
 import { Header } from '../../components/Header'
 import img from "../../assets/imgs/About1.png"

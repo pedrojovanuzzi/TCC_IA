@@ -12,7 +12,7 @@ const Login = () => {
     e.preventDefault();
     const sucesso = await login(username, password);
     if (sucesso) {
-      navigate("/");
+      navigate("/options");
     } else {
       alert("Login ou senha incorretos!");
     }
