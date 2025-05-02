@@ -1,6 +1,6 @@
-train: ./dataset_sem_duplicatas/train/images
-val: ./dataset_sem_duplicatas/valid/images
-test: ./dataset_sem_duplicatas/test/images
+train: ../dataset_sem_duplicatas/train/images
+val: ../dataset_sem_duplicatas/valid/images
+test: ../dataset_sem_duplicatas/test/images
 
 # train: ../train/images
 # val: ../train/images
