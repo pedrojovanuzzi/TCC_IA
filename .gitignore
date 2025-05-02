@@ -4,6 +4,7 @@ imagens_geradas
 test/*
 train/*
 valid/*
+dataset_sem_duplicatas/*
 *.zip
 corrigir_labels/*
 augmented/*

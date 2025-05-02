@@ -169,7 +169,7 @@ from fastapi import Body
 
 @app.post("/api/login")
 def login(data: dict = Body(...)):
-    import hashlib
+    
     login = data.get("username")
     password = data.get("password")
 
@@ -208,7 +208,7 @@ def listar_usuarios():
 
 @app.post("/api/users")
 def criar_usuario(user: dict = Body(...)):
-    import hashlib
+    
     login = user.get("login")
     password = user.get("password")
 
@@ -329,48 +329,39 @@ def delete_camera(camera_id: int):
 @app.websocket("/api/ws/camera/{camera_id}")
 async def conexao_websocket_camera(websocket: WebSocket, camera_id: int):
     await websocket.accept()
-
     # Buscar IP da câmera no banco
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT ip FROM cameras WHERE id = %s", (camera_id,))
     row = cursor.fetchone()
     conn.close()
-
     if not row:
         await websocket.send_text(json.dumps({"erro": "Câmera não encontrada no banco."}))
         await websocket.close()
         return
-
     ip = row[0]
     rtsp_url = ip
-
     cap = cv2.VideoCapture(rtsp_url)
     if not cap.isOpened():
         await websocket.send_text(json.dumps({"erro": "Não foi possível conectar à câmera."}))
         await websocket.close()
         return
-
     dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
     modelo_yolo = YOLO(model_path)
     ultimo_save = 0
-
     try:
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
-
             resultados = modelo_yolo.predict(frame, imgsz=img_size, device=dispositivo, half=True)[0]
-
             for caixa in resultados.boxes:
                 x1, y1, x2, y2 = map(int, caixa.xyxy[0])
                 classe = modelo_yolo.names[int(caixa.cls[0])]
                 conf = float(caixa.conf[0])
                 cor = cores_classes.get(classe, (255, 255, 255))
                 cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 1)
-                draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)
-
+                draw_label(frame, f"{classe}: {conf:.2f}", x1, y1, cor)        
             # 🧠 Salvar a cada 3 segundos
             agora = time.time()
             if agora - ultimo_save >= 3.0:
@@ -380,11 +371,9 @@ async def conexao_websocket_camera(websocket: WebSocket, camera_id: int):
                 caminho = os.path.join(img_real_time, nome_arquivo)
                 cv2.imwrite(caminho, frame)
                 ultimo_save = agora
-
             _, buffer = cv2.imencode(".jpg", frame)
             frame_saida = base64.b64encode(buffer).decode("utf-8")
             await websocket.send_text(json.dumps({"frame": frame_saida}))
-
     except Exception as e:
         print(f"Erro na câmera {camera_id}: {e}")
     finally:
