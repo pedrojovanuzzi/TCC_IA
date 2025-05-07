@@ -180,7 +180,7 @@ def log_operation(user_id: int, operacao: str):
 
 
 @app.post("/api/token")
-def login(data: dict = Body(...)):
+def login(data: dict = Body(...), token: dict = Depends(verificar_token)):
     login = data.get("username")
     password = data.get("password")
     if not login or not password:
@@ -193,6 +193,11 @@ def login(data: dict = Body(...)):
     cursor.execute("SELECT id, nivel FROM users WHERE login = %s AND password = %s", (login, senha_hash))
     row = cursor.fetchone()
     conn.close()
+
+    log_operation(
+        token["user_id"],
+        f"logou usuário '{login}'"
+    )
 
     if row:
         token = criar_token({"user_id": row[0], "nivel": row[1]})
@@ -212,9 +217,8 @@ def listar_usuarios(token=Depends(verificar_token)):
     return users
 
 @app.post("/api/users")
-def criar_usuario(user: dict = Body(...)):
+def criar_usuario(user: dict = Body(...), token: dict = Depends(verificar_token) ):
     login = user.get("login")
-    username = user.get("username")
     password = user.get("password")
     nivel = user.get("nivel", 1)  # padrão 1 se não vier
 
@@ -236,17 +240,40 @@ def criar_usuario(user: dict = Body(...)):
     conn.commit()
     conn.close()
     
-    log_operation({username}, f"criou usuário '{login}' com nível {nivel}")
+    log_operation(
+        token["user_id"],
+        f"criou usuário '{login}' com nível {nivel}"
+    )
     return {"success": True, "login": login, "nivel": nivel}
 
 @app.delete("/api/users/{user_id}")
-def deletar_usuario(user_id: int):
+def deletar_usuario(
+    user_id: int,
+    token: dict = Depends(verificar_token)
+):
     conn = get_connection()
     cursor = conn.cursor()
+    # 1) buscar o login para usar no log
+    cursor.execute("SELECT login FROM users WHERE id = %s", (user_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    login_a_deletar = row[0]
+
+    # 2) deletar o usuário
     cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
     conn.commit()
     conn.close()
+
+    # 3) logar usando o login
+    log_operation(
+        token["user_id"],
+        f"deletou usuário '{login_a_deletar}' (id={user_id})"
+    )
     return {"success": True}
+
+
 
 @app.put("/api/users/{user_id}")
 def atualizar_usuario(user_id: int, data: dict = Body(...)):
