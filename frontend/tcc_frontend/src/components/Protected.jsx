@@ -3,12 +3,21 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const ProtectedRoute = ({ element, minPermission = 1 }) => {
-  const { isAuthenticated, nivel, isLoading } = useAuth();
+  const { nivel, isLoading } = useAuth();
 
-  if (isLoading) return <div>Carregando...</div>;
+  if (isLoading) {
+    return <div>Carregando...</div>;
+  }
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (nivel < minPermission) return <Navigate to="/acesso-negado" replace />;
+  // Se não houver nível extraído do token, considera usuário não autenticado
+  if (nivel === null) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Se o nível for inferior ao mínimo exigido
+  if (nivel < minPermission) {
+    return <Navigate to="/acesso-negado" replace />;
+  }
 
   return element;
 };

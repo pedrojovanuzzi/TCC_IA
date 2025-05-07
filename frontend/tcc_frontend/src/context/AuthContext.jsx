@@ -21,20 +21,23 @@ const parseJwt = (token) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [nivel, setNivel] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    if (token) {
+    const storedNivel = localStorage.getItem("nivel");
+    if (token && storedNivel === null) {
       const payload = parseJwt(token);
       if (payload && Date.now() < payload.exp * 1000) {
-        setIsAuthenticated(true);
         setNivel(payload.nivel);
+        localStorage.setItem("nivel", String(payload.nivel));
       } else {
         localStorage.removeItem("access_token");
+        localStorage.removeItem("nivel");
       }
+    } else if (storedNivel) {
+      setNivel(Number(storedNivel));
     }
     setIsLoading(false);
   }, []);
@@ -50,11 +53,10 @@ export const AuthProvider = ({ children }) => {
 
       const { access_token } = await res.json();
       localStorage.setItem("access_token", access_token);
-      
       const payload = parseJwt(access_token);
       if (payload) {
-        setIsAuthenticated(true);
         setNivel(payload.nivel);
+        localStorage.setItem("nivel", String(payload.nivel));
       }
       return true;
     } catch {
@@ -63,14 +65,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    setIsAuthenticated(false);
     setNivel(null);
     localStorage.removeItem("access_token");
+    localStorage.removeItem("nivel");
   };
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, nivel, isLoading, login, logout }}
+      value={{ nivel, isLoading, login, logout }}
     >
       {children}
     </AuthContext.Provider>

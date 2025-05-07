@@ -3,12 +3,15 @@ import webcam from "../../assets/imgs/webcam.png";
 import galeria from "../../assets/imgs/galeria.png";
 import video from "../../assets/imgs/video_player.png";
 import precision from "../../assets/imgs/precision-marketing.png";
+import Header from "../../components/Header";
 
 export default function Options() {
   const navigate = useNavigate();
 
   return (
-    <div className="bg-gray-50 py-24 sm:py-32">
+    <>
+    <Header />
+        <div className="bg-gray-50 py-24 sm:py-32">
       <div className="mx-auto max-w-3xl px-6 lg:max-w-7xl lg:px-8">
         <h2 className="text-center text-base/7 font-semibold text-indigo-600">
           YOLO
@@ -127,5 +130,6 @@ export default function Options() {
         </div>
       </div>
     </div>
+    </>
   );
 }

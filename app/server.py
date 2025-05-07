@@ -204,20 +204,29 @@ def listar_usuarios(token=Depends(verificar_token)):
 
 @app.post("/api/users")
 def criar_usuario(user: dict = Body(...)):
-    
     login = user.get("login")
     password = user.get("password")
+    nivel = user.get("nivel", 1)  # padrão 1 se não vier
 
+    # validações básicas
     if not login or not password:
         raise HTTPException(status_code=400, detail="Login e senha obrigatórios.")
+    if not isinstance(nivel, int) or nivel < 1 or nivel > 3:
+        raise HTTPException(status_code=400, detail="Nível inválido. Deve ser 1, 2 ou 3.")
 
     senha_hash = hashlib.sha256(password.encode()).hexdigest()
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO users (login, password) VALUES (%s, %s)", (login, senha_hash))
+
+    # inclui o nível na tabela
+    cursor.execute(
+        "INSERT INTO users (login, password, nivel) VALUES (%s, %s, %s)",
+        (login, senha_hash, nivel)
+    )
     conn.commit()
     conn.close()
-    return {"success": True}
+
+    return {"success": True, "login": login, "nivel": nivel}
 
 @app.delete("/api/users/{user_id}")
 def deletar_usuario(user_id: int):
