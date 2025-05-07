@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useAuth } from "../../context/AuthContext";
 
 export const Users = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -7,6 +8,7 @@ export const Users = () => {
   const [nivel, setNivel] = useState(1);
   const [editandoId, setEditandoId] = useState(null);
   const [error, setError] = useState(null);
+  const { username } = useAuth();
 
   // Lê o token do localStorage
   const getAuthHeader = () => {
@@ -38,6 +40,7 @@ export const Users = () => {
     const payload = { login };
     if (password) payload.password = password;
     if (nivel) payload.nivel = Number(nivel);
+    if (username) payload.username = username;
 
     const url = editandoId
       ? `http://localhost:3001/api/users/${editandoId}`

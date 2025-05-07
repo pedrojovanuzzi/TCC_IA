@@ -168,6 +168,15 @@ def get_connection():
         database=database
     )
 
+def log_operation(user_id: int, operacao: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO register (`user`, operacao) VALUES (%s, %s)",
+        (user_id, operacao),
+    )
+    conn.commit()
+    conn.close()
 
 
 @app.post("/api/token")
@@ -205,6 +214,7 @@ def listar_usuarios(token=Depends(verificar_token)):
 @app.post("/api/users")
 def criar_usuario(user: dict = Body(...)):
     login = user.get("login")
+    username = user.get("username")
     password = user.get("password")
     nivel = user.get("nivel", 1)  # padrão 1 se não vier
 
@@ -225,7 +235,8 @@ def criar_usuario(user: dict = Body(...)):
     )
     conn.commit()
     conn.close()
-
+    
+    log_operation({username}, f"criou usuário '{login}' com nível {nivel}")
     return {"success": True, "login": login, "nivel": nivel}
 
 @app.delete("/api/users/{user_id}")

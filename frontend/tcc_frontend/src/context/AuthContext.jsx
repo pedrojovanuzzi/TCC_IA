@@ -23,6 +23,7 @@ const parseJwt = (token) => {
 export const AuthProvider = ({ children }) => {
   const [nivel, setNivel] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [username, setUsername] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -31,9 +32,11 @@ export const AuthProvider = ({ children }) => {
       const payload = parseJwt(token);
       if (payload && Date.now() < payload.exp * 1000) {
         setNivel(payload.nivel);
+        setUsername(payload.username);
         localStorage.setItem("nivel", String(payload.nivel));
       } else {
         localStorage.removeItem("access_token");
+        localStorage.setItem("username", payload.username);
         localStorage.removeItem("nivel");
       }
     } else if (storedNivel) {
@@ -56,7 +59,9 @@ export const AuthProvider = ({ children }) => {
       const payload = parseJwt(access_token);
       if (payload) {
         setNivel(payload.nivel);
+        setUsername(payload.username);
         localStorage.setItem("nivel", String(payload.nivel));
+        localStorage.setItem("username", payload.username);
       }
       return true;
     } catch {
@@ -66,14 +71,14 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setNivel(null);
+    setUsername(null);
     localStorage.removeItem("access_token");
     localStorage.removeItem("nivel");
+    localStorage.removeItem("username");
   };
 
   return (
-    <AuthContext.Provider
-      value={{ nivel, isLoading, login, logout }}
-    >
+    <AuthContext.Provider value={{ nivel, username, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
