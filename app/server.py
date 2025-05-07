@@ -1,5 +1,5 @@
 import mysql.connector
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from fastapi import FastAPI, File, UploadFile, WebSocket, HTTPException, WebSocketDisconnect
@@ -27,7 +27,8 @@ from dotenv import load_dotenv
 import hashlib
 from contextlib import asynccontextmanager
 from fastapi import Body
-
+from auth import criar_token
+from auth import verificar_token
 
 load_dotenv()
 # Determinar se está rodando localmente
@@ -92,6 +93,9 @@ async def lifespan(app: FastAPI):
     yield  # Aqui libera para o app continuar rodando
 
 
+class TokenRequest(BaseModel):
+    username: str
+    password: str
 
 
 app = FastAPI(lifespan=lifespan)
@@ -165,44 +169,36 @@ def get_connection():
     )
 
 
-from fastapi import Body
 
-@app.post("/api/login")
+@app.post("/api/token")
 def login(data: dict = Body(...)):
-    
     login = data.get("username")
     password = data.get("password")
-
     if not login or not password:
         raise HTTPException(status_code=400, detail="Login e senha obrigatórios")
 
     senha_hash = hashlib.sha256(password.encode()).hexdigest()
-    
+
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT id, nivel FROM users WHERE login = %s AND password = %s",
-        (login, senha_hash),
-    )
+    cursor.execute("SELECT id, nivel FROM users WHERE login = %s AND password = %s", (login, senha_hash))
     row = cursor.fetchone()
     conn.close()
 
     if row:
-        return {
-            "success": True,
-            "user_id": row[0],
-            "nivel": row[1]
-        }
+        token = criar_token({"user_id": row[0], "nivel": row[1]})
+        return {"access_token": token, "token_type": "bearer"}
     else:
-        return JSONResponse(content={"success": False, "message": "Login ou senha inválidos"}, status_code=401)
+        raise HTTPException(status_code=401, detail="Login ou senha inválidos")
 
 
 @app.get("/api/users")
-def listar_usuarios():
-    conn = get_connection()
-    cursor = conn.cursor()
+def listar_usuarios(token=Depends(verificar_token)):
+    if token["nivel"] < 3:
+        raise HTTPException(status_code=403, detail="Permissão negada.")
+    conn = get_connection(); cursor = conn.cursor()
     cursor.execute("SELECT id, login, nivel FROM users WHERE login != 'admin'")
-    users = [{"id": row[0], "login": row[1], "nivel": row[2]} for row in cursor.fetchall()]
+    users = [{"id": r[0], "login": r[1], "nivel": r[2]} for r in cursor.fetchall()]
     conn.close()
     return users
 
