@@ -6,50 +6,64 @@ export const Users = () => {
   const [password, setPassword] = useState("");
   const [nivel, setNivel] = useState(1);
   const [editandoId, setEditandoId] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Lê o token do localStorage
+  const getAuthHeader = () => {
+    const token = localStorage.getItem("access_token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
   const carregarUsuarios = async () => {
-    const res = await fetch("http://localhost:3001/api/users");
-    const data = await res.json();
-    setUsuarios(data);
+    try {
+      const res = await fetch("http://localhost:3001/api/users", {
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeader(),
+        },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setUsuarios(data);
+    } catch (err) {
+      console.error("Falha ao buscar usuários:", err);
+      setError(err.message);
+    }
   };
 
   const adicionarOuAtualizarUsuario = async (e) => {
     e.preventDefault();
     if (!login) return alert("Preencha o login");
-  
-    const payload = {};
-    if (login) payload.login = login;
+
+    const payload = { login };
     if (password) payload.password = password;
     if (nivel) payload.nivel = Number(nivel);
-  
-    if (editandoId) {
-      const res = await fetch(`http://localhost:3001/api/users/${editandoId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+
+    const url = editandoId
+      ? `http://localhost:3001/api/users/${editandoId}`
+      : "http://localhost:3001/api/users";
+    const method = editandoId ? "PUT" : "POST";
+
+    if (!editandoId && !password) {
+      return alert("Senha é obrigatória ao criar um usuário");
+    }
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeader(),
+        },
         body: JSON.stringify(payload),
       });
-      if (res.ok) {
-        resetarForm();
-        carregarUsuarios();
-      } else {
-        alert("Erro ao atualizar usuário");
-      }
-    } else {
-      if (!password) return alert("Senha é obrigatória ao criar um usuário");
-      const res = await fetch("http://localhost:3001/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        resetarForm();
-        carregarUsuarios();
-      } else {
-        alert("Erro ao criar usuário");
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      resetarForm();
+      carregarUsuarios();
+    } catch {
+      alert(`Erro ao ${editandoId ? "atualizar" : "criar"} usuário`);
     }
   };
-  
 
   const resetarForm = () => {
     setLogin("");
@@ -65,18 +79,32 @@ export const Users = () => {
   };
 
   const removerUsuario = async (id) => {
-    if (!confirm("Tem certeza que deseja excluir?")) return;
-    await fetch(`http://localhost:3001/api/users/${id}`, { method: "DELETE" });
-    carregarUsuarios();
+    if (!window.confirm("Tem certeza que deseja excluir?")) return;
+    try {
+      const res = await fetch(`http://localhost:3001/api/users/${id}`, {
+        method: "DELETE",
+        headers: {
+          ...getAuthHeader(),
+        },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      carregarUsuarios();
+    } catch {
+      alert("Erro ao remover usuário");
+    }
   };
 
   useEffect(() => {
     carregarUsuarios();
   }, []);
 
+  if (error) return <div>Erro: {error}</div>;
+
   return (
     <div className="p-10 max-w-xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">{editandoId ? "Editar Usuário" : "Adicionar Usuário"}</h2>
+      <h2 className="text-2xl font-bold mb-4">
+        {editandoId ? "Editar Usuário" : "Adicionar Usuário"}
+      </h2>
 
       <form onSubmit={adicionarOuAtualizarUsuario} className="mb-6 space-y-4">
         <input
@@ -104,7 +132,7 @@ export const Users = () => {
         </select>
         <button
           type="submit"
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-500 cursor-pointer"
+          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-500"
         >
           {editandoId ? "Atualizar Usuário" : "Adicionar Usuário"}
         </button>
@@ -120,33 +148,34 @@ export const Users = () => {
       </form>
 
       <ul className="space-y-2">
-  {usuarios.map((user) => (
-    <li
-      key={user.id}
-      className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-2"
-    >
-      <div>
-        <span className="font-medium">{user.login}</span>{" "}
-        <span className="text-sm text-gray-500">— Nível {user.nivel}</span>
-      </div>
-      <div className="mt-2 sm:mt-0 space-x-2">
-        <button
-          onClick={() => editarUsuario(user)}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          Editar
-        </button>
-        <button
-          onClick={() => removerUsuario(user.id)}
-          className="text-sm text-red-600 hover:underline"
-        >
-          Remover
-        </button>
-      </div>
-    </li>
-  ))}
-</ul>
-
+        {usuarios.map((user) => (
+          <li
+            key={user.id}
+            className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-2"
+          >
+            <div>
+              <span className="font-medium">{user.login}</span>{" "}
+              <span className="text-sm text-gray-500">
+                — Nível {user.nivel}
+              </span>
+            </div>
+            <div className="mt-2 sm:mt-0 space-x-2">
+              <button
+                onClick={() => editarUsuario(user)}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => removerUsuario(user.id)}
+                className="text-sm text-red-600 hover:underline"
+              >
+                Remover
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
