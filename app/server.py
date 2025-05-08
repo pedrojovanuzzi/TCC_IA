@@ -11,6 +11,7 @@ from app.routers.predict  import router as predict_router
 from app.routers.ws       import router as ws_router
 from app.routers.predict  import router as predict_router
 from app.lifespan         import lifespan
+from app.routers.logs import router as logs
 
 from app.routers.files   import router as files_router
 
@@ -34,6 +35,7 @@ app.include_router(cameras_router, prefix="/api")
 app.include_router(predict_router, prefix="/api")
 app.include_router(ws_router,      prefix="/api")
 app.include_router(files_router,   prefix="/api")
+app.include_router(logs, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn

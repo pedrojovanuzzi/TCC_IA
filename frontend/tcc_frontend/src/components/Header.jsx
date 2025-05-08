@@ -29,6 +29,13 @@ export const Header = () => {
                 <a href="/about" className="text-gray-900 font-medium">
                   Sobre-nós
                 </a>
+                {nivel >= 2 && (
+                  <>
+                    <a href="/logs" className="text-gray-900 font-medium">
+                      Logs
+                    </a>
+                  </>
+                )}
                 {/* apenas usuários com nível >=3 */}
                 {nivel >= 3 && (
                   <>
@@ -68,6 +75,13 @@ export const Header = () => {
             <a href="/about" className="block text-gray-900 font-medium">
               Sobre-nós
             </a>
+            {nivel >= 2 && (
+              <>
+                <a href="/logs" className="block text-gray-900 font-medium">
+                  Logs
+                </a>
+              </>
+            )}
             {nivel >= 3 && (
               <>
                 <a href="/gallery" className="block text-gray-900 font-medium">
