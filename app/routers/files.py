@@ -1,9 +1,9 @@
+# app/routers/files.py
 from io import BytesIO
 from fastapi import APIRouter, Depends, HTTPException, Body
-from fastapi.responses import StreamingResponse
-from starlette.responses import JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
-from ..schemas import DecryptRequest, DeleteFileRequest, DeleteRequest
+from ..schemas import DeleteFileRequest, DeleteRequest
 from ..config import IMAGES_DIR, ENCRYPTION_KEY
 from ..auth import verificar_token
 from cryptography.fernet import Fernet
@@ -13,28 +13,28 @@ from datetime import datetime
 router = APIRouter()
 fernet = Fernet(ENCRYPTION_KEY)
 
-
-router = APIRouter()
+class DecryptRequest(BaseModel):
+    folder: str
+    filename: str
 
 @router.delete("/delete")
-def delete_file(request: DeleteFileRequest, token = Depends(verificar_token)):
-    folder = os.path.join(IMAGES_DIR, request.folder)
-    path   = os.path.join(folder, request.filename)
+def delete_file(request: DeleteFileRequest, token=Depends(verificar_token)):
+    path = os.path.join(IMAGES_DIR, request.folder, request.filename)
     if not os.path.exists(path):
         raise HTTPException(404, "Arquivo não encontrado")
     os.remove(path)
     return {"success": True}
 
 @router.delete("/delete-batch")
-async def delete_batch(request: DeleteRequest, token = Depends(verificar_token)):
-    folder = os.path.join(IMAGES_DIR, request.folder)
+async def delete_batch(request: DeleteRequest, token=Depends(verificar_token)):
+    folder_path = os.path.join(IMAGES_DIR, request.folder)
     deleted = []
     for fn in request.filenames:
-        path = os.path.join(folder, fn)
-        if os.path.exists(path):
+        p = os.path.join(folder_path, fn)
+        if os.path.exists(p):
             for _ in range(5):
                 try:
-                    os.remove(path)
+                    os.remove(p)
                     deleted.append(fn)
                     break
                 except PermissionError:
@@ -52,35 +52,34 @@ def list_gallery():
             for f in os.listdir(p):
                 fp = os.path.join(p, f)
                 if os.path.isfile(fp):
-                    files.append({"name": f, "date": datetime.fromtimestamp(os.path.getmtime(fp)).strftime("%d/%m/%Y %H:%M")})
+                    files.append({
+                        "name": f,
+                        "date": datetime.fromtimestamp(os.path.getmtime(fp)).strftime("%d/%m/%Y %H:%M")
+                    })
             result.append({"name": folder, "files": files})
     return {"folders": result}
 
 @router.post("/decrypt_image")
 def decrypt_image(req: DecryptRequest = Body(...), token=Depends(verificar_token)):
-    folder = os.path.join(IMAGES_DIR, req.folder)
-    path   = os.path.join(folder, req.filename)
+    path = os.path.join(IMAGES_DIR, req.folder, req.filename)
     if not os.path.exists(path):
         raise HTTPException(404, "Arquivo não encontrado")
-    with open(path, "rb") as f:
-        data = f.read()
+    data = open(path, "rb").read()
     try:
-        decrypted = fernet.decrypt(data)
+        dec = fernet.decrypt(data)
     except:
         raise HTTPException(400, "Falha na descriptografia")
-    b64 = base64.b64encode(decrypted).decode("utf-8")
+    b64 = base64.b64encode(dec).decode()
     return JSONResponse({"frame": b64})
 
 @router.post("/decrypt_video")
 def decrypt_video(req: DecryptRequest = Body(...), token=Depends(verificar_token)):
-    folder = os.path.join(IMAGES_DIR, req.folder)
-    path   = os.path.join(folder, req.filename)
+    path = os.path.join(IMAGES_DIR, req.folder, req.filename)
     if not os.path.exists(path):
         raise HTTPException(404, "Vídeo não encontrado")
-    with open(path, "rb") as f:
-        data = f.read()
+    data = open(path, "rb").read()
     try:
-        decrypted = fernet.decrypt(data)
+        dec = fernet.decrypt(data)
     except:
         raise HTTPException(400, "Falha na descriptografia")
-    return StreamingResponse(BytesIO(decrypted), media_type="video/mp4")
+    return StreamingResponse(BytesIO(dec), media_type="video/mp4")
