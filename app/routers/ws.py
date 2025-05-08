@@ -5,6 +5,7 @@ from ultralytics import YOLO
 import torch, cv2, json, os, time
 from ..utils import log_operation
 
+
 router = APIRouter()
 
 @router.websocket("/ws/camera/{camera_id}")
