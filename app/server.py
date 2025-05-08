@@ -180,7 +180,7 @@ def log_operation(user_id: int, operacao: str):
 
 
 @app.post("/api/token")
-def login(data: dict = Body(...), token: dict = Depends(verificar_token)):
+def login(data: dict = Body(...)):
     login = data.get("username")
     password = data.get("password")
     if not login or not password:
@@ -661,7 +661,7 @@ async def inferencia_video(file: UploadFile = File(...), token: dict = Depends(v
 
 
 @app.websocket("/api/ws")
-async def conexao_websocket(websocket: WebSocket , token: dict = Depends(verificar_token)):
+async def conexao_websocket(websocket: WebSocket):
     await websocket.accept()
     modelo_yolo = YOLO(model_path)
     ultimo_save = 0
@@ -674,10 +674,6 @@ async def conexao_websocket(websocket: WebSocket , token: dict = Depends(verific
             frame = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
             dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
             resultados = modelo_yolo.predict(frame, imgsz=img_size, device=dispositivo, half=True, conf=confidence, stream=True)
-            log_operation(
-            token["user_id"],
-            f"Utilizou o Websocket"
-            )
             for res in resultados:
                 if not res.boxes:
                     continue
