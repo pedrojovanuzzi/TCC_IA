@@ -40,22 +40,34 @@ export default function Video() {
   const handleUpload = async (file) => {
     setUploading(true);
   
+    const token = localStorage.getItem("access_token");
+  
     const formData = new FormData();
     formData.append("file", file);
   
     try {
-      const response = await axios.post(`${API_URL}/api/predict_video`, formData);
+      const response = await axios.post(
+        `${API_URL}/api/predict_video`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "Authorization": `Bearer ${token}`,
+          },
+        }
+      );
   
       if (response.data.video_url) {
-        // Corrige a URL do vídeo para um caminho absoluto
-        setProcessedVideo(`${API_URL}/api${response.data.video_url}`);
+        // vídeo já está disponível em response.data.video_url
+        setProcessedVideo(`${API_URL}${response.data.video_url}`);
       }
     } catch (error) {
-      console.error("Erro ao enviar o vídeo:", error);
+      console.error("Erro ao enviar o vídeo:", error.response?.data || error);
     } finally {
       setUploading(false);
     }
   };
+  
   
   
   

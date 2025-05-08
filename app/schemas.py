@@ -19,3 +19,7 @@ class Camera(BaseModel):
 
 class CameraOut(Camera):
     id: int
+
+class DecryptRequest(BaseModel):
+    folder: str
+    filename: str

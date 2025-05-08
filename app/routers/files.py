@@ -1,10 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from starlette.responses import JSONResponse
-from ..schemas import DeleteFileRequest, DeleteRequest
-from ..config import IMAGES_DIR
+from pydantic import BaseModel
+from ..schemas import DecryptRequest, DeleteFileRequest, DeleteRequest
+from ..config import IMAGES_DIR, ENCRYPTION_KEY
 from ..auth import verificar_token
-import os, time, gc
+from cryptography.fernet import Fernet
+import base64, os, time, gc
 from datetime import datetime
+
+router = APIRouter()
+fernet = Fernet(ENCRYPTION_KEY)
+
 
 router = APIRouter()
 
@@ -47,3 +53,18 @@ def list_gallery():
                     files.append({"name": f, "date": datetime.fromtimestamp(os.path.getmtime(fp)).strftime("%d/%m/%Y %H:%M")})
             result.append({"name": folder, "files": files})
     return {"folders": result}
+
+@router.post("/decrypt_image")
+def decrypt_image(req: DecryptRequest = Body(...), token=Depends(verificar_token)):
+    folder = os.path.join(IMAGES_DIR, req.folder)
+    path   = os.path.join(folder, req.filename)
+    if not os.path.exists(path):
+        raise HTTPException(404, "Arquivo não encontrado")
+    with open(path, "rb") as f:
+        data = f.read()
+    try:
+        decrypted = fernet.decrypt(data)
+    except:
+        raise HTTPException(400, "Falha na descriptografia")
+    b64 = base64.b64encode(decrypted).decode("utf-8")
+    return JSONResponse({"frame": b64})
