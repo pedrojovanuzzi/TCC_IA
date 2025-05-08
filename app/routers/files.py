@@ -3,7 +3,7 @@ from io import BytesIO
 from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
-from ..schemas import DeleteFileRequest, DeleteRequest
+from ..schemas import DecryptRequest, DeleteFileRequest, DeleteRequest
 from ..config import IMAGES_DIR, ENCRYPTION_KEY
 from ..auth import verificar_token
 from cryptography.fernet import Fernet
@@ -13,9 +13,7 @@ from datetime import datetime
 router = APIRouter()
 fernet = Fernet(ENCRYPTION_KEY)
 
-class DecryptRequest(BaseModel):
-    folder: str
-    filename: str
+
 
 @router.delete("/delete")
 def delete_file(request: DeleteFileRequest, token=Depends(verificar_token)):

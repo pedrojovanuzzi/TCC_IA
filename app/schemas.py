@@ -23,3 +23,7 @@ class CameraOut(Camera):
 class DecryptRequest(BaseModel):
     folder: str
     filename: str
+    
+class DecryptRequest(BaseModel):
+    folder: str
+    filename: str
