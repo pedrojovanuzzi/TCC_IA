@@ -180,7 +180,7 @@ def log_operation(user_id: int, operacao: str):
 
 
 @app.post("/api/token")
-def login(data: dict = Body(...)):
+def login(data: dict = Body(...), token: dict = Depends(verificar_token)):
     login = data.get("username")
     password = data.get("password")
     if not login or not password:
@@ -212,9 +212,8 @@ def listar_usuarios(token=Depends(verificar_token)):
     return users
 
 @app.post("/api/users")
-def criar_usuario(user: dict = Body(...)):
+def criar_usuario(user: dict = Body(...), token: dict = Depends(verificar_token) ):
     login = user.get("login")
-    username = user.get("username")
     password = user.get("password")
     nivel = user.get("nivel", 1)  # padrão 1 se não vier
 
@@ -236,20 +235,43 @@ def criar_usuario(user: dict = Body(...)):
     conn.commit()
     conn.close()
     
-    log_operation({username}, f"criou usuário '{login}' com nível {nivel}")
+    log_operation(
+        token["user_id"],
+        f"criou usuário '{login}' com nível {nivel}"
+    )
     return {"success": True, "login": login, "nivel": nivel}
 
 @app.delete("/api/users/{user_id}")
-def deletar_usuario(user_id: int):
+def deletar_usuario(
+    user_id: int,
+    token: dict = Depends(verificar_token)
+):
     conn = get_connection()
     cursor = conn.cursor()
+    # 1) buscar o login para usar no log
+    cursor.execute("SELECT login FROM users WHERE id = %s", (user_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    login_a_deletar = row[0]
+
+    # 2) deletar o usuário
     cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
     conn.commit()
     conn.close()
+
+    # 3) logar usando o login
+    log_operation(
+        token["user_id"],
+        f"deletou usuário '{login_a_deletar}' (id={user_id})"
+    )
     return {"success": True}
 
+
+
 @app.put("/api/users/{user_id}")
-def atualizar_usuario(user_id: int, data: dict = Body(...)):
+def atualizar_usuario(user_id: int, data: dict = Body(...),token: dict = Depends(verificar_token)):
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -282,6 +304,10 @@ def atualizar_usuario(user_id: int, data: dict = Body(...)):
     cursor.execute(query, values)
     conn.commit()
     conn.close()
+    log_operation(
+    token["user_id"],
+    f"atualizou usuario '{login}' com nível {nivel}"
+)
     return {"success": True}
 
 
@@ -295,17 +321,21 @@ def list_cameras():
     return [{"id": row[0], "name": row[1], "ip": row[2]} for row in rows]
 
 @app.post("/api/cameras", response_model=CameraOut)
-def add_camera(camera: Camera):
+def add_camera(camera: Camera, token: dict = Depends(verificar_token)):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("INSERT INTO cameras (name, ip) VALUES (%s, %s)", (camera.name, camera.ip))
     conn.commit()
     new_id = cursor.lastrowid
     conn.close()
+    log_operation(
+    token["user_id"],
+    f"adicionou câmera {camera.name}"
+    )
     return {"id": new_id, **camera.dict()}
 
 @app.put("/api/cameras/{camera_id}", response_model=CameraOut)
-def update_camera(camera_id: int, camera: Camera):
+def update_camera(camera_id: int, camera: Camera, token: dict = Depends(verificar_token)):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE cameras SET name = %s, ip = %s WHERE id = %s", (camera.name, camera.ip, camera_id))
@@ -314,6 +344,10 @@ def update_camera(camera_id: int, camera: Camera):
         raise HTTPException(status_code=404, detail="Câmera não encontrada")
     conn.commit()
     conn.close()
+    log_operation(
+    token["user_id"],
+    f"atualizou câmera {camera.name}"
+    )
     return {"id": camera_id, **camera.dict()}
 
 @app.get("/api/cameras/{camera_id}", response_model=CameraOut)
@@ -330,15 +364,27 @@ def get_camera_by_id(camera_id: int):
 
 
 @app.delete("/api/cameras/{camera_id}")
-def delete_camera(camera_id: int):
+def delete_camera(camera_id: int, token: dict = Depends(verificar_token)):
     conn = get_connection()
     cursor = conn.cursor()
+    
+    cursor.execute("SELECT id, name, ip FROM cameras WHERE id = %s", (camera_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    camera_deletada = row[0]
+    
     cursor.execute("DELETE FROM cameras WHERE id = %s", (camera_id,))
     if cursor.rowcount == 0:
         conn.close()
         raise HTTPException(status_code=404, detail="Câmera não encontrada")
     conn.commit()
     conn.close()
+    log_operation(
+    token["user_id"],
+    f"removeu câmera {camera_deletada}"
+    )
     return {"message": "Câmera removida com sucesso"}
 
 
@@ -401,7 +447,7 @@ async def conexao_websocket_camera(websocket: WebSocket, camera_id: int):
 
 
 @app.delete("/api/delete-batch")
-async def delete_batch(request: DeleteRequest):
+async def delete_batch(request: DeleteRequest, token: dict = Depends(verificar_token)):
     if not request.folder or not request.filenames:
         raise HTTPException(status_code=400, detail="Pasta ou arquivos não informados")
     deleted_files = []
@@ -416,16 +462,24 @@ async def delete_batch(request: DeleteRequest):
                 except PermissionError:
                     time.sleep(1)
                     gc.collect()
+    log_operation(
+    token["user_id"],
+    f"Deletou todas as imagens da pasta {request.folder}"
+    )
     return {"success": True, "deleted": deleted_files}
 
 
 @app.delete("/api/delete")
-def delete_file(request: DeleteFileRequest):
+def delete_file(request: DeleteFileRequest, token: dict = Depends(verificar_token)):
     folder_path = os.path.join(IMAGES_DIR, request.folder)
     file_path = os.path.join(folder_path, request.filename)
     
     if os.path.exists(file_path):
         os.remove(file_path)
+        log_operation(
+        token["user_id"],
+        f"Deletou o arquivo {request.filename}"
+        )
         return JSONResponse(content={"success": True, "message": "Arquivo excluído com sucesso."})
     else:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
@@ -483,7 +537,7 @@ def draw_label(imagem, text, x, y, color):
 
 
 @app.post("/api/predict")
-async def inferencia_imagem(file: UploadFile = File(...)):
+async def inferencia_imagem(file: UploadFile = File(...), token: dict = Depends(verificar_token)):
     try:
         dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
         modelo_yolo = YOLO(model_path)
@@ -507,6 +561,10 @@ async def inferencia_imagem(file: UploadFile = File(...)):
         cv2.imwrite(caminho_imagem, imagem)
         _, buffer_codificado = cv2.imencode(".jpg", imagem)
         imagem_base64 = base64.b64encode(buffer_codificado).decode("utf-8")
+        log_operation(
+        token["user_id"],
+        f"Salvou Foto {nome_arquivo}"
+        )
         return JSONResponse(content={"frame": imagem_base64, "path": caminho_imagem})
     except Exception as e:
         return JSONResponse(content={"erro": str(e)}, status_code=500)
@@ -514,7 +572,7 @@ async def inferencia_imagem(file: UploadFile = File(...)):
 
 
 @app.post("/api/predict_video")
-async def inferencia_video(file: UploadFile = File(...)):
+async def inferencia_video(file: UploadFile = File(...), token: dict = Depends(verificar_token)):
     dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
     modelo_yolo = YOLO(model_path)
 
@@ -592,13 +650,18 @@ async def inferencia_video(file: UploadFile = File(...)):
     except:
         pass
 
+    log_operation(
+    token["user_id"],
+    f"Salvou Video {video_nome_processado}"
+    )
+    
     # Retorna o caminho correto do vídeo salvo
     video_url = f"/videos/{os.path.basename(caminho_video_processado)}"
     return JSONResponse(content={"video_url": video_url, "path": caminho_video_processado})
 
 
 @app.websocket("/api/ws")
-async def conexao_websocket(websocket: WebSocket):
+async def conexao_websocket(websocket: WebSocket , token: dict = Depends(verificar_token)):
     await websocket.accept()
     modelo_yolo = YOLO(model_path)
     ultimo_save = 0
@@ -611,7 +674,10 @@ async def conexao_websocket(websocket: WebSocket):
             frame = cv2.imdecode(array_bytes, cv2.IMREAD_COLOR)
             dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
             resultados = modelo_yolo.predict(frame, imgsz=img_size, device=dispositivo, half=True, conf=confidence, stream=True)
-            
+            log_operation(
+            token["user_id"],
+            f"Utilizou o Websocket"
+            )
             for res in resultados:
                 if not res.boxes:
                     continue
