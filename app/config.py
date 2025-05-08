@@ -1,6 +1,7 @@
 import os
 import socket
 from dotenv import load_dotenv
+from base64 import urlsafe_b64decode
 
 load_dotenv()
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -20,3 +21,5 @@ CORES_CLASSES = {
 }
 CONFIDENCE = 0.5
 IMG_SIZE   = 640
+ENCRYPTION_KEY = os.getenv("6nGI2Rp9DQszezo-txX9KReN3mHqKOMpSlWlVHQuQ2o=")
+
