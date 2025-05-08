@@ -25,7 +25,7 @@ app.add_middleware(
 )
 
 # monta estáticos
-app.mount("/api/videos", StaticFiles(directory=VIDEO_DIR), name="videos")
+app.mount("/videos", StaticFiles(directory=VIDEO_DIR), name="videos")
 app.mount("/imagens",     StaticFiles(directory=IMAGES_DIR), name="imagens")
 
 # inclui routers

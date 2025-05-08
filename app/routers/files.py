@@ -1,4 +1,6 @@
+from io import BytesIO
 from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi.responses import StreamingResponse
 from starlette.responses import JSONResponse
 from pydantic import BaseModel
 from ..schemas import DecryptRequest, DeleteFileRequest, DeleteRequest
@@ -68,3 +70,17 @@ def decrypt_image(req: DecryptRequest = Body(...), token=Depends(verificar_token
         raise HTTPException(400, "Falha na descriptografia")
     b64 = base64.b64encode(decrypted).decode("utf-8")
     return JSONResponse({"frame": b64})
+
+@router.post("/decrypt_video")
+def decrypt_video(req: DecryptRequest = Body(...), token=Depends(verificar_token)):
+    folder = os.path.join(IMAGES_DIR, req.folder)
+    path   = os.path.join(folder, req.filename)
+    if not os.path.exists(path):
+        raise HTTPException(404, "Vídeo não encontrado")
+    with open(path, "rb") as f:
+        data = f.read()
+    try:
+        decrypted = fernet.decrypt(data)
+    except:
+        raise HTTPException(400, "Falha na descriptografia")
+    return StreamingResponse(BytesIO(decrypted), media_type="video/mp4")
