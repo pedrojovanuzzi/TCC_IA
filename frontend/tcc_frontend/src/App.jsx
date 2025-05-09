@@ -14,6 +14,7 @@ import { Monitoring } from "./pages/Monitoring/Monitoring";
 import { MonitoringCam } from "./pages/Monitoring/MonitoringCam";
 import { Users } from "./pages/Users/Users";
 import AcessoNegado from "./pages/AcessoNegado/AcessoNegado";
+import { Logs } from "./pages/Logs/Logs";
 export default function App() {
   return (
     <Routes>
@@ -29,6 +30,7 @@ export default function App() {
       <Route path="/cam" element={<ProtectedRoute element={<Cam />} />} />
       <Route path="/camsahi" element={<ProtectedRoute element={<CamSahi />} />} />
       <Route path="/about" element={<About />}/>
+      <Route path="/logs" element={<ProtectedRoute element={<Logs />} minPermission={2} />} />
       <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} minPermission={3} />} />
       <Route path="/users" element={<ProtectedRoute element={<Users />} minPermission={3}  />} />
       <Route path="/monitoring" element={<ProtectedRoute element={<Monitoring />} minPermission={2}  />} />

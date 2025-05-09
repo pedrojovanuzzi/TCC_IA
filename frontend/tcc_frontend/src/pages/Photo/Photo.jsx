@@ -41,24 +41,34 @@ export default function Photo() {
 
   const handleUpload = async (file) => {
     setLoading(true);
-
+  
+    const token = localStorage.getItem("access_token"); // ou onde você guarda o JWT
+  
     const formData = new FormData();
     formData.append("file", file);
-
+  
     try {
-      const response = await axios.post(`${API_URL}/api/predict`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
+      const response = await axios.post(
+        `${API_URL}/api/predict`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "Authorization": `Bearer ${token}`,
+          },
+        }
+      );
+  
       if (response.data.frame) {
         setPreview(`data:image/jpeg;base64,${response.data.frame}`);
       }
     } catch (error) {
-      console.error("Erro ao enviar a imagem:", error);
+      console.error("Erro ao enviar a imagem:", error.response?.data || error);
     } finally {
       setLoading(false);
     }
   };
+  
 
   const startCamera = async () => {
     setCameraActive(true);
