@@ -1,11 +1,17 @@
 from ultralytics import YOLO
+from multiprocessing import freeze_support
 
-# Carrega o modelo treinado (pode ser .pt ou um dos pré-treinados como 'yolov8n.pt')
-model = YOLO("runs/detect/train7/weights/best.pt")  # ou o caminho do seu modelo .pt
+def run_validation():
+    # Carrega o modelo
+    model = YOLO("runs/detect/train11/weights/best.pt")
 
-# Roda a validação no dataset de teste (usa o split 'val' que está no YAML)
-metrics = model.val(data="./dataset.yaml")
+    # Executa a validação
+    metrics = model.val(data="./dataset.yaml")
 
-# Exibe os principais resultados
-print("mAP50:", metrics.box.map50)      # média de precisão com IoU=0.50
-print("mAP50-95:", metrics.box.map)     # média de precisão média entre IoU 0.50 e 0.95
+    # Exibe os resultados
+    print("mAP50:", metrics.box.map50)
+    print("mAP50-95:", metrics.box.map)
+
+if __name__ == "__main__":
+    freeze_support()  # Necessário no Windows
+    run_validation()
