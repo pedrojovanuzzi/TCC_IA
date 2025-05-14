@@ -18,7 +18,7 @@ if not key_str:
     raise Exception("❌ ENCRYPTION_KEY não encontrada no .env")
 
 key_bytes = key_str.encode()
-print(f"🔢 Comprimento da chave (bytes): {len(key_bytes)}")
+# print(f"🔢 Comprimento da chave (bytes): {len(key_bytes)}")
 if len(key_bytes) != 44:
     raise Exception(f"❌ ENCRYPTION_KEY inválida: comprimento esperado 44, obtido {len(key_bytes)}")
 
@@ -26,7 +26,7 @@ ENCRYPTION_KEY = key_bytes
 
 # Outras configurações
 IS_LOCAL = os.getenv("LOCAL") == "true"
-TRAIN    = os.getenv("TRAIN", "train10")
+TRAIN    = os.getenv("TRAIN", "train11")
 
 MODEL_PT    = os.path.join(BASE_DIR, "runs", "detect", TRAIN, "weights", "best.pt")
 MODEL_E     = os.path.join(BASE_DIR, "runs", "detect", TRAIN, "weights", "best.engine")
