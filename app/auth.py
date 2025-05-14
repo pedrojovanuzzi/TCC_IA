@@ -24,8 +24,13 @@ def verificar_token(token: str = Depends(oauth2_scheme)):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: int = payload.get("user_id")
         nivel: int = payload.get("nivel")
-        if user_id is None:
+        username: str = payload.get("username")  # 👈 aqui
+
+        if user_id is None or username is None:
             raise HTTPException(status_code=401, detail="Token inválido.")
-        return {"user_id": user_id, "nivel": nivel}
+
+        return {"user_id": user_id, "nivel": nivel, "username": username}
+
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido ou expirado.")
+

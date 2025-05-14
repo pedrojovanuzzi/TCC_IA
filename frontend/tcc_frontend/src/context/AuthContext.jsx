@@ -29,19 +29,23 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem("access_token");
     const storedNivel = localStorage.getItem("nivel");
     if (token && storedNivel === null) {
-      const payload = parseJwt(token);
-      if (payload && Date.now() < payload.exp * 1000) {
-        setNivel(payload.nivel);
-        setUsername(payload.username);
-        localStorage.setItem("nivel", String(payload.nivel));
-      } else {
-        localStorage.removeItem("access_token");
-        localStorage.setItem("username", payload.username);
-        localStorage.removeItem("nivel");
-      }
-    } else if (storedNivel) {
-      setNivel(Number(storedNivel));
-    }
+  const payload = parseJwt(token);
+  if (payload && Date.now() < payload.exp * 1000) {
+    setNivel(payload.nivel);
+    setUsername(payload.username);
+    localStorage.setItem("nivel", String(payload.nivel));
+    localStorage.setItem("username", payload.username);
+  } else {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("nivel");
+    localStorage.removeItem("username");
+  }
+} else if (storedNivel) {
+  setNivel(Number(storedNivel));
+  const storedUsername = localStorage.getItem("username");
+  if (storedUsername) setUsername(storedUsername);
+}
+
     setIsLoading(false);
   }, []);
 

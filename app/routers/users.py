@@ -14,7 +14,7 @@ def login(data: TokenRequest):
     c.execute("SELECT id,nivel FROM users WHERE login=%s AND password=%s",(data.username,h))
     r = c.fetchone(); conn.close()
     if not r: raise HTTPException(401,"Login ou senha inválidos")
-    return {"access_token": criar_token({"user_id":r[0],"nivel":r[1]}),"token_type":"bearer"}
+    return {"access_token": criar_token({"user_id":r[0],"nivel":r[1], "username": r[2]}),"token_type":"bearer"}
 
 @router.get("/users")
 def listar(token=Depends(verificar_token)):
