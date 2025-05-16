@@ -73,7 +73,6 @@ async def ws_root(websocket: WebSocket):
 @router.websocket("/ws/camera/{camera_id}")
 async def ws_cam(ws: WebSocket, camera_id: int):
     await ws.accept()
-    start_time = time.time()  # ⏱️ Marca o início da conexão
     conn = get_connection(); c = conn.cursor()
     c.execute("SELECT ip FROM cameras WHERE id=%s", (camera_id,)); row = c.fetchone(); conn.close()
     if not row:
@@ -86,10 +85,6 @@ async def ws_cam(ws: WebSocket, camera_id: int):
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     try:
         while True:
-            # ⏱️ Verifica se passou de 10 segundos
-            if time.time() - start_time > 10:
-                await ws.send_text(json.dumps({"erro": "tempo limite excedido"}))
-                break
 
             ret, frame = cap.read()
             if not ret: break
