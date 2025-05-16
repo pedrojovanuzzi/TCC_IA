@@ -8,7 +8,9 @@ export const Monitoring = () => {
   const [ip, setIp] = useState('');
   const [editingId, setEditingId] = useState(null);
   const navigate = useNavigate();
-  // 🔄 Buscar lista de câmeras do backend
+
+  const token = localStorage.getItem('access_token');
+
   const fetchCameras = async () => {
     try {
       const response = await axios.get('http://localhost:3001/api/cameras');
@@ -27,11 +29,28 @@ export const Monitoring = () => {
 
     try {
       if (editingId !== null) {
-        await axios.put(`http://localhost:3001/api/cameras/${editingId}`, { name, ip });
+        await axios.put(
+          `http://localhost:3001/api/cameras/${editingId}`,
+          { name, ip },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
       } else {
-        await axios.post('http://localhost:3001/api/cameras', { name, ip });
+        await axios.post(
+          'http://localhost:3001/api/cameras',
+          { name, ip },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
       }
-      await fetchCameras(); // Atualiza lista após salvar
+
+      await fetchCameras();
       setName('');
       setIp('');
       setEditingId(null);
@@ -39,11 +58,22 @@ export const Monitoring = () => {
       console.error('Erro ao salvar câmera:', error);
     }
   };
-  
-  const handleView = (id) => {
-    navigate(`/monitoring/${id}`);
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(
+        `http://localhost:3001/api/cameras/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      await fetchCameras();
+    } catch (error) {
+      console.error('Erro ao remover câmera:', error);
+    }
   };
-  
 
   const handleEdit = (camera) => {
     setName(camera.name);
@@ -51,13 +81,8 @@ export const Monitoring = () => {
     setEditingId(camera.id);
   };
 
-  const handleDelete = async (id) => {
-    try {
-      await axios.delete(`http://localhost:3001/api/cameras/${id}`);
-      await fetchCameras();
-    } catch (error) {
-      console.error('Erro ao remover câmera:', error);
-    }
+  const handleView = (id) => {
+    navigate(`/monitoring/${id}`);
   };
 
   return (
@@ -92,10 +117,7 @@ export const Monitoring = () => {
           <p className="text-gray-500">Nenhuma câmera adicionada.</p>
         ) : (
           cameras.map(cam => (
-            <div
-              key={cam.id}
-              className="border p-5 rounded"
-            >
+            <div key={cam.id} className="border p-5 rounded">
               <div>
                 <p className="font-semibold">{cam.name}</p>
                 <p className="text-sm text-gray-600">{cam.ip}</p>
@@ -114,12 +136,11 @@ export const Monitoring = () => {
                   Remover
                 </button>
                 <button
-                className="text-green-600 cursor-pointer p-3"
-                onClick={() => handleView(cam.id)}
+                  className="text-green-600 cursor-pointer p-3"
+                  onClick={() => handleView(cam.id)}
                 >
-                Visualizar
+                  Visualizar
                 </button>
-
               </div>
             </div>
           ))
