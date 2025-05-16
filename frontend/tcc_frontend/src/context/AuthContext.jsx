@@ -25,29 +25,26 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [username, setUsername] = useState(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    const storedNivel = localStorage.getItem("nivel");
-    if (token && storedNivel === null) {
+useEffect(() => {
+  const token = localStorage.getItem("access_token");
   const payload = parseJwt(token);
-  if (payload && Date.now() < payload.exp * 1000) {
+
+  if (token && payload && Date.now() < payload.exp * 1000) {
     setNivel(payload.nivel);
     setUsername(payload.username);
     localStorage.setItem("nivel", String(payload.nivel));
     localStorage.setItem("username", payload.username);
   } else {
+    setNivel(null);
+    setUsername(null);
     localStorage.removeItem("access_token");
     localStorage.removeItem("nivel");
     localStorage.removeItem("username");
   }
-} else if (storedNivel) {
-  setNivel(Number(storedNivel));
-  const storedUsername = localStorage.getItem("username");
-  if (storedUsername) setUsername(storedUsername);
-}
 
-    setIsLoading(false);
-  }, []);
+  setIsLoading(false);
+}, []);
+
 
   const login = async (username, password) => {
     try {
