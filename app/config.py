@@ -26,7 +26,7 @@ ENCRYPTION_KEY = key_bytes
 
 # Outras configurações
 IS_LOCAL = os.getenv("LOCAL") == "true"
-TRAIN    = os.getenv("TRAIN", "train11")
+TRAIN    = os.getenv("TRAIN", "train13")
 
 MODEL_PT    = os.path.join(BASE_DIR, "runs", "detect", TRAIN, "weights", "best.pt")
 MODEL_E     = os.path.join(BASE_DIR, "runs", "detect", TRAIN, "weights", "best.engine")
@@ -43,5 +43,5 @@ CORES_CLASSES = {
     "no_glasses":(255,0,255),"no_belt":(0,0,255),"boots":(255,128,0),
 }
 
-CONFIDENCE = 0.5
+CONFIDENCE = 0.1
 IMG_SIZE   = 640

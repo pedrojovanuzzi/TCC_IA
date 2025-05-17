@@ -85,6 +85,7 @@ async def ws_cam(ws: WebSocket, camera_id: int):
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     try:
         while True:
+
             ret, frame = cap.read()
             if not ret: break
             res = model.predict(frame, imgsz=IMG_SIZE, device=dev, half=True)[0]
@@ -93,6 +94,7 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                 name = model.names[int(b.cls[0])]
                 col = CORES_CLASSES.get(name,(255,255,255))
                 cv2.rectangle(frame,(x1,y1),(x2,y2),col,1)
+
             now = time.time()
             if now - last >= 3:
                 os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
@@ -103,6 +105,7 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                 with open(path, "wb") as f:
                     f.write(encrypted)
                 last = now
+
             _, buf = cv2.imencode(".jpg", frame)
             frame_b64 = base64.b64encode(buf.tobytes()).decode("utf-8")
             await ws.send_text(json.dumps({"frame": frame_b64}))
@@ -111,3 +114,4 @@ async def ws_cam(ws: WebSocket, camera_id: int):
     finally:
         cap.release()
         await ws.close()
+
