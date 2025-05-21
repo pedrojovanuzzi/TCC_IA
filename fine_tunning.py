@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import os
 
 
-train = "train41"
+train = "train42"
 
 # Caminho do modelo treinado
 script_dir = os.path.dirname(os.path.abspath(__file__))
