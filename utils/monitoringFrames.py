@@ -18,6 +18,7 @@ if not cap.isOpened():
 
 count = 0
 intervalo_segundos = 1
+ultimo_tempo = time.time()
 
 print("[INFO] Capturando frames automaticamente... Pressione Ctrl+C para parar.")
 
@@ -25,14 +26,15 @@ try:
     while True:
         ret, frame = cap.read()
         if not ret:
-            break
+            continue
 
-        img_name = f"frame_{count:04d}.jpg"
-        cv2.imwrite(os.path.join(output_dir, img_name), frame)
-        print(f"[SALVO] {img_name}")
-        count += 1
-
-        time.sleep(intervalo_segundos)
+        agora = time.time()
+        if agora - ultimo_tempo >= intervalo_segundos:
+            img_name = f"frame_{count:04d}.jpg"
+            cv2.imwrite(os.path.join(output_dir, img_name), frame)
+            print(f"[SALVO] {img_name}")
+            count += 1
+            ultimo_tempo = agora
 
 except KeyboardInterrupt:
     print("\n[INFO] Captura encerrada pelo usuário.")
