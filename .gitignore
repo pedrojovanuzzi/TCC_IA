@@ -15,4 +15,4 @@ sem_duplicatas/*
 /frontend/tcc_frontend/public/imagens/img_statica
 /frontend/tcc_frontend/public/imagens/video_treinado
 /utils/dataset_frames/*
-/study
+app/study
