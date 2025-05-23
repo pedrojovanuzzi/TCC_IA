@@ -97,5 +97,5 @@ if __name__ == "__main__":
         "folder": "img_statica",
         "filename": "detectado_2025-05-23_08-40-32-765.jpg"
     }
-    req = SimpleNamespace(**json)
+    req = DecryptRequest(**json)
     decrypt_image(req)
