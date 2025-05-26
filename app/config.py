@@ -8,10 +8,6 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 dotenv_path = os.path.join(BASE_DIR, ".env")
 load_dotenv(dotenv_path)
 
-# Debug: mostrar onde está o .env e se foi carregado
-# print(f"🔎 Carregando .env de: {dotenv_path}")
-# print(f"🔑 Chave bruta: {os.getenv('ENCRYPTION_KEY')}")
-
 # Leitura e validação da ENCRYPTION_KEY
 key_str = os.getenv("ENCRYPTION_KEY")
 if not key_str:
