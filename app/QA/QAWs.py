@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import json
+import multiprocessing
 import os
 import sys
 import time
@@ -99,22 +100,18 @@ async def ws_root(websocket: WebSocket):
     finally:
         await websocket.close()
 
+def start_server():
+    import uvicorn
+    uvicorn.run("QAWs:app", host="0.0.0.0", port=3001, reload=False)
+
 
 if __name__ == "__main__":
-    import multiprocessing
-
-    # Roda o servidor FastAPI em um processo separado
-    def start_server():
-        uvicorn.run("QAWs:app", host="0.0.0.0", port=3001, reload=False)
 
     server_proc = multiprocessing.Process(target=start_server)
     server_proc.start()
 
-    # Aguarda o servidor subir (ajuste se precisar)
-    time.sleep(2)
+    time.sleep(2)  # aguarda o servidor subir
 
-    # Roda o cliente WebSocket (envia webcam)
     asyncio.run(webcam_client())
 
-    # Finaliza o servidor depois de sair do cliente
     server_proc.terminate()
