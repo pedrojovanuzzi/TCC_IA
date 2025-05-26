@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import os
@@ -5,6 +6,8 @@ import sys
 import time
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import websockets  # <-- importante
+
 from fastapi.websockets import WebSocketState
 import uvicorn
 import cv2
@@ -23,12 +26,49 @@ fernet = Fernet(ENCRYPTION_KEY)
 app = FastAPI()
 
 
+async def webcam_client():
+    uri = "ws://localhost:3001/ws"
+    async with websockets.connect(uri, max_size=None) as ws:
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            print("❌ Erro ao acessar a webcam.")
+            return
+
+        print("🎥 Enviando frames para o servidor...")
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("❌ Falha ao capturar frame.")
+                break
+
+            # Codifica em JPEG + base64
+            _, buffer = cv2.imencode(".jpg", frame)
+            b64_frame = base64.b64encode(buffer).decode("utf-8")
+
+            # Envia para o servidor
+            await ws.send(json.dumps({ "frame": b64_frame }))
+
+            # Espera resposta do servidor
+            resposta = await ws.recv()
+            processed = json.loads(resposta)["frame"]
+
+            # Decodifica e mostra
+            img_bytes = base64.b64decode(processed)
+            img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+            result_frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
+            cv2.imshow("Frame Processado", result_frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        cap.release()
+        cv2.destroyAllWindows()
+
 @app.websocket("/ws")
 async def ws_root(websocket: WebSocket):
     await websocket.accept()
     model = YOLO(MODEL_PATH)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    last_saved = 0  # controle de tempo
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
@@ -54,27 +94,27 @@ async def ws_root(websocket: WebSocket):
             # Envia para o frontend
             await websocket.send_text(json.dumps({ "frame": b64 }))
 
-            # Salva a cada 3 segundos
-            now = time.time()
-            if now - last_saved >= 3:
-                try:
-                    os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
-                    filename = f"webcam_{time.strftime('%Y-%m-%d_%H-%M-%S')}.jpg"
-                    path = os.path.join(IMG_REAL_TIME_DIR, filename)
-                    encrypted = fernet.encrypt(buf.tobytes())
-                    with open(path, "wb") as f:
-                        f.write(encrypted)
-                    print(f"✅ Imagem da webcam salva: {path}")
-                    last_saved = now
-                except Exception as e:
-                    print("❌ Erro ao salvar imagem da webcam:", e)
-
     except WebSocketDisconnect:
         print("🔌 WebSocket desconectado.")
     finally:
         await websocket.close()
 
 
-# Executa diretamente com: `python nome_arquivo.py`
 if __name__ == "__main__":
-    uvicorn.run("AQWs:app", host="0.0.0.0", port=3001, reload=True)
+    import multiprocessing
+
+    # Roda o servidor FastAPI em um processo separado
+    def start_server():
+        uvicorn.run("QAWs:app", host="0.0.0.0", port=3001, reload=False)
+
+    server_proc = multiprocessing.Process(target=start_server)
+    server_proc.start()
+
+    # Aguarda o servidor subir (ajuste se precisar)
+    time.sleep(2)
+
+    # Roda o cliente WebSocket (envia webcam)
+    asyncio.run(webcam_client())
+
+    # Finaliza o servidor depois de sair do cliente
+    server_proc.terminate()
