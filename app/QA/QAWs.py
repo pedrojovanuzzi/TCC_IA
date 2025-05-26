@@ -3,24 +3,27 @@ import json
 import os
 import sys
 import time
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-import cv2
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
+import uvicorn
+import cv2
 import numpy as np
 import torch
 from ultralytics import YOLO
 from cryptography.fernet import Fernet
 
+# Ajuste para importar seus próprios módulos
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
 from app.QA.QACsv import draw_label
 from app.config import CORES_CLASSES, ENCRYPTION_KEY, IMG_REAL_TIME_DIR, IMG_SIZE, MODEL_PATH
 
-
-
 fernet = Fernet(ENCRYPTION_KEY)
+app = FastAPI()
 
 
+@app.websocket("/ws")
 async def ws_root(websocket: WebSocket):
     await websocket.accept()
     model = YOLO(MODEL_PATH)
@@ -71,5 +74,7 @@ async def ws_root(websocket: WebSocket):
     finally:
         await websocket.close()
 
+
+# Executa diretamente com: `python nome_arquivo.py`
 if __name__ == "__main__":
-    ws_root()
+    uvicorn.run("AQWs:app", host="0.0.0.0", port=3001, reload=True)
