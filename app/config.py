@@ -39,5 +39,5 @@ CORES_CLASSES = {
     "no_glasses":(255,0,255),"no_belt":(0,0,255),"boots":(255,128,0),
 }
 
-CONFIDENCE = 0.7
+CONFIDENCE = 0.1
 IMG_SIZE   = 640
