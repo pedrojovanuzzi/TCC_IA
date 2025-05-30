@@ -14,22 +14,29 @@ if not cap.isOpened():
 count = 0
 intervalo_segundos = 1  # salva uma imagem a cada 1 segundo
 
-print("[INFO] Capturando frames automaticamente... Pressione Ctrl+C para parar.")
+print("[INFO] Capturando frames automaticamente... Pressione 'q' para sair.")
 
-try:
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+last_time = time.time()
 
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Mostra a imagem na janela
+    cv2.imshow("Captura da Câmera", frame)
+
+    # Salva frame a cada X segundos
+    if time.time() - last_time >= intervalo_segundos:
         img_name = f"frame_{count:04d}.jpg"
         cv2.imwrite(os.path.join(output_dir, img_name), frame)
         print(f"[SALVO] {img_name}")
         count += 1
+        last_time = time.time()
 
-        time.sleep(intervalo_segundos)
-
-except KeyboardInterrupt:
-    print("\n[INFO] Captura encerrada pelo usuário.")
+    # Sai ao pressionar 'q'
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
 cap.release()
+cv2.destroyAllWindows()
