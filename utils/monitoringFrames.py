@@ -3,6 +3,7 @@ import os
 import time
 from dotenv import load_dotenv
 
+# Carrega variáveis do .env
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 dotenv_path = os.path.join(BASE_DIR, ".env")
 load_dotenv(dotenv_path)
@@ -20,13 +21,16 @@ count = 0
 intervalo_segundos = 1
 ultimo_tempo = time.time()
 
-print("[INFO] Capturando frames automaticamente... Pressione Ctrl+C para parar.")
+print("[INFO] Capturando frames automaticamente... Pressione 'q' para sair.")
 
 try:
     while True:
         ret, frame = cap.read()
         if not ret:
             continue
+
+        # Exibe o frame na tela
+        cv2.imshow("Câmera RTSP", frame)
 
         agora = time.time()
         if agora - ultimo_tempo >= intervalo_segundos:
@@ -36,7 +40,12 @@ try:
             count += 1
             ultimo_tempo = agora
 
+        # Encerra ao pressionar 'q'
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
 except KeyboardInterrupt:
     print("\n[INFO] Captura encerrada pelo usuário.")
 
 cap.release()
+cv2.destroyAllWindows()

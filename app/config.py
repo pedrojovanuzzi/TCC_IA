@@ -8,10 +8,6 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 dotenv_path = os.path.join(BASE_DIR, ".env")
 load_dotenv(dotenv_path)
 
-# Debug: mostrar onde está o .env e se foi carregado
-# print(f"🔎 Carregando .env de: {dotenv_path}")
-# print(f"🔑 Chave bruta: {os.getenv('ENCRYPTION_KEY')}")
-
 # Leitura e validação da ENCRYPTION_KEY
 key_str = os.getenv("ENCRYPTION_KEY")
 if not key_str:
@@ -26,7 +22,7 @@ ENCRYPTION_KEY = key_bytes
 
 # Outras configurações
 IS_LOCAL = os.getenv("LOCAL") == "true"
-TRAIN    = os.getenv("TRAIN", "train46")
+TRAIN    = os.getenv("TRAIN", "train45")
 
 MODEL_PT    = os.path.join(BASE_DIR, "runs", "detect", TRAIN, "weights", "best.pt")
 MODEL_E     = os.path.join(BASE_DIR, "runs", "detect", TRAIN, "weights", "best.engine")
