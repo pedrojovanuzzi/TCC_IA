@@ -9,7 +9,7 @@ if __name__ == '__main__':
     YOLO(model_path).train(
     data="dataset.yaml",
     epochs=300,
-    imgsz=960,  # ⬆️ aumenta o input size para melhorar detecção de objetos pequenos
+    imgsz=416,  # ⬆️ aumenta o input size para melhorar detecção de objetos pequenos
     batch=16,   # pode deixar -1 se quiser automático, mas 16 costuma ser bom
     optimizer='auto',
     device=0,
