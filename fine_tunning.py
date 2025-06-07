@@ -16,7 +16,7 @@ if not os.path.exists(model_path):
 if __name__ == '__main__':
     YOLO(model_path).train(
         data="dataset.yaml",
-        epochs=300,
+        epochs=50,
         imgsz=416,
         batch=-1,
         optimizer='auto',
