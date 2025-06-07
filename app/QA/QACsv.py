@@ -68,6 +68,7 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
 
 def decrypt_image(req: DecryptRequest = Body(...), token=Depends(verificar_token)):
     path = os.path.join(IMAGES_DIR, req.folder, req.filename)
+    print(f"[DEBUG] Procurando arquivo em: {path}")
     if not os.path.exists(path):
         raise HTTPException(404, "Arquivo não encontrado")
     data = open(path, "rb").read()
