@@ -14,6 +14,9 @@ from app.lifespan         import lifespan
 from app.routers.logs import router as logs
 
 from app.routers.files   import router as files_router
+from dotenv import load_dotenv
+load_dotenv()
+
 
 app = FastAPI(lifespan=lifespan)
 
