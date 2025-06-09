@@ -2,12 +2,12 @@ train: ../train/images
 val: ../valid/images
 test: ../test/images
 
-nc: 9
-names: ['belt', 'boots', 'glasses', 'glove', 'hands', 'head', 'helmet', 'no_belt', 'no_glasses']
+nc: 8
+names: ['belt', 'boots', 'glasses', 'hands', 'head', 'helmet', 'no_belt', 'no_glasses']
 
 roboflow:
   workspace: pedro-2p96q
   project: tcc-visao-computacional-epi-v2
-  version: 23
+  version: 32
   license: CC BY 4.0
-  url: https://universe.roboflow.com/pedro-2p96q/tcc-visao-computacional-epi-v2/dataset/23
+  url: https://universe.roboflow.com/pedro-2p96q/tcc-visao-computacional-epi-v2/dataset/32
