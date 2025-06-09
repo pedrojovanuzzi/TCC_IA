@@ -8,6 +8,6 @@ names: ['belt', 'boots', 'glasses', 'glove', 'hands', 'head', 'helmet', 'no_belt
 roboflow:
   workspace: pedro-2p96q
   project: tcc-visao-computacional-epi-v2
-  version: 3
+  version: 23
   license: CC BY 4.0
-  url: https://universe.roboflow.com/pedro-2p96q/tcc-visao-computacional-epi-v2/dataset/3
+  url: https://universe.roboflow.com/pedro-2p96q/tcc-visao-computacional-epi-v2/dataset/23
