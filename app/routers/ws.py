@@ -93,7 +93,9 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                 x1,y1,x2,y2 = map(int, b.xyxy[0])
                 name = model.names[int(b.cls[0])]
                 col = CORES_CLASSES.get(name,(255,255,255))
+                conf = float(b.conf[0])
                 cv2.rectangle(frame,(x1,y1),(x2,y2),col,1)
+                draw_label(frame, f"{name}:{conf:.2f}", x1, y1, col)
 
             now = time.time()
             if now - last >= 3:
