@@ -6,7 +6,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "./dataset_fr
 
 pasta = BASE_DIR
 # Prefixo do nome (ex: "capacete")
-nome = "foto"
+nome = "background"
 # Parte fixa
 fixo = "001"
 
