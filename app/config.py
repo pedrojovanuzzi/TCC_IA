@@ -27,7 +27,7 @@ TRAIN    = os.getenv("TRAIN", "train3")
 MONITORINGFRAMES = os.getenv("MONITORINGFRAMES")
 
 MODEL_PT    = os.path.join(BASE_DIR, "runs", "detect", TRAIN, "weights", "best.pt")
-MODEL_E     = os.path.join(BASE_DIR, "runs", "detect", TRAIN, "weights", "best.engine")
+MODEL_E     = os.path.join(BASE_DIR, "runs", "detect", TRAIN, "weights", "best.onnx")
 MODEL_PATH  = MODEL_E if IS_LOCAL else MODEL_PT
 
 VIDEO_DIR        = os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "video_treinado")
