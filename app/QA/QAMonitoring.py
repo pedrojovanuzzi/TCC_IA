@@ -25,6 +25,7 @@ from app.config import CORES_CLASSES, ENCRYPTION_KEY, IMG_REAL_TIME_DIR, IMG_SIZ
 
 fernet = Fernet(ENCRYPTION_KEY)
 app = FastAPI()
+MONITORINGFRAMES = os.getenv("MONITORINGFRAMES", "rtsp://usuario:senha@ip_da_camera/stream")
 
 
 async def webcam_client():
@@ -45,8 +46,12 @@ async def webcam_client():
                 print("❌ Falha ao capturar frame.")
                 break
 
-            # Codifica em JPEG + base64
-            _, buffer = cv2.imencode(".jpg", frame)
+            # Reduz a resolução
+            frame = cv2.resize(frame, (640, 360))  # ou (320, 240) se quiser mais leve
+
+            # Codifica com qualidade JPEG reduzida
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 50]  # Qualidade de 0 a 100
+            _, buffer = cv2.imencode(".jpg", frame, encode_param)
             b64_frame = base64.b64encode(buffer).decode("utf-8")
 
             # Envia para o servidor
@@ -67,7 +72,6 @@ async def webcam_client():
 
         cap.release()
         cv2.destroyAllWindows()
-
 
 @app.websocket("/ws")
 async def ws_root(websocket: WebSocket):

@@ -7,6 +7,7 @@ from ultralytics import YOLO
 from cryptography.fernet import Fernet
 import torch, cv2, json, os, time, base64
 
+
 router = APIRouter()
 fernet = Fernet(ENCRYPTION_KEY)
 
