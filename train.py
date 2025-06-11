@@ -8,7 +8,7 @@ model_path = "./yolo11s.pt"
 if __name__ == '__main__':
     YOLO(model_path).train(
         data="data.yaml",
-        epochs=50,
+        epochs=300,
         imgsz=416,
         batch=16,
         optimizer='auto',
