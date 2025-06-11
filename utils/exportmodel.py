@@ -5,7 +5,7 @@ def export_model():
     model = YOLO("../runs/detect/train3/weights/best.pt")
     
     # Exporta para formato TensorRT (.engine)
-    model.export(format="engine", device="cuda")  # usa GPU para exportar
+    model.export(format="engine", device="cuda", half=True)
 
 if __name__ == "__main__":
     freeze_support()  # necessário no Windows
