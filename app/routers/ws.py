@@ -89,7 +89,15 @@ async def ws_cam(ws: WebSocket, camera_id: int):
 
             ret, frame = cap.read()
             if not ret: break
-            res = model.predict(frame, imgsz=IMG_SIZE, device=dev, half=True)[0]
+            res = model.predict(
+                            frame,
+                            imgsz=IMG_SIZE,
+                            device=dev,
+                            half=True,
+                            conf=0.1,            # reduz a confiança mínima
+                            iou=0.4,             # aumenta a sensibilidade de NMS
+                            agnostic_nms=True    # ignora a classe ao aplicar NMS
+                        )[0]
             for b in res.boxes:
                 x1,y1,x2,y2 = map(int, b.xyxy[0])
                 name = model.names[int(b.cls[0])]
