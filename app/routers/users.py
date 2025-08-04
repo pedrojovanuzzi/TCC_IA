@@ -20,7 +20,7 @@ def login(data: TokenRequest):
 def listar(token=Depends(verificar_token)):
     if token["nivel"]<3: raise HTTPException(403,"Permissão negada")
     conn = get_connection(); c=conn.cursor()
-    c.execute("SELECT id,login,nivel FROM users WHERE login!='admin'")
+    c.execute("SELECT id,login,nivel FROM users")
     u=[{"id":i[0],"login":i[1],"nivel":i[2]} for i in c.fetchall()]
     conn.close()
     return u
