@@ -25,6 +25,7 @@ export const Logs = () => {
               <th className="border px-4 py-2">ID</th>
               <th className="border px-4 py-2">Usuário</th>
               <th className="border px-4 py-2">Operação</th>
+              <th className="border px-4 py-2">Data</th>
             </tr>
           </thead>
           <tbody>
@@ -33,6 +34,7 @@ export const Logs = () => {
                 <td className="border px-4 py-1">{log.id}</td>
                 <td className="border px-4 py-1">{log.user_id}</td>
                 <td className="border px-4 py-1">{log.operacao}</td>
+                <td className="border px-4 py-1">{log.date}</td>
               </tr>
             ))}
           </tbody>
