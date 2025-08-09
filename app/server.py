@@ -9,7 +9,6 @@ from app.routers.users    import router as users_router
 from app.routers.cameras  import router as cameras_router
 from app.routers.predict  import router as predict_router
 from app.routers.ws       import router as ws_router
-from app.routers.predict  import router as predict_router
 from app.lifespan         import lifespan
 from app.routers.logs import router as logs
 

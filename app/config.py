@@ -22,7 +22,7 @@ ENCRYPTION_KEY = key_bytes
 
 # Outras configurações
 IS_LOCAL = os.getenv("LOCAL") == "true"
-TRAIN    = os.getenv("TRAIN", "train2")
+TRAIN    = os.getenv("TRAIN", "train3")
 
 MONITORINGFRAMES = os.getenv("MONITORINGFRAMES")
 
@@ -42,4 +42,4 @@ CORES_CLASSES = {
 }
 
 CONFIDENCE = 0.362
-IMG_SIZE   = 416
+IMG_SIZE   = 1280

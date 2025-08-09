@@ -6,10 +6,15 @@ from ..config import MODEL_PATH, IMG_REAL_TIME_DIR, CORES_CLASSES, IMG_SIZE, ENC
 from ultralytics import YOLO
 from cryptography.fernet import Fernet
 import torch, cv2, json, os, time, base64
-
+from functools import lru_cache
 
 router = APIRouter()
 fernet = Fernet(ENCRYPTION_KEY)
+
+@lru_cache(maxsize=1)
+def get_model():
+    print("📦 Carregando YOLO...")
+    return YOLO(MODEL_PATH)
 
 def draw_label(img, text, x, y, color):
     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -22,9 +27,9 @@ def draw_label(img, text, x, y, color):
 @router.websocket("/ws")
 async def ws_root(websocket: WebSocket):
     await websocket.accept()
-    model = YOLO(MODEL_PATH)
+    model = get_model()
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    last_saved = 0  # controle de tempo
+    last_saved = 0
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
@@ -32,7 +37,6 @@ async def ws_root(websocket: WebSocket):
             frame_bytes = base64.b64decode(json.loads(data)["frame"])
             img = cv2.imdecode(np.frombuffer(frame_bytes, np.uint8), cv2.IMREAD_COLOR)
 
-            # Processa com o YOLO
             results = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=0.5, stream=True)
             for res in results:
                 for box in res.boxes:
@@ -43,14 +47,10 @@ async def ws_root(websocket: WebSocket):
                     cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
                     draw_label(img, cls_name, x1, y1, color)
 
-            # Cria imagem final codificada
             _, buf = cv2.imencode(".jpg", img)
             b64 = base64.b64encode(buf.tobytes()).decode("utf-8")
-
-            # Envia para o frontend
             await websocket.send_text(json.dumps({ "frame": b64 }))
 
-            # Salva a cada 3 segundos
             now = time.time()
             if now - last_saved >= 3:
                 try:
@@ -75,34 +75,48 @@ async def ws_root(websocket: WebSocket):
 async def ws_cam(ws: WebSocket, camera_id: int):
     await ws.accept()
     conn = get_connection(); c = conn.cursor()
-    c.execute("SELECT ip FROM cameras WHERE id=%s", (camera_id,)); row = c.fetchone(); conn.close()
+    c.execute("SELECT ip FROM cameras WHERE id=%s", (camera_id,))
+    row = c.fetchone(); conn.close()
     if not row:
-        await ws.send_text(json.dumps({"erro":"não encontrada"})); await ws.close(); return
+        await ws.send_text(json.dumps({"erro": "não encontrada"})); await ws.close(); return
+
     cap = cv2.VideoCapture(row[0])
     if not cap.isOpened():
-        await ws.send_text(json.dumps({"erro":"não conectou"})); await ws.close(); return
-    model = YOLO(MODEL_PATH)
+        await ws.send_text(json.dumps({"erro": "não conectou"})); await ws.close(); return
+
+    model = get_model()
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     last = 0
-    dev = "cuda" if torch.cuda.is_available() else "cpu"
+
     try:
         while True:
-
             ret, frame = cap.read()
             if not ret: break
-            res = model.predict(frame, imgsz=IMG_SIZE, device=dev, half=True)[0]
-            for b in res.boxes:
-                x1,y1,x2,y2 = map(int, b.xyxy[0])
-                name = model.names[int(b.cls[0])]
-                col = CORES_CLASSES.get(name,(255,255,255))
+
+            results = model.predict(
+                frame,
+                imgsz=IMG_SIZE,
+                device=device,
+                half=True,
+                conf=0.1,
+                iou=0.4,
+                agnostic_nms=True
+            )[0]
+
+            for b in results.boxes:
+                x1, y1, x2, y2 = map(int, b.xyxy[0])
+                cls_id = int(b.cls[0])
+                name = model.names[cls_id]
+                col = CORES_CLASSES.get(name, (255, 255, 255))
                 conf = float(b.conf[0])
-                cv2.rectangle(frame,(x1,y1),(x2,y2),col,1)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), col, 1)
                 draw_label(frame, f"{name}:{conf:.2f}", x1, y1, col)
 
             now = time.time()
             if now - last >= 3:
                 os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
-                fn = f"cam{camera_id}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.jpg"
-                path = os.path.join(IMG_REAL_TIME_DIR, fn)
+                filename = f"cam{camera_id}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.jpg"
+                path = os.path.join(IMG_REAL_TIME_DIR, filename)
                 _, buf = cv2.imencode(".jpg", frame)
                 encrypted = fernet.encrypt(buf.tobytes())
                 with open(path, "wb") as f:
@@ -111,10 +125,10 @@ async def ws_cam(ws: WebSocket, camera_id: int):
 
             _, buf = cv2.imencode(".jpg", frame)
             frame_b64 = base64.b64encode(buf.tobytes()).decode("utf-8")
-            await ws.send_text(json.dumps({"frame": frame_b64}))
+            await ws.send_text(json.dumps({ "frame": frame_b64 }))
+
     except WebSocketDisconnect:
         pass
     finally:
         cap.release()
         await ws.close()
-
