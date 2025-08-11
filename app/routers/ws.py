@@ -42,10 +42,12 @@ async def ws_root(websocket: WebSocket):
                 for box in res.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     cls_id = int(box.cls[0])
+                    cls = model.names[int(box.cls[0])]
+                    conf = float(box.conf[0])
                     cls_name = model.names[cls_id]
                     color = CORES_CLASSES.get(cls_name, (255, 255, 255))
                     cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
-                    draw_label(img, cls_name, x1, y1, color)
+                    draw_label(img, f"{cls}:{conf:.2f}", x1, y1, color)
 
             _, buf = cv2.imencode(".jpg", img)
             b64 = base64.b64encode(buf.tobytes()).decode("utf-8")
