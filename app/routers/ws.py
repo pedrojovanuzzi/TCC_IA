@@ -14,7 +14,7 @@ from multiprocessing.synchronize import Event as MpEvent
 router = APIRouter()
 fernet = Fernet(ENCRYPTION_KEY)
 
-READ_IDLE_TIMEOUT = 8.0   # segundos sem frame -> encerra
+READ_IDLE_TIMEOUT = 20.0   # segundos sem frame -> encerra
 QUEUE_MAXSIZE = 2         # evita backlog/latência
 
 @lru_cache(maxsize=1)
