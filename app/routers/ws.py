@@ -217,18 +217,37 @@ async def ws_cam(ws: WebSocket, camera_id: int):
     except WebSocketDisconnect:
         pass
     finally:
-        # Encerra captura sem piedade (evita travas do FFMPEG)
+    # 1) Para o processo de captura (se existir)
         try:
-            stop.set()
+            if 'stop' in locals() and stop is not None:
+                stop.set()
         except Exception:
             pass
-        if proc.is_alive():
+
+    try:
+        if 'proc' in locals() and proc is not None and proc.is_alive():
             proc.terminate()
             proc.join(timeout=1.0)
+            # Se ainda estiver vivo, tenta matar de vez
+            if proc.is_alive():
+                try:
+                    proc.kill()  # Python 3.7+; no Windows funciona
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
-        # Fecha WS com segurança
+    # 2) Se o WS ainda estiver conectado, avisa o front e fecha
+    from starlette.websockets import WebSocketState
+    if ws.application_state == WebSocketState.CONNECTED:
         try:
-            if ws.application_state == WebSocketState.CONNECTED:
-                await ws.close()
+            await ws.send_text(json.dumps({
+                "erro": "conexao_encerrada",
+                "mensagem": "A conexão com o servidor foi encerrada."
+            }))
+        except Exception:
+            pass
+        try:
+            await ws.close()
         except Exception:
             pass
