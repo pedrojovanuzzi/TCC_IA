@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 import numpy as np
@@ -7,9 +8,14 @@ from ultralytics import YOLO
 from cryptography.fernet import Fernet
 import torch, cv2, json, os, time, base64
 from functools import lru_cache
+import os, cv2, time, json, base64, asyncio, multiprocessing as mp
+from multiprocessing.synchronize import Event as MpEvent
 
 router = APIRouter()
 fernet = Fernet(ENCRYPTION_KEY)
+
+READ_IDLE_TIMEOUT = 8.0   # segundos sem frame -> encerra
+QUEUE_MAXSIZE = 2         # evita backlog/latência
 
 @lru_cache(maxsize=1)
 def get_model():
@@ -73,28 +79,97 @@ async def ws_root(websocket: WebSocket):
         await websocket.close()
 
 
+async def _safe_ws_send_text(ws: WebSocket, payload: dict):
+    if ws.application_state == WebSocketState.CONNECTED:
+        await ws.send_text(json.dumps(payload))
+
+def capture_proc(ip: str, q: mp.Queue, stop: MpEvent = mp.Event()):
+    """Roda em PROCESSO separado. Lê frames e joga na fila."""
+    cap = cv2.VideoCapture(ip, cv2.CAP_FFMPEG)
+
+    # Tenta aplicar timeouts nativos (OpenCV >= 4.8/4.9 + FFMPEG build)
+    try:
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        # Se sua build suportar:
+        cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000)   # 5s para abrir
+        cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000)   # 5s por leitura
+    except Exception:
+        pass
+
+    last_put = 0.0
+    try:
+        while not stop.is_set():
+            ret, frame = cap.read()
+            if not ret:
+                # pequena espera para evitar tight loop quando o stream cai
+                time.sleep(0.05)
+                continue
+
+            # Mantém no máx 1-2 itens na fila (drop de frames antigos)
+            if q.qsize() >= QUEUE_MAXSIZE:
+                try:
+                    q.get_nowait()
+                except Exception:
+                    pass
+            try:
+                q.put_nowait(frame)
+                last_put = time.time()
+            except Exception:
+                # fila cheia inesperadamente
+                time.sleep(0.01)
+    finally:
+        cap.release()
+
+
 @router.websocket("/ws/camera/{camera_id}")
 async def ws_cam(ws: WebSocket, camera_id: int):
     await ws.accept()
+
+    # Busca IP no banco e fecha conexão imediatamente (evita lock prolongado)
     conn = get_connection(); c = conn.cursor()
     c.execute("SELECT ip FROM cameras WHERE id=%s", (camera_id,))
-    row = c.fetchone(); conn.close()
+    row = c.fetchone()
+    conn.close()  # <--- fecha já aqui
     if not row:
-        await ws.send_text(json.dumps({"erro": "não encontrada"})); await ws.close(); return
+        await _safe_ws_send_text(ws, {"erro": "não encontrada"})
+        if ws.application_state == WebSocketState.CONNECTED:
+            await ws.close()
+        return
+    ip = row[0]
 
-    cap = cv2.VideoCapture(row[0])
-    if not cap.isOpened():
-        await ws.send_text(json.dumps({"erro": "não conectou"})); await ws.close(); return
-
+    # Prepara modelo fora da captura
     model = get_model()
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    last = 0
+
+    # Cria fila/processo de captura
+    q: mp.Queue = mp.Queue(maxsize=QUEUE_MAXSIZE)
+    stop = mp.Event()
+    proc = mp.Process(target=capture_proc, args=(ip, q, stop), daemon=True)
+    proc.start()
+
+    last_frame_ts = time.time()
+    last_save_ts = 0.0
 
     try:
         while True:
-            ret, frame = cap.read()
-            if not ret: break
+            # espera por um frame com timeout (não bloqueia seu servidor)
+            try:
+                frame = await asyncio.get_running_loop().run_in_executor(
+                    None, lambda: q.get(True, 0.5)  # 500ms timeout por poll
+                )
+                last_frame_ts = time.time()
+            except Exception:
+                # Sem novo frame no período de poll; verifica timeout total
+                if (time.time() - last_frame_ts) > READ_IDLE_TIMEOUT:
+                    await _safe_ws_send_text(ws, {
+                        "erro": "timeout_stream",
+                        "detalhe": f"Sem frames há {READ_IDLE_TIMEOUT:.0f}s"
+                    })
+                    break
+                # segue tentando
+                continue
 
+            # ---------- INFERÊNCIA ----------
             results = model.predict(
                 frame,
                 imgsz=IMG_SIZE,
@@ -114,23 +189,46 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                 cv2.rectangle(frame, (x1, y1), (x2, y2), col, 1)
                 draw_label(frame, f"{name}:{conf:.2f}", x1, y1, col)
 
+            # ---------- SAVE CRIPTO a cada 3s ----------
             now = time.time()
-            if now - last >= 3:
+            if (now - last_save_ts) >= 3.0:
                 os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
                 filename = f"cam{camera_id}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.jpg"
                 path = os.path.join(IMG_REAL_TIME_DIR, filename)
-                _, buf = cv2.imencode(".jpg", frame)
-                encrypted = fernet.encrypt(buf.tobytes())
-                with open(path, "wb") as f:
-                    f.write(encrypted)
-                last = now
+                ok, buf = cv2.imencode(".jpg", frame)
+                if ok:
+                    encrypted = fernet.encrypt(buf.tobytes())
+                    with open(path, "wb") as f:
+                        f.write(encrypted)
+                last_save_ts = now
 
-            _, buf = cv2.imencode(".jpg", frame)
+            # ---------- ENVIO WS ----------
+            ok, buf = cv2.imencode(".jpg", frame)
+            if not ok:
+                await asyncio.sleep(0.001)
+                continue
             frame_b64 = base64.b64encode(buf.tobytes()).decode("utf-8")
-            await ws.send_text(json.dumps({ "frame": frame_b64 }))
+            try:
+                await _safe_ws_send_text(ws, {"frame": frame_b64})
+            except WebSocketDisconnect:
+                break
+            await asyncio.sleep(0.001)
 
     except WebSocketDisconnect:
         pass
     finally:
-        cap.release()
-        await ws.close()
+        # Encerra captura sem piedade (evita travas do FFMPEG)
+        try:
+            stop.set()
+        except Exception:
+            pass
+        if proc.is_alive():
+            proc.terminate()
+            proc.join(timeout=1.0)
+
+        # Fecha WS com segurança
+        try:
+            if ws.application_state == WebSocketState.CONNECTED:
+                await ws.close()
+        except Exception:
+            pass
