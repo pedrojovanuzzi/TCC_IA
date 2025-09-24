@@ -1,13 +1,14 @@
 import React, { useRef, useState } from "react";
 import axios from "axios";
 import img from "../../assets/imgs/video.png";
+import getHostName from "../../../utils/getUrl";
 
 export default function Video() {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [processedVideo, setProcessedVideo] = useState(null);
-  const API_URL = `http://localhost:3001`;
+  const API_URL = getHostName();
   const token = localStorage.getItem("access_token");
 
   const handleDragOver = (e) => {

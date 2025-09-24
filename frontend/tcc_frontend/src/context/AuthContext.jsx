@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import getHostName from "../../utils/getUrl";
 
 const AuthContext = createContext();
 
@@ -47,8 +48,9 @@ useEffect(() => {
 
 
   const login = async (username, password) => {
+    const url = getHostName();
     try {
-      const res = await fetch("http://localhost:3001/api/token", {
+      const res = await fetch(`http://${url}/token`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

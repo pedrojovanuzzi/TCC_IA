@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react"
+import getHostName from "../../../utils/getUrl";
 
 export const Logs = () => {
   const [logs, setLogs] = useState([])
-  const API = "http://localhost:3001/api"
+    const API_URL = getHostName();
   const token = localStorage.getItem("access_token")
 
   useEffect(() => {
-    fetch(`${API}/logs`, {
+    fetch(`http://${API_URL}/logs`, {
       headers: {
         "Authorization": `Bearer ${token}`
       }

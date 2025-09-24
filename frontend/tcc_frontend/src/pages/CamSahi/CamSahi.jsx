@@ -1,13 +1,13 @@
 import React, { useRef, useState, useEffect } from "react";
+import getHostName from "../../../utils/getUrl";
 
 export default function CamSahi() {
   const videoRef = useRef(null);
   const [ws, setWs] = useState(null);
   const [frame, setFrame] = useState("");
-
+  const API_URL = getHostName();
   useEffect(() => {
-    const backendIP = "localhost";
-    const wsUrl = `ws://${backendIP}:3001/api/ws_sahi`;
+    const wsUrl = `ws://${API_URL}/api/ws_sahi`;
   
     const w = new WebSocket(wsUrl);
     

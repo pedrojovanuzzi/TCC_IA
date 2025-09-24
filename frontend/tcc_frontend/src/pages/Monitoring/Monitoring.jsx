@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import getHostName from "../../../utils/getUrl";
 
 export const Monitoring = () => {
   const [cameras, setCameras] = useState([]);
@@ -8,12 +9,13 @@ export const Monitoring = () => {
   const [ip, setIp] = useState('');
   const [editingId, setEditingId] = useState(null);
   const navigate = useNavigate();
-
+  const API_URL = getHostName();
   const token = localStorage.getItem('access_token');
 
   const fetchCameras = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/cameras');
+      const url = getHostName();
+      const response = await axios.get(`http://${API_URL}/api/cameras`);
       setCameras(response.data);
     } catch (error) {
       console.error('Erro ao buscar câmeras:', error);
@@ -30,7 +32,7 @@ export const Monitoring = () => {
     try {
       if (editingId !== null) {
         await axios.put(
-          `http://localhost:3001/api/cameras/${editingId}`,
+          `http://${API_URL}/api/cameras/${editingId}`,
           { name, ip },
           {
             headers: {
@@ -40,7 +42,7 @@ export const Monitoring = () => {
         );
       } else {
         await axios.post(
-          'http://localhost:3001/api/cameras',
+          `http://${API_URL}/api/cameras`,
           { name, ip },
           {
             headers: {
@@ -62,7 +64,7 @@ export const Monitoring = () => {
   const handleDelete = async (id) => {
     try {
       await axios.delete(
-        `http://localhost:3001/api/cameras/${id}`,
+        `http://${API_URL}/api/cameras/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

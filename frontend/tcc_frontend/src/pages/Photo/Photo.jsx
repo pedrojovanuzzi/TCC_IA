@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import axios from "axios";
 import img from "../../assets/imgs/photo.png";
+import getHostName from "../../../utils/getUrl";
 
 export default function Photo() {
   const inputRef = useRef(null);
@@ -10,8 +11,7 @@ export default function Photo() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
-  const backendIP = "localhost";
-  const API_URL = `http://${backendIP}:3001`;
+  const API_URL = getHostName();
 
   const handleDragOver = (event) => {
     event.preventDefault();

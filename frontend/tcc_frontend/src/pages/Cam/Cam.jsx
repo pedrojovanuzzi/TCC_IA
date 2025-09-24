@@ -1,13 +1,13 @@
 import React, { useRef, useState, useEffect } from "react";
+import getHostName from "../../../utils/getUrl";
 
 export default function Cam() {
   const videoRef = useRef(null);
   const [ws, setWs] = useState(null);
   const [frame, setFrame] = useState("");
-
+  const API_URL = getHostName();
   useEffect(() => {
-    const backendIP = "localhost";
-    const wsUrl = `ws://${backendIP}:3001/api/ws`;
+    const wsUrl = `ws://${API_URL}/api/ws`;
 
     const w = new WebSocket(wsUrl);
 

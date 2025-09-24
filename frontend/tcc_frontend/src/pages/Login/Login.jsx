@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import getHostName from "../../../utils/getUrl";
 
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const { login } = useAuth();
   const navigate = useNavigate();
-
+  const API_URL = getHostName();
   const handleSubmit = async (e) => {
     e.preventDefault();
     const sucesso = await login(username, password);

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import getHostName from "../../../utils/getUrl";
+
 
 export const Users = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -9,6 +11,7 @@ export const Users = () => {
   const [editandoId, setEditandoId] = useState(null);
   const [error, setError] = useState(null);
   const { username } = useAuth();
+    const API_URL = getHostName();
 
   // Lê o token do localStorage
   const getAuthHeader = () => {
@@ -18,7 +21,7 @@ export const Users = () => {
 
   const carregarUsuarios = async () => {
     try {
-      const res = await fetch("http://localhost:3001/api/users", {
+      const res = await fetch(`http://${API_URL}/api/users`, {
         headers: {
           "Content-Type": "application/json",
           ...getAuthHeader(),
@@ -43,8 +46,8 @@ export const Users = () => {
     if (username) payload.username = username;
 
     const url = editandoId
-      ? `http://localhost:3001/api/users/${editandoId}`
-      : "http://localhost:3001/api/users";
+      ? `http://${API_URL}/api/users/${editandoId}`
+      : `http://${API_URL}/api/users`;
     const method = editandoId ? "PUT" : "POST";
 
     if (!editandoId && !password) {
@@ -84,7 +87,7 @@ export const Users = () => {
   const removerUsuario = async (id) => {
     if (!window.confirm("Tem certeza que deseja excluir?")) return;
     try {
-      const res = await fetch(`http://localhost:3001/api/users/${id}`, {
+      const res = await fetch(`http://${API_URL}/api/users/${id}`, {
         method: "DELETE",
         headers: {
           ...getAuthHeader(),

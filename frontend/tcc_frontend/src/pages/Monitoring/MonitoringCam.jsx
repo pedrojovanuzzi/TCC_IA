@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import getHostName from "../../../utils/getUrl";
 
 export const MonitoringCam = () => {
   const { id } = useParams();
@@ -10,13 +11,13 @@ export const MonitoringCam = () => {
   const [camera, setCamera] = useState(null);
   const closedRef = useRef(false); // evita setState após unmount
   const alertedRef = useRef(false); // evita múltiplos alerts
-
+  const API_URL = getHostName();
   // Busca metadados da câmera
   useEffect(() => {
     let cancel = false;
     (async () => {
       try {
-        const response = await axios.get(`http://localhost:3001/api/cameras/${id}`);
+        const response = await axios.get(`http://${API_URL}/api/cameras/${id}`);
         if (!cancel) setCamera(response.data);
       } catch (error) {
         console.error("Erro ao buscar dados da câmera:", error);
@@ -35,7 +36,7 @@ export const MonitoringCam = () => {
   // WebSocket
   useEffect(() => {
     if (!camera) return;
-    const url = `ws://localhost:3001/api/ws/camera/${camera.id}`;
+    const url = `ws://${API_URL}/api/ws/camera/${camera.id}`;
     const ws = new WebSocket(url);
 
     closedRef.current = false;
