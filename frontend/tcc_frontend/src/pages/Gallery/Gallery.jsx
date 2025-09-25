@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react"
 import { IoIosCloseCircle } from "react-icons/io"
-import getHostName from "../../../utils/getUrl";
-import Header from "../../components/Header";
+import getHostName from "../../../utils/getUrl"
+import Header from "../../components/Header"
+import axios from "axios" // importa o axios
+import { FaSpinner } from "react-icons/fa";
 
 export const Gallery = () => {
   const [folders, setFolders] = useState([])
@@ -12,49 +14,55 @@ export const Gallery = () => {
   const [selectedType, setSelectedType] = useState("image")
   const [fileToDelete, setFileToDelete] = useState(null)
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
-  const API_URL = getHostName();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const API_URL = getHostName()
   const token = localStorage.getItem("access_token") || ""
 
+  // Carrega as pastas da galeria
   useEffect(() => {
-    fetch(`${API_URL}/gallery`)
-      .then(r => r.json())
-      .then(d => setFolders(d.folders || []))
-  }, [])
+    axios.get(`${API_URL}/gallery`)
+      .then(res => setFolders(res.data.folders || []))
+      .catch(err => setError(err))
+  }, [API_URL])
 
+  // Carrega as miniaturas dos arquivos quando muda a pasta selecionada
   useEffect(() => {
     if (!selectedFolder) return
     const m = {}
+    setLoading(true);
     const decrypt = (isVideo, filename) =>
-      fetch(`${API_URL}/${isVideo ? "decrypt_video" : "decrypt_image"}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ folder: selectedFolder, filename }),
+      axios.post(
+        `${API_URL}/${isVideo ? "decrypt_video" : "decrypt_image"}`,
+        { folder: selectedFolder, filename },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          responseType: isVideo ? "blob" : "json"
+        }
+      ).then(res => {
+        m[filename] = isVideo
+          ? URL.createObjectURL(res.data)
+          : `data:image/jpeg;base64,${res.data.frame}`
+          
       })
-        .then(res => (isVideo ? res.blob() : res.json()))
-        .then(data => {
-          m[filename] = isVideo
-            ? URL.createObjectURL(data)
-            : `data:image/jpeg;base64,${data.frame}`
-        })
 
     Promise.all(
-      files.map(f =>
-        decrypt(/\.(mp4|mov|webm)$/i.test(f.name), f.name)
-      )
-    ).then(() => setThumbnails(m))
-  }, [selectedFolder, files])
+      files.map(f => decrypt(/\.(mp4|mov|webm)$/i.test(f.name), f.name))
+    ).then(() => {setThumbnails(m), setLoading(false)})
+  }, [selectedFolder, files, API_URL, token])
 
-  const handleFolderClick = folder => {
+  const handleFolderClick = (folder) => {
     setSelectedFolder(folder)
     const found = folders.find(f => f.name === folder)
     setFiles(found?.files || [])
     setThumbnails({})
   }
 
-  const handleFileClick = name => {
+  const handleFileClick = (name) => {
     setSelectedFile(thumbnails[name])
     setSelectedType(/\.(mp4|mov|webm)$/i.test(name) ? "video" : "image")
   }
@@ -62,160 +70,173 @@ export const Gallery = () => {
   const closeModal = () => setSelectedFile(null)
 
   const handleDelete = () => {
-    fetch(`${API_URL}/delete`, {
-      method: "DELETE",
+    axios.delete(`${API_URL}/delete`, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ folder: selectedFolder, filename: fileToDelete }),
+      data: { folder: selectedFolder, filename: fileToDelete },
     }).then(() => window.location.reload())
+      .catch(err => setError(err))
   }
 
   const handleBatchDelete = () => {
-    fetch(`${API_URL}/delete-batch`, {
-      method: "DELETE",
+    axios.delete(`${API_URL}/delete-batch`, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
+      data: {
         folder: selectedFolder,
         filenames: files.map(f => f.name),
-      }),
+      },
     }).then(() => window.location.reload())
+      .catch(err => setError(err))
   }
 
   return (
-    <><Header></Header><div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Gallery</h1>
-      <div className="flex  gap-6 flex-col items-center sm:items-baseline sm:flex-row">
-        <div className="flex flex-col sm:w-1/4 ">
-          {folders.map(f => (
-            <button
-              key={f.name}
-              onClick={() => handleFolderClick(f.name)}
-              className="w-screen sm:w-full p-5 sm:p-2 mb-2 bg-gray-200 rounded hover:bg-gray-300"
-            >
-              {f.name}
-            </button>
-          ))}
-        </div>
-        <div className="w-3/4">
-          {selectedFolder && (
-            <>
-              <div className="flex items-center mb-4">
-                <h2 className="text-lg font-semibold mr-4">
-                  {selectedFolder}
-                </h2>
-                <button
-                  onClick={() => setConfirmBatchDelete(true)}
-                  className="px-4 py-1 bg-red-500 text-white rounded"
-                >
-                  Excluir todos
-                </button>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {files.map(f => (
-                  <div
-                    key={f.name}
-                    className="relative border rounded overflow-hidden"
+    <>
+      <Header />
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Gallery</h1>
+        <div className="flex gap-6 flex-col items-center sm:items-baseline sm:flex-row">
+          <div className="flex flex-col sm:w-1/4 ">
+            {folders.map(f => (
+              <button
+                key={f.name}
+                onClick={() => handleFolderClick(f.name)}
+                className="w-screen sm:w-full p-5 sm:p-2 mb-2 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                {f.name}
+              </button>
+            ))}
+          </div>
+          <div className="w-3/4">
+            {selectedFolder && (
+              <>
+                <div className="flex flex-col sm:flex-row items-center mb-4 gap-5">
+                  <h2 className="text-lg font-semibold mr-4">
+                    {selectedFolder}
+                  </h2>
+                  <button
+                    onClick={() => setConfirmBatchDelete(true)}
+                    className="px-4 py-1 bg-red-500 text-white rounded"
                   >
-                    {thumbnails[f.name] && /\.(jpg|jpeg|png)$/i.test(f.name) ? (
-                      <img
-                        src={thumbnails[f.name]}
-                        className="w-full h-32 object-cover cursor-pointer"
-                        onClick={() => handleFileClick(f.name)} />
-                    ) : thumbnails[f.name] ? (
-                      <video
-                        src={thumbnails[f.name]}
-                        className="w-full h-32 object-cover cursor-pointer"
-                        onClick={() => handleFileClick(f.name)}
-                        muted />
-                    ) : null}
-                    <div className="p-1 text-center text-sm">{f.name}</div>
-                    <button
-                      onClick={() => setFileToDelete(f.name)}
-                      className="absolute top-1 right-1 text-red-500"
-                    >
-                      <IoIosCloseCircle size={20} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+                    Excluir todos
+                  </button>
+                   <div className="flex gap-2 items-center">
+                                                     {error && <p className="text-red-500">Erro: {error}</p>}
+                  {loading && <><p>Carregando</p><FaSpinner className="animate-spin"></FaSpinner></>}
+                   </div>
+                </div>
 
-      {selectedFile && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
-          onClick={closeModal}
-        >
-          <button
-            onClick={closeModal}
-            className="absolute top-4 right-4 text-white text-3xl"
-          >
-            <IoIosCloseCircle />
-          </button>
-          <div
-            className="bg-white p-4 rounded"
-            onClick={e => e.stopPropagation()}
-          >
-            {selectedType === "image" ? (
-              <img
-                src={selectedFile}
-                className="max-w-full max-h-[80vh]" />
-            ) : (
-              <video
-                controls
-                src={selectedFile}
-                className="max-w-full max-h-[80vh]" />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+
+                  {files.map(f => (
+                    <div
+                      key={f.name}
+                      className="relative border rounded overflow-hidden"
+                    >
+                      {thumbnails[f.name] && /\.(jpg|jpeg|png)$/i.test(f.name) ? (
+                        <img
+                          src={thumbnails[f.name]}
+                          className="w-full h-32 object-cover cursor-pointer"
+                          onClick={() => handleFileClick(f.name)}
+                        />
+                      ) : thumbnails[f.name] ? (
+                        <video
+                          src={thumbnails[f.name]}
+                          className="w-full h-32 object-cover cursor-pointer"
+                          onClick={() => handleFileClick(f.name)}
+                          muted
+                        />
+                      ) : null}
+                      <div className="p-1 text-center text-sm">{f.name}</div>
+                      <button
+                        onClick={() => setFileToDelete(f.name)}
+                        className="absolute top-1 right-1 text-red-500"
+                      >
+                        <IoIosCloseCircle size={20} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
-      )}
 
-      {fileToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-4 rounded">
-            <p>Excluir {fileToDelete}?</p>
+        {selectedFile && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+            onClick={closeModal}
+          >
             <button
-              onClick={handleDelete}
-              className="px-2 py-1 bg-red-500 text-white rounded mr-2"
+              onClick={closeModal}
+              className="absolute top-4 right-4 text-white text-3xl"
             >
-              Sim
+              <IoIosCloseCircle />
             </button>
-            <button
-              onClick={() => setFileToDelete(null)}
-              className="px-2 py-1 bg-gray-300 rounded"
+            <div
+              className="bg-white p-4 rounded"
+              onClick={e => e.stopPropagation()}
             >
-              Não
-            </button>
+              {selectedType === "image" ? (
+                <img
+                  src={selectedFile}
+                  className="max-w-full max-h-[80vh]"
+                />
+              ) : (
+                <video
+                  controls
+                  src={selectedFile}
+                  className="max-w-full max-h-[80vh]"
+                />
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {confirmBatchDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-4 rounded">
-            <p>Excluir todos os arquivos?</p>
-            <button
-              onClick={handleBatchDelete}
-              className="px-2 py-1 bg-red-500 text-white rounded mr-2"
-            >
-              Sim
-            </button>
-            <button
-              onClick={() => setConfirmBatchDelete(false)}
-              className="px-2 py-1 bg-gray-300 rounded"
-            >
-              Não
-            </button>
+        {fileToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="bg-white p-4 rounded">
+              <p>Excluir {fileToDelete}?</p>
+              <button
+                onClick={handleDelete}
+                className="px-2 py-1 bg-red-500 text-white rounded mr-2"
+              >
+                Sim
+              </button>
+              <button
+                onClick={() => setFileToDelete(null)}
+                className="px-2 py-1 bg-gray-300 rounded"
+              >
+                Não
+              </button>
+            </div>
           </div>
-        </div>
-      )}
-    </div></>
+        )}
+
+        {confirmBatchDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="bg-white p-4 rounded">
+              <p>Excluir todos os arquivos?</p>
+              <button
+                onClick={handleBatchDelete}
+                className="px-2 py-1 bg-red-500 text-white rounded mr-2"
+              >
+                Sim
+              </button>
+              <button
+                onClick={() => setConfirmBatchDelete(false)}
+                className="px-2 py-1 bg-gray-300 rounded"
+              >
+                Não
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   )
 }

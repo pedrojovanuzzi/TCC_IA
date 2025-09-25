@@ -25,9 +25,19 @@ export default function Cam() {
   }, []);
 
   useEffect(() => {
+    let streamA;
+
     navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
       if (videoRef.current) videoRef.current.srcObject = stream;
+      streamA = stream;
     });
+
+    return () => {
+      if(streamA){
+        streamA.getTracks().forEach(track => track.stop());
+      }
+    }
+
   }, []);
 
   useEffect(() => {
