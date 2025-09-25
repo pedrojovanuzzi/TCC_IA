@@ -118,9 +118,9 @@ export const Monitoring = () => {
           <p className="text-gray-500">Nenhuma câmera adicionada.</p>
         ) : (
           cameras.map(cam => (
-            <div key={cam.id} className="border p-5 rounded">
+            <div key={cam.id} className="border rounded p-5">
               <div>
-                <p className="font-semibold">{cam.name}</p>
+                <p className="font-semibold text-red-700">{cam.name}</p>
                 <p className="text-sm text-gray-600">{cam.ip}</p>
               </div>
               <div className="flex gap-2">

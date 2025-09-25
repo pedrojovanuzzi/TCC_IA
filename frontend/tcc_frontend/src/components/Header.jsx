@@ -29,6 +29,9 @@ export const Header = () => {
                 <a href="/about" className="text-gray-900 font-medium">
                   Sobre-nós
                 </a>
+                <a href="/options" className="text-gray-900 font-medium">
+                  Modos
+                </a>
                 {nivel >= 2 && (
                   <>
                     <a href="/logs" className="text-gray-900 font-medium">
@@ -71,6 +74,9 @@ export const Header = () => {
           <Disclosure.Panel className="md:hidden px-4 pb-3 space-y-1">
             <a href="/" className="block text-gray-900 font-medium">
               Home
+            </a>
+            <a href="/options" className="block text-gray-900 font-medium">
+              Modos
             </a>
             <a href="/about" className="block text-gray-900 font-medium">
               Sobre-nós

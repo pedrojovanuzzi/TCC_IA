@@ -95,7 +95,7 @@ export const Gallery = () => {
             <button
               key={f.name}
               onClick={() => handleFolderClick(f.name)}
-              className="w-screen sm:w-full p-2 mb-2 bg-gray-200 rounded hover:bg-gray-300"
+              className="w-screen sm:w-full p-5 sm:p-2 mb-2 bg-gray-200 rounded hover:bg-gray-300"
             >
               {f.name}
             </button>
