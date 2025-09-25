@@ -1,6 +1,8 @@
 import React, { useRef, useState } from "react";
 import axios from "axios";
 import img from "../../assets/imgs/photo.png";
+import getHostName from "../../../utils/getUrl";
+import Header from "../../components/Header";
 
 export default function Photo() {
   const inputRef = useRef(null);
@@ -10,8 +12,7 @@ export default function Photo() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
-  const backendIP = "localhost";
-  const API_URL = `http://${backendIP}:3001`;
+  const API_URL = getHostName();
 
   const handleDragOver = (event) => {
     event.preventDefault();
@@ -49,7 +50,7 @@ export default function Photo() {
   
     try {
       const response = await axios.post(
-        `${API_URL}/api/predict`,
+        `${API_URL}/predict`,
         formData,
         {
           headers: {
@@ -94,7 +95,7 @@ export default function Photo() {
   };
 
   return (
-    <div className="flex justify-center flex-col">
+    <><Header></Header><div className="flex justify-center flex-col">
       <div className="flex justify-center">
         <img src={img} className="size-16 mt-5 sm:size-24" />
       </div>
@@ -104,9 +105,7 @@ export default function Photo() {
         <input type="file" ref={inputRef} accept="image/*" className="hidden" onChange={handleFileChange} />
 
         <div
-          className={`relative cursor-pointer block w-2/4 rounded-lg border-2 border-dashed ${
-            dragging ? "border-blue-500 bg-blue-100" : "border-gray-300"
-          } p-12 text-center hover:border-gray-400`}
+          className={`relative cursor-pointer block w-2/4 rounded-lg border-2 border-dashed ${dragging ? "border-blue-500 bg-blue-100" : "border-gray-300"} p-12 text-center hover:border-gray-400`}
           onClick={() => inputRef.current?.click()}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -127,8 +126,7 @@ export default function Photo() {
                   d="M8 14v20c0 4.418 7.163 8 16 8 1.381 0 2.721-.087 4-.252M8 14c0 4.418 7.163 8 16 8s16-3.582 16-8M8 14c0-4.418 7.163-8 16-8s16 3.582 16 8m0 0v14m0-4c0 4.418-7.163 8-16 8S8 28.418 8 24m32 10v6m0 0v6m0-6h6m-6 0h-6"
                   strokeWidth={2}
                   strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                  strokeLinejoin="round" />
               </svg>
               <span className="mt-2 block text-sm font-semibold text-gray-900">
                 Selecione ou arraste uma Foto aqui
@@ -158,12 +156,12 @@ export default function Photo() {
         )}
 
         {preview && (
-          <div className="mt-4">
-            <h2 className="font-semibold">Imagem Processada:</h2>
-            <img src={preview} alt="Imagem processada" className="mt-2 w-7xl m-5 rounded-lg shadow-md" />
+          <div className="mt-4 flex flex-col">
+            <h2 className="font-semibold text-center">Imagem Processada:</h2>
+            <img src={preview} alt="Imagem processada" className="mt-2 rounded-lg shadow-md" />
           </div>
         )}
       </div>
-    </div>
+    </div></>
   );
 }

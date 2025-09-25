@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import getHostName from "../../../utils/getUrl";
+import Header from "../../components/Header";
+
 
 export const Users = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -9,6 +12,7 @@ export const Users = () => {
   const [editandoId, setEditandoId] = useState(null);
   const [error, setError] = useState(null);
   const { username } = useAuth();
+    const API_URL = getHostName();
 
   // Lê o token do localStorage
   const getAuthHeader = () => {
@@ -18,13 +22,13 @@ export const Users = () => {
 
   const carregarUsuarios = async () => {
     try {
-      const res = await fetch("http://localhost:3001/api/users", {
+      const res = await fetch(`${API_URL}/users`, {
         headers: {
           "Content-Type": "application/json",
           ...getAuthHeader(),
         },
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`https ${res.status}`);
       const data = await res.json();
       setUsuarios(data);
     } catch (err) {
@@ -43,8 +47,8 @@ export const Users = () => {
     if (username) payload.username = username;
 
     const url = editandoId
-      ? `http://localhost:3001/api/users/${editandoId}`
-      : "http://localhost:3001/api/users";
+      ? `${API_URL}/users/${editandoId}`
+      : `${API_URL}/users`;
     const method = editandoId ? "PUT" : "POST";
 
     if (!editandoId && !password) {
@@ -60,7 +64,7 @@ export const Users = () => {
         },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`https ${res.status}`);
       resetarForm();
       carregarUsuarios();
     } catch {
@@ -84,13 +88,13 @@ export const Users = () => {
   const removerUsuario = async (id) => {
     if (!window.confirm("Tem certeza que deseja excluir?")) return;
     try {
-      const res = await fetch(`http://localhost:3001/api/users/${id}`, {
+      const res = await fetch(`${API_URL}/users/${id}`, {
         method: "DELETE",
         headers: {
           ...getAuthHeader(),
         },
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`https ${res.status}`);
       carregarUsuarios();
     } catch {
       alert("Erro ao remover usuário");
@@ -104,7 +108,7 @@ export const Users = () => {
   if (error) return <div>Erro: {error}</div>;
 
   return (
-    <div className="p-10 max-w-xl mx-auto">
+    <><Header></Header><div className="p-10 max-w-xl mx-auto">
       <h2 className="text-2xl font-bold mb-4">
         {editandoId ? "Editar Usuário" : "Adicionar Usuário"}
       </h2>
@@ -115,15 +119,13 @@ export const Users = () => {
           placeholder="Login"
           className="w-full p-2 border rounded"
           value={login}
-          onChange={(e) => setLogin(e.target.value)}
-        />
+          onChange={(e) => setLogin(e.target.value)} />
         <input
           type="password"
           placeholder="Senha"
           className="w-full p-2 border rounded"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          onChange={(e) => setPassword(e.target.value)} />
         <select
           className="w-full p-2 border rounded"
           value={nivel}
@@ -179,6 +181,6 @@ export const Users = () => {
           </li>
         ))}
       </ul>
-    </div>
+    </div></>
   );
 };

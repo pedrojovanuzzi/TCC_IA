@@ -1,6 +1,7 @@
 import img from "../../assets/imgs/hero1.webp";
 import { Header } from "../../components/Header";
 import { Footer } from "../../components/Footer";
+import getHostName from "../../../utils/getUrl";
 
 export default function Home() {
 

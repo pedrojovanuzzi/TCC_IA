@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import getHostNameSocket from "../../../utils/getUrlSocket";
+import getHostName from "../../../utils/getUrl";
+import Header from "../../components/Header";
 
 export const MonitoringCam = () => {
   const { id } = useParams();
@@ -10,13 +13,14 @@ export const MonitoringCam = () => {
   const [camera, setCamera] = useState(null);
   const closedRef = useRef(false); // evita setState após unmount
   const alertedRef = useRef(false); // evita múltiplos alerts
-
+  const API_URL = getHostName();
+  const API_URL_WEBSOCKET = getHostNameSocket();
   // Busca metadados da câmera
   useEffect(() => {
     let cancel = false;
     (async () => {
       try {
-        const response = await axios.get(`http://localhost:3001/api/cameras/${id}`);
+        const response = await axios.get(`${API_URL}/cameras/${id}`);
         if (!cancel) setCamera(response.data);
       } catch (error) {
         console.error("Erro ao buscar dados da câmera:", error);
@@ -35,8 +39,11 @@ export const MonitoringCam = () => {
   // WebSocket
   useEffect(() => {
     if (!camera) return;
-    const url = `ws://localhost:3001/api/ws/camera/${camera.id}`;
+    const url = `${API_URL_WEBSOCKET}/ws/camera/${camera.id}`;
     const ws = new WebSocket(url);
+
+    console.log(url);
+    
 
     closedRef.current = false;
 
@@ -115,7 +122,7 @@ export const MonitoringCam = () => {
   }, [camera, navigate]);
 
   return (
-    <div className="p-4 flex flex-col items-center justify-center">
+    <><Header></Header><div className="p-4 flex flex-col items-center justify-center">
       <h2 className="text-xl font-bold mb-4">
         Visualizando: {camera?.name || "..."}
       </h2>
@@ -124,11 +131,10 @@ export const MonitoringCam = () => {
         <img
           src={frame}
           alt="Frame da câmera"
-          className="rounded border max-w-6xl w-full h-auto"
-        />
+          className="rounded border max-w-6xl w-full h-auto" />
       ) : (
         <p>🔄 Carregando stream da câmera...</p>
       )}
-    </div>
+    </div></>
   );
 };

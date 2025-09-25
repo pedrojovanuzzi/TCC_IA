@@ -12,7 +12,7 @@ export const Header = () => {
   if (isLoading) return null;
 
   return (
-    <Disclosure as="nav" className="bg-white fixed w-full z-50 shadow">
+    <Disclosure as="nav" className="bg-white relative w-full z-50 shadow">
       {({ open }) => (
         <>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -28,6 +28,9 @@ export const Header = () => {
                 </a>
                 <a href="/about" className="text-gray-900 font-medium">
                   Sobre-nós
+                </a>
+                <a href="/options" className="text-gray-900 font-medium">
+                  Modos
                 </a>
                 {nivel >= 2 && (
                   <>
@@ -71,6 +74,9 @@ export const Header = () => {
           <Disclosure.Panel className="md:hidden px-4 pb-3 space-y-1">
             <a href="/" className="block text-gray-900 font-medium">
               Home
+            </a>
+            <a href="/options" className="block text-gray-900 font-medium">
+              Modos
             </a>
             <a href="/about" className="block text-gray-900 font-medium">
               Sobre-nós

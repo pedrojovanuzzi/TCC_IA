@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { IoIosCloseCircle } from "react-icons/io"
+import getHostName from "../../../utils/getUrl";
+import Header from "../../components/Header";
 
 export const Gallery = () => {
   const [folders, setFolders] = useState([])
@@ -10,12 +12,11 @@ export const Gallery = () => {
   const [selectedType, setSelectedType] = useState("image")
   const [fileToDelete, setFileToDelete] = useState(null)
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
-
-  const API = "http://localhost:3001/api"
+  const API_URL = getHostName();
   const token = localStorage.getItem("access_token") || ""
 
   useEffect(() => {
-    fetch(`${API}/gallery`)
+    fetch(`${API_URL}/gallery`)
       .then(r => r.json())
       .then(d => setFolders(d.folders || []))
   }, [])
@@ -24,7 +25,7 @@ export const Gallery = () => {
     if (!selectedFolder) return
     const m = {}
     const decrypt = (isVideo, filename) =>
-      fetch(`${API}/${isVideo ? "decrypt_video" : "decrypt_image"}`, {
+      fetch(`${API_URL}/${isVideo ? "decrypt_video" : "decrypt_image"}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -61,7 +62,7 @@ export const Gallery = () => {
   const closeModal = () => setSelectedFile(null)
 
   const handleDelete = () => {
-    fetch(`${API}/delete`, {
+    fetch(`${API_URL}/delete`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -72,7 +73,7 @@ export const Gallery = () => {
   }
 
   const handleBatchDelete = () => {
-    fetch(`${API}/delete-batch`, {
+    fetch(`${API_URL}/delete-batch`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -86,15 +87,15 @@ export const Gallery = () => {
   }
 
   return (
-    <div className="p-6">
+    <><Header></Header><div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Gallery</h1>
-      <div className="flex gap-6">
-        <div className="w-1/4">
+      <div className="flex  gap-6 flex-col items-center sm:items-baseline sm:flex-row">
+        <div className="flex flex-col sm:w-1/4 ">
           {folders.map(f => (
             <button
               key={f.name}
               onClick={() => handleFolderClick(f.name)}
-              className="w-full p-2 mb-2 bg-gray-200 rounded hover:bg-gray-300"
+              className="w-screen sm:w-full p-5 sm:p-2 mb-2 bg-gray-200 rounded hover:bg-gray-300"
             >
               {f.name}
             </button>
@@ -114,7 +115,7 @@ export const Gallery = () => {
                   Excluir todos
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {files.map(f => (
                   <div
                     key={f.name}
@@ -124,15 +125,13 @@ export const Gallery = () => {
                       <img
                         src={thumbnails[f.name]}
                         className="w-full h-32 object-cover cursor-pointer"
-                        onClick={() => handleFileClick(f.name)}
-                      />
+                        onClick={() => handleFileClick(f.name)} />
                     ) : thumbnails[f.name] ? (
                       <video
                         src={thumbnails[f.name]}
                         className="w-full h-32 object-cover cursor-pointer"
                         onClick={() => handleFileClick(f.name)}
-                        muted
-                      />
+                        muted />
                     ) : null}
                     <div className="p-1 text-center text-sm">{f.name}</div>
                     <button
@@ -167,14 +166,12 @@ export const Gallery = () => {
             {selectedType === "image" ? (
               <img
                 src={selectedFile}
-                className="max-w-full max-h-[80vh]"
-              />
+                className="max-w-full max-h-[80vh]" />
             ) : (
               <video
                 controls
                 src={selectedFile}
-                className="max-w-full max-h-[80vh]"
-              />
+                className="max-w-full max-h-[80vh]" />
             )}
           </div>
         </div>
@@ -219,6 +216,6 @@ export const Gallery = () => {
           </div>
         </div>
       )}
-    </div>
+    </div></>
   )
 }

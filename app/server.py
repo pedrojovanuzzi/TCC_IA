@@ -11,11 +11,13 @@ from app.routers.predict  import router as predict_router
 from app.routers.ws       import router as ws_router
 from app.lifespan         import lifespan
 from app.routers.logs import router as logs
-
+import os
 from app.routers.files   import router as files_router
 from dotenv import load_dotenv
 load_dotenv()
 
+
+BASE_DIR = os.path.dirname(__file__)
 
 app = FastAPI(lifespan=lifespan)
 
@@ -41,5 +43,12 @@ app.include_router(logs, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=3001)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=3001,
+        ssl_keyfile=os.path.join(BASE_DIR, "..", "frontend", "tcc_frontend", "certs", "localhost-key.pem"),
+        ssl_certfile=os.path.join(BASE_DIR, "..", "frontend", "tcc_frontend", "certs", "localhost.pem")
+    )
+
 

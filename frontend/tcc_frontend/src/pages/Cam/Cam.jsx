@@ -1,13 +1,14 @@
 import React, { useRef, useState, useEffect } from "react";
+import getHostNameSocket from "../../../utils/getUrlSocket";
+import Header from '../../components/Header';
 
 export default function Cam() {
   const videoRef = useRef(null);
   const [ws, setWs] = useState(null);
   const [frame, setFrame] = useState("");
-
+  const API_URL = getHostNameSocket();
   useEffect(() => {
-    const backendIP = "localhost";
-    const wsUrl = `ws://${backendIP}:3001/api/ws`;
+    const wsUrl = `${API_URL}/ws`;
 
     const w = new WebSocket(wsUrl);
 
@@ -44,17 +45,17 @@ export default function Cam() {
   }, [ws]);
 
   return (
-    <div
-      className="flex justify-center items-center h-screen bg-gray-800"
+    <><Header /><div
+      className="flex justify-center items-center h-screen bg-gray-200"
       style={{ textAlign: "center" }}
     >
-      {frame && <img src={frame} alt="processed" className="w-1/2" />}
+      {frame && <img src={frame} alt="processed" className="sm:w-1/2" />}
       {!frame && (
         <h1 className="text-3xl font-semibold text-gray-200">
           Video Ainda Não Iniciado
         </h1>
       )}
       <video ref={videoRef} style={{ display: "none" }} autoPlay />
-    </div>
+    </div></>
   );
 }
