@@ -121,7 +121,8 @@ export const Monitoring = () => {
             <div key={cam.id} className="border rounded p-5">
               <div>
                 <p className="font-semibold text-red-700">{cam.name}</p>
-                <p className="text-sm text-gray-600">{cam.ip}</p>
+                <p className="text-sm text-gray-600 break-all">{cam.ip}</p>
+
               </div>
               <div className="flex gap-2">
                 <button

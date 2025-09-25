@@ -49,7 +49,7 @@ export default function Cam() {
       className="flex justify-center items-center h-screen bg-gray-200"
       style={{ textAlign: "center" }}
     >
-      {frame && <img src={frame} alt="processed" className="sm:w-1/2" />}
+      {frame && <img src={frame} alt="processed" className="mb-10 h-64 sm:w-1/2 sm:h-auto" />}
       {!frame && (
         <h1 className="text-3xl font-semibold text-gray-200">
           Video Ainda Não Iniciado
