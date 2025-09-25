@@ -131,7 +131,7 @@ export const MonitoringCam = () => {
         <img
           src={frame}
           alt="Frame da câmera"
-          className="rounded border max-w-6xl w-full h-auto" />
+          className="rounded border sm:w-1/2" />
       ) : (
         <p>🔄 Carregando stream da câmera...</p>
       )}
