@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import getHostName from "../../../utils/getUrl";
+import Header from '../../components/Header';
 
 export const Monitoring = () => {
   const [cameras, setCameras] = useState([]);
@@ -88,7 +89,7 @@ export const Monitoring = () => {
   };
 
   return (
-    <div className="p-4 max-w-xl mx-auto">
+    <><Header></Header><div className="p-4 max-w-xl mx-auto">
       <h2 className="text-xl font-semibold mb-4">Gerenciar Câmeras</h2>
 
       <div className="flex flex-col gap-2 mb-4">
@@ -97,15 +98,13 @@ export const Monitoring = () => {
           type="text"
           placeholder="Nome da câmera"
           value={name}
-          onChange={e => setName(e.target.value)}
-        />
+          onChange={e => setName(e.target.value)} />
         <input
           className="border p-2 rounded"
           type="text"
           placeholder="IP da câmera"
           value={ip}
-          onChange={e => setIp(e.target.value)}
-        />
+          onChange={e => setIp(e.target.value)} />
         <button
           className="bg-blue-600 text-white px-4 py-2 rounded"
           onClick={handleAddOrUpdateCamera}
@@ -148,6 +147,6 @@ export const Monitoring = () => {
           ))
         )}
       </div>
-    </div>
+    </div></>
   );
 };

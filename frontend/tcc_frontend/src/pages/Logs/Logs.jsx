@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react"
 import getHostName from "../../../utils/getUrl";
+import Header from "../../components/Header";
 
 export const Logs = () => {
   const [logs, setLogs] = useState([])
@@ -17,7 +18,7 @@ export const Logs = () => {
   }, [])
 
   return (
-    <div className="p-4">
+    <><Header></Header><div className="p-4">
       <h1 className="text-xl font-semibold mb-4">Logs do Sistema</h1>
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white border">
@@ -41,6 +42,6 @@ export const Logs = () => {
           </tbody>
         </table>
       </div>
-    </div>
+    </div></>
   )
 }

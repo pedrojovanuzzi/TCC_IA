@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import axios from "axios";
 import img from "../../assets/imgs/video.png";
 import getHostName from "../../../utils/getUrl";
+import Header from "../../components/Header";
 
 export default function Video() {
   const inputRef = useRef(null);
@@ -65,7 +66,7 @@ export default function Video() {
   };
 
   return (
-    <div className="flex flex-col items-center p-6">
+    <><Header></Header><div className="flex flex-col items-center p-6">
       <img src={img} className="w-16 mb-4" />
       <h1 className="font-semibold mb-6">
         {uploading
@@ -77,12 +78,9 @@ export default function Video() {
         ref={inputRef}
         accept="video/*"
         className="hidden"
-        onChange={handleFileChange}
-      />
+        onChange={handleFileChange} />
       <div
-        className={`w-2/4 p-12 border-2 border-dashed rounded-lg cursor-pointer text-center ${
-          dragging ? "border-blue-500 bg-blue-100" : "border-gray-300"
-        }`}
+        className={`w-2/4 p-12 border-2 border-dashed rounded-lg cursor-pointer text-center ${dragging ? "border-blue-500 bg-blue-100" : "border-gray-300"}`}
         onClick={() => inputRef.current?.click()}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -101,17 +99,16 @@ export default function Video() {
           <video
             controls
             src={processedVideo}
-            className="w-2/3 rounded-lg shadow-md"
-          />
+            className="w-screen sm:w-2/3 rounded-lg shadow-md" />
           {/* <a
-            href={processedVideo}
-            download="video_processado.mp4"
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Baixar Vídeo
-          </a> */}
+              href={processedVideo}
+              download="video_processado.mp4"
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Baixar Vídeo
+            </a> */}
         </div>
       )}
-    </div>
+    </div></>
   );
 }

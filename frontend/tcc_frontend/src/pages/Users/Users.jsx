@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import getHostName from "../../../utils/getUrl";
+import Header from "../../components/Header";
 
 
 export const Users = () => {
@@ -107,7 +108,7 @@ export const Users = () => {
   if (error) return <div>Erro: {error}</div>;
 
   return (
-    <div className="p-10 max-w-xl mx-auto">
+    <><Header></Header><div className="p-10 max-w-xl mx-auto">
       <h2 className="text-2xl font-bold mb-4">
         {editandoId ? "Editar Usuário" : "Adicionar Usuário"}
       </h2>
@@ -118,15 +119,13 @@ export const Users = () => {
           placeholder="Login"
           className="w-full p-2 border rounded"
           value={login}
-          onChange={(e) => setLogin(e.target.value)}
-        />
+          onChange={(e) => setLogin(e.target.value)} />
         <input
           type="password"
           placeholder="Senha"
           className="w-full p-2 border rounded"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          onChange={(e) => setPassword(e.target.value)} />
         <select
           className="w-full p-2 border rounded"
           value={nivel}
@@ -182,6 +181,6 @@ export const Users = () => {
           </li>
         ))}
       </ul>
-    </div>
+    </div></>
   );
 };

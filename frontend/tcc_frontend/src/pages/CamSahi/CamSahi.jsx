@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import getHostNameSocket from "../../../utils/getUrlSocket";
+import Header from "../../components/Header";
 
 export default function CamSahi() {
   const videoRef = useRef(null);
@@ -55,10 +56,10 @@ export default function CamSahi() {
   
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-800" style={{ textAlign: "center" }}>
+    <><Header></Header><div className="flex justify-center items-center h-screen bg-gray-800" style={{ textAlign: "center" }}>
       {frame && <img src={frame} alt="processed" className="w-1/2" />}
       {!frame && <h1 className="text-3xl font-semibold text-gray-200">Video Ainda Não Iniciado</h1>}
       <video ref={videoRef} style={{ display: "none" }} autoPlay />
-    </div>
+    </div></>
   );
 }

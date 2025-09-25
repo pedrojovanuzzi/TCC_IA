@@ -12,7 +12,7 @@ export const Header = () => {
   if (isLoading) return null;
 
   return (
-    <Disclosure as="nav" className="bg-white fixed w-full z-50 shadow">
+    <Disclosure as="nav" className="bg-white relative w-full z-50 shadow">
       {({ open }) => (
         <>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

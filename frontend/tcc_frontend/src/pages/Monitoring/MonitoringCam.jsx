@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import getHostNameSocket from "../../../utils/getUrlSocket";
 import getHostName from "../../../utils/getUrl";
+import Header from "../../components/Header";
 
 export const MonitoringCam = () => {
   const { id } = useParams();
@@ -121,7 +122,7 @@ export const MonitoringCam = () => {
   }, [camera, navigate]);
 
   return (
-    <div className="p-4 flex flex-col items-center justify-center">
+    <><Header></Header><div className="p-4 flex flex-col items-center justify-center">
       <h2 className="text-xl font-bold mb-4">
         Visualizando: {camera?.name || "..."}
       </h2>
@@ -130,11 +131,10 @@ export const MonitoringCam = () => {
         <img
           src={frame}
           alt="Frame da câmera"
-          className="rounded border max-w-6xl w-full h-auto"
-        />
+          className="rounded border max-w-6xl w-full h-auto" />
       ) : (
         <p>🔄 Carregando stream da câmera...</p>
       )}
-    </div>
+    </div></>
   );
 };
