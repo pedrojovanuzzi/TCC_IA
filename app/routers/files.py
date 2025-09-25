@@ -3,6 +3,8 @@ from io import BytesIO
 from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
+
+from app.utils import log_operation
 from ..schemas import DecryptRequest, DeleteFileRequest, DeleteRequest
 from ..config import IMAGES_DIR, ENCRYPTION_KEY
 from ..auth import verificar_token
@@ -21,6 +23,7 @@ def delete_file(request: DeleteFileRequest, token=Depends(verificar_token)):
     if not os.path.exists(path):
         raise HTTPException(404, "Arquivo não encontrado")
     os.remove(path)
+    log_operation(token["user_id"],f"Deletou um arquivo {request.filename}")
     return {"success": True}
 
 @router.delete("/delete-batch")
@@ -38,6 +41,7 @@ async def delete_batch(request: DeleteRequest, token=Depends(verificar_token)):
                 except PermissionError:
                     time.sleep(0.1)
                     gc.collect()
+    log_operation(token["user_id"],f"Deletou todos os arquivos da pasta {request.folder}")                
     return {"success": True, "deleted": deleted}
 
 @router.get("/gallery")
