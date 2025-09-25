@@ -45,5 +45,6 @@ sem_duplicatas/*
 app/study
 
 
+
 /app/routers/__pycache__
-*.pyc
+/app/routers/__pycache__
