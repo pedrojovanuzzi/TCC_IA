@@ -15,7 +15,7 @@ export const Gallery = () => {
   const token = localStorage.getItem("access_token") || ""
 
   useEffect(() => {
-    fetch(`http://${API_URL}/gallery`)
+    fetch(`${API_URL}/gallery`)
       .then(r => r.json())
       .then(d => setFolders(d.folders || []))
   }, [])
@@ -24,7 +24,7 @@ export const Gallery = () => {
     if (!selectedFolder) return
     const m = {}
     const decrypt = (isVideo, filename) =>
-      fetch(`http://${API_URL}/${isVideo ? "decrypt_video" : "decrypt_image"}`, {
+      fetch(`${API_URL}/${isVideo ? "decrypt_video" : "decrypt_image"}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -61,7 +61,7 @@ export const Gallery = () => {
   const closeModal = () => setSelectedFile(null)
 
   const handleDelete = () => {
-    fetch(`http://${API_URL}/delete`, {
+    fetch(`${API_URL}/delete`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -72,7 +72,7 @@ export const Gallery = () => {
   }
 
   const handleBatchDelete = () => {
-    fetch(`http://${API_URL}/delete-batch`, {
+    fetch(`${API_URL}/delete-batch`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",

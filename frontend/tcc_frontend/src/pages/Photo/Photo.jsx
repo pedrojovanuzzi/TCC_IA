@@ -49,7 +49,7 @@ export default function Photo() {
   
     try {
       const response = await axios.post(
-        `${API_URL}/api/predict`,
+        `${API_URL}/predict`,
         formData,
         {
           headers: {

@@ -21,13 +21,13 @@ export const Users = () => {
 
   const carregarUsuarios = async () => {
     try {
-      const res = await fetch(`http://${API_URL}/api/users`, {
+      const res = await fetch(`${API_URL}/users`, {
         headers: {
           "Content-Type": "application/json",
           ...getAuthHeader(),
         },
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`https ${res.status}`);
       const data = await res.json();
       setUsuarios(data);
     } catch (err) {
@@ -46,8 +46,8 @@ export const Users = () => {
     if (username) payload.username = username;
 
     const url = editandoId
-      ? `http://${API_URL}/api/users/${editandoId}`
-      : `http://${API_URL}/api/users`;
+      ? `${API_URL}/users/${editandoId}`
+      : `${API_URL}/users`;
     const method = editandoId ? "PUT" : "POST";
 
     if (!editandoId && !password) {
@@ -63,7 +63,7 @@ export const Users = () => {
         },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`https ${res.status}`);
       resetarForm();
       carregarUsuarios();
     } catch {
@@ -87,13 +87,13 @@ export const Users = () => {
   const removerUsuario = async (id) => {
     if (!window.confirm("Tem certeza que deseja excluir?")) return;
     try {
-      const res = await fetch(`http://${API_URL}/api/users/${id}`, {
+      const res = await fetch(`${API_URL}/users/${id}`, {
         method: "DELETE",
         headers: {
           ...getAuthHeader(),
         },
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`https ${res.status}`);
       carregarUsuarios();
     } catch {
       alert("Erro ao remover usuário");

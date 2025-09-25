@@ -7,7 +7,7 @@ export const Logs = () => {
   const token = localStorage.getItem("access_token")
 
   useEffect(() => {
-    fetch(`http://${API_URL}/logs`, {
+    fetch(`${API_URL}/logs`, {
       headers: {
         "Authorization": `Bearer ${token}`
       }

@@ -15,7 +15,7 @@ export const Monitoring = () => {
   const fetchCameras = async () => {
     try {
       const url = getHostName();
-      const response = await axios.get(`http://${API_URL}/api/cameras`);
+      const response = await axios.get(`${API_URL}/cameras`);
       setCameras(response.data);
     } catch (error) {
       console.error('Erro ao buscar câmeras:', error);
@@ -32,7 +32,7 @@ export const Monitoring = () => {
     try {
       if (editingId !== null) {
         await axios.put(
-          `http://${API_URL}/api/cameras/${editingId}`,
+          `${API_URL}/cameras/${editingId}`,
           { name, ip },
           {
             headers: {
@@ -42,7 +42,7 @@ export const Monitoring = () => {
         );
       } else {
         await axios.post(
-          `http://${API_URL}/api/cameras`,
+          `${API_URL}/cameras`,
           { name, ip },
           {
             headers: {
@@ -64,7 +64,7 @@ export const Monitoring = () => {
   const handleDelete = async (id) => {
     try {
       await axios.delete(
-        `http://${API_URL}/api/cameras/${id}`,
+        `${API_URL}/cameras/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

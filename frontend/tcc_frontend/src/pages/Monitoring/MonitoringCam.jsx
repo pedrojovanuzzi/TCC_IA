@@ -17,7 +17,7 @@ export const MonitoringCam = () => {
     let cancel = false;
     (async () => {
       try {
-        const response = await axios.get(`http://${API_URL}/api/cameras/${id}`);
+        const response = await axios.get(`${API_URL}/cameras/${id}`);
         if (!cancel) setCamera(response.data);
       } catch (error) {
         console.error("Erro ao buscar dados da câmera:", error);
@@ -36,7 +36,7 @@ export const MonitoringCam = () => {
   // WebSocket
   useEffect(() => {
     if (!camera) return;
-    const url = `ws://${API_URL}/api/ws/camera/${camera.id}`;
+    const url = `${API_URL}/ws/camera/${camera.id}`;
     const ws = new WebSocket(url);
 
     closedRef.current = false;

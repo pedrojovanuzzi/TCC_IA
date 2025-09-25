@@ -33,7 +33,7 @@ export default function Video() {
     try {
       // 1) envia e criptografa
       const res = await axios.post(
-        `${API_URL}/api/predict_video`,
+        `${API_URL}/predict_video`,
         form,
         {
           headers: {
@@ -46,7 +46,7 @@ export default function Video() {
 
       // 2) descriptografa antes de exibir
       const dec = await axios.post(
-        `${API_URL}/api/decrypt_video`,
+        `${API_URL}/decrypt_video`,
         { folder: "video_treinado", filename },
         {
           responseType: "blob",
