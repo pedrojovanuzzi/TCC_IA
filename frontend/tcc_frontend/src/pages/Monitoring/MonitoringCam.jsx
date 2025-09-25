@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import getHostNameSocket from "../../../utils/getUrlSocket";
 import getHostName from "../../../utils/getUrl";
 
 export const MonitoringCam = () => {
@@ -12,6 +13,7 @@ export const MonitoringCam = () => {
   const closedRef = useRef(false); // evita setState após unmount
   const alertedRef = useRef(false); // evita múltiplos alerts
   const API_URL = getHostName();
+  const API_URL_WEBSOCKET = getHostNameSocket();
   // Busca metadados da câmera
   useEffect(() => {
     let cancel = false;
@@ -36,8 +38,11 @@ export const MonitoringCam = () => {
   // WebSocket
   useEffect(() => {
     if (!camera) return;
-    const url = `${API_URL}/ws/camera/${camera.id}`;
+    const url = `${API_URL_WEBSOCKET}/ws/camera/${camera.id}`;
     const ws = new WebSocket(url);
+
+    console.log(url);
+    
 
     closedRef.current = false;
 
