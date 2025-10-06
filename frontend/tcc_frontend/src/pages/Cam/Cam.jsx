@@ -27,10 +27,21 @@ export default function Cam() {
   useEffect(() => {
     let streamA;
 
-    navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      streamA = stream;
-    });
+    navigator.mediaDevices.getUserMedia({
+  video: { facingMode: { exact: "environment" } } // traseira
+})
+.then((stream) => {
+  if (videoRef.current) videoRef.current.srcObject = stream;
+  streamA = stream;
+})
+.catch((err) => {
+  console.error("Erro ao acessar câmera traseira:", err);
+  // fallback: tenta câmera padrão
+  navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+    if (videoRef.current) videoRef.current.srcObject = stream;
+    streamA = stream;
+  });
+});
 
     return () => {
       if(streamA){
@@ -55,17 +66,19 @@ export default function Cam() {
   }, [ws]);
 
   return (
-    <><Header /><div
-      className="flex justify-center items-center h-screen bg-gray-200"
+    <div className="bg-gray-200 h-screen"><Header /><div
+      className="flex justify-center "
       style={{ textAlign: "center" }}
     >
-      {frame && <img src={frame} alt="processed" className="mb-10 h-64 sm:w-1/2 sm:h-auto" />}
+      <div className="px-5 mt-2 bg-gray-200 pb-5">
+        {frame && <img src={frame} alt="processed" className="rounded-sm h-[80vh] sm:h-[90vh] ring-1 ring-black " />}
       {!frame && (
         <h1 className="text-3xl font-semibold text-gray-200">
           Video Ainda Não Iniciado
         </h1>
       )}
       <video ref={videoRef} style={{ display: "none" }} autoPlay />
-    </div></>
+      </div>
+    </div></div>
   );
 }
