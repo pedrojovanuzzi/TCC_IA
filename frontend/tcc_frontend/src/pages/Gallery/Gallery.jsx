@@ -33,22 +33,20 @@ export const Gallery = () => {
     const m = {}
     setLoading(true);
     const decrypt = (isVideo, filename) =>
-      axios.post(
-        `${API_URL}/${isVideo ? "decrypt_video" : "decrypt_image"}`,
-        { folder: selectedFolder, filename },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          responseType: isVideo ? "blob" : "json"
-        }
-      ).then(res => {
-        m[filename] = isVideo
-          ? URL.createObjectURL(res.data)
-          : `data:image/jpeg;base64,${res.data.frame}`
-          
-      })
+  axios.post(
+    `${API_URL}/${isVideo ? "decrypt_video" : "decrypt_image"}?mode=blob`,
+    { folder: selectedFolder, filename },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      responseType: "blob" // 👈 sempre blob
+    }
+  ).then(res => {
+    m[filename] = URL.createObjectURL(res.data)
+  })
+
 
     Promise.all(
       files.map(f => decrypt(/\.(mp4|mov|webm)$/i.test(f.name), f.name))

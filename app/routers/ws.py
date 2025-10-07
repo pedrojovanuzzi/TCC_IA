@@ -39,26 +39,31 @@ async def ws_root(websocket: WebSocket):
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
-            data = await websocket.receive_text()
-            frame_bytes = base64.b64decode(json.loads(data)["frame"])
+            # Recebe frame como bytes (Blob vindo do React)
+            frame_bytes = await websocket.receive_bytes()
+            
+            # Decodifica para imagem OpenCV
             img = cv2.imdecode(np.frombuffer(frame_bytes, np.uint8), cv2.IMREAD_COLOR)
 
+            # Faz a predição
             results = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=0.5, stream=True)
             for res in results:
                 for box in res.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     cls_id = int(box.cls[0])
-                    cls = model.names[int(box.cls[0])]
-                    conf = float(box.conf[0])
                     cls_name = model.names[cls_id]
+                    conf = float(box.conf[0])
                     color = CORES_CLASSES.get(cls_name, (255, 255, 255))
                     cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
-                    draw_label(img, f"{cls}:{conf:.2f}", x1, y1, color)
+                    draw_label(img, f"{cls_name}:{conf:.2f}", x1, y1, color)
 
+            # Converte imagem processada para JPEG (bytes)
             _, buf = cv2.imencode(".jpg", img)
-            b64 = base64.b64encode(buf.tobytes()).decode("utf-8")
-            await websocket.send_text(json.dumps({ "frame": b64 }))
 
+            # Envia os bytes de volta (não mais base64/JSON)
+            await websocket.send_bytes(buf.tobytes())
+
+            # A cada 3s salva a imagem criptografada
             now = time.time()
             if now - last_saved >= 3:
                 try:
@@ -77,7 +82,6 @@ async def ws_root(websocket: WebSocket):
         print("🔌 WebSocket desconectado.")
     finally:
         await websocket.close()
-
 
 async def _safe_ws_send_text(ws: WebSocket, payload: dict):
     if ws.application_state == WebSocketState.CONNECTED:
