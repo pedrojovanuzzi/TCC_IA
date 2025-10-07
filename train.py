@@ -16,7 +16,7 @@ if __name__ == '__main__':
         data="data.yaml",     # Caminho do arquivo que define classes e paths do dataset
         epochs=100,           # Diminui para 100 nas primeiras execuções (testar desempenho)
         imgsz=640,            # Reduz resolução para acelerar o processamento
-        batch=8,              # Usa lote de 8 imagens (ideal para 12GB de VRAM da 4070 Ti)
+        batch="auto",              # Usa lote de 8 imagens (ideal para 12GB de VRAM da 4070 Ti)
         workers=8,            # Usa 8 threads de CPU para carregar dados em paralelo
         cache=True,           # Faz cache do dataset (imagens já redimensionadas ficam salvas)
         optimizer='auto',     # Deixa o YOLO escolher o melhor otimizador (AdamW geralmente)
