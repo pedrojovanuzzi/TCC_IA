@@ -27,43 +27,31 @@ export default function Video() {
   };
 
   const handleUpload = async (file) => {
-    setUploading(true);
-    const form = new FormData();
-    form.append("file", file);
+  setUploading(true);
+  const form = new FormData();
+  form.append("file", file);
 
-    try {
-      // 1) envia e criptografa
-      const res = await axios.post(
-        `${API_URL}/predict_video`,
-        form,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const filename = res.data.video_url.split("/").pop();
+  try {
+    // envia vídeo e já recebe como blob
+    const res = await axios.post(`${API_URL}/predict_video`, form, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${token}`,
+      },
+      responseType: "blob",  // 👈 espera um vídeo binário
+    });
 
-      // 2) descriptografa antes de exibir
-      const dec = await axios.post(
-        `${API_URL}/decrypt_video`,
-        { folder: "video_treinado", filename },
-        {
-          responseType: "blob",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+    const url = URL.createObjectURL(res.data);
+    if (processedVideo) URL.revokeObjectURL(processedVideo); // libera anterior
+    setProcessedVideo(url);
+  } catch (err) {
+    console.error("Erro:", err.response?.data || err);
+  } finally {
+    setUploading(false);
+  }
+};
 
-      // 3) cria URL de blob já descriptografado
-      const url = URL.createObjectURL(dec.data);
-      setProcessedVideo(url);
-    } catch (err) {
-      console.error("Erro:", err.response?.data || err);
-    } finally {
-      setUploading(false);
-    }
-  };
+
 
   return (
     <><Header></Header><div className="flex flex-col items-center p-6">

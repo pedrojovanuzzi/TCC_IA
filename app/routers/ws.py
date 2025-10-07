@@ -3,7 +3,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 import numpy as np
 from ..database import get_connection
-from ..config import MODEL_PATH, IMG_REAL_TIME_DIR, CORES_CLASSES, IMG_SIZE, ENCRYPTION_KEY
+from ..config import CONFIDENCE, MODEL_PATH, IMG_REAL_TIME_DIR, CORES_CLASSES, IMG_SIZE, ENCRYPTION_KEY
 from ultralytics import YOLO
 from cryptography.fernet import Fernet
 import torch, cv2, json, os, time, base64
@@ -39,26 +39,31 @@ async def ws_root(websocket: WebSocket):
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
-            data = await websocket.receive_text()
-            frame_bytes = base64.b64decode(json.loads(data)["frame"])
+            # Recebe frame como bytes (Blob vindo do React)
+            frame_bytes = await websocket.receive_bytes()
+            
+            # Decodifica para imagem OpenCV
             img = cv2.imdecode(np.frombuffer(frame_bytes, np.uint8), cv2.IMREAD_COLOR)
 
+            # Faz a predição
             results = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=0.5, stream=True)
             for res in results:
                 for box in res.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     cls_id = int(box.cls[0])
-                    cls = model.names[int(box.cls[0])]
-                    conf = float(box.conf[0])
                     cls_name = model.names[cls_id]
+                    conf = float(box.conf[0])
                     color = CORES_CLASSES.get(cls_name, (255, 255, 255))
                     cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
-                    draw_label(img, f"{cls}:{conf:.2f}", x1, y1, color)
+                    draw_label(img, f"{cls_name}:{conf:.2f}", x1, y1, color)
 
+            # Converte imagem processada para JPEG (bytes)
             _, buf = cv2.imencode(".jpg", img)
-            b64 = base64.b64encode(buf.tobytes()).decode("utf-8")
-            await websocket.send_text(json.dumps({ "frame": b64 }))
 
+            # Envia os bytes de volta (não mais base64/JSON)
+            await websocket.send_bytes(buf.tobytes())
+
+            # A cada 3s salva a imagem criptografada
             now = time.time()
             if now - last_saved >= 3:
                 try:
@@ -77,7 +82,6 @@ async def ws_root(websocket: WebSocket):
         print("🔌 WebSocket desconectado.")
     finally:
         await websocket.close()
-
 
 async def _safe_ws_send_text(ws: WebSocket, payload: dict):
     if ws.application_state == WebSocketState.CONNECTED:
@@ -125,11 +129,11 @@ def capture_proc(ip: str, q: mp.Queue, stop: MpEvent = mp.Event()):
 async def ws_cam(ws: WebSocket, camera_id: int):
     await ws.accept()
 
-    # Busca IP no banco e fecha conexão imediatamente (evita lock prolongado)
+    # Busca IP no banco
     conn = get_connection(); c = conn.cursor()
     c.execute("SELECT ip FROM cameras WHERE id=%s", (camera_id,))
     row = c.fetchone()
-    conn.close()  # <--- fecha já aqui
+    conn.close()
     if not row:
         await _safe_ws_send_text(ws, {"erro": "não encontrada"})
         if ws.application_state == WebSocketState.CONNECTED:
@@ -137,11 +141,10 @@ async def ws_cam(ws: WebSocket, camera_id: int):
         return
     ip = row[0]
 
-    # Prepara modelo fora da captura
     model = get_model()
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # Cria fila/processo de captura
+    # Captura em processo separado
     q: mp.Queue = mp.Queue(maxsize=QUEUE_MAXSIZE)
     stop = mp.Event()
     proc = mp.Process(target=capture_proc, args=(ip, q, stop), daemon=True)
@@ -152,21 +155,18 @@ async def ws_cam(ws: WebSocket, camera_id: int):
 
     try:
         while True:
-            # espera por um frame com timeout (não bloqueia seu servidor)
             try:
                 frame = await asyncio.get_running_loop().run_in_executor(
-                    None, lambda: q.get(True, 0.5)  # 500ms timeout por poll
+                    None, lambda: q.get(True, 0.5)
                 )
                 last_frame_ts = time.time()
             except Exception:
-                # Sem novo frame no período de poll; verifica timeout total
                 if (time.time() - last_frame_ts) > READ_IDLE_TIMEOUT:
                     await _safe_ws_send_text(ws, {
                         "erro": "timeout_stream",
                         "detalhe": f"Sem frames há {READ_IDLE_TIMEOUT:.0f}s"
                     })
                     break
-                # segue tentando
                 continue
 
             # ---------- INFERÊNCIA ----------
@@ -175,7 +175,7 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                 imgsz=IMG_SIZE,
                 device=device,
                 half=True,
-                conf=0.1,
+                conf=CONFIDENCE,
                 iou=0.4,
                 agnostic_nms=True
             )[0]
@@ -202,14 +202,13 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                         f.write(encrypted)
                 last_save_ts = now
 
-            # ---------- ENVIO WS ----------
+            # ---------- ENVIO WS (binário) ----------
             ok, buf = cv2.imencode(".jpg", frame)
             if not ok:
                 await asyncio.sleep(0.001)
                 continue
-            frame_b64 = base64.b64encode(buf.tobytes()).decode("utf-8")
             try:
-                await _safe_ws_send_text(ws, {"frame": frame_b64})
+                await ws.send_bytes(buf.tobytes())
             except WebSocketDisconnect:
                 break
             await asyncio.sleep(0.001)
@@ -217,37 +216,35 @@ async def ws_cam(ws: WebSocket, camera_id: int):
     except WebSocketDisconnect:
         pass
     finally:
-    # 1) Para o processo de captura (se existir)
         try:
             if 'stop' in locals() and stop is not None:
                 stop.set()
         except Exception:
             pass
 
-    try:
-        if 'proc' in locals() and proc is not None and proc.is_alive():
-            proc.terminate()
-            proc.join(timeout=1.0)
-            # Se ainda estiver vivo, tenta matar de vez
-            if proc.is_alive():
-                try:
-                    proc.kill()  # Python 3.7+; no Windows funciona
-                except Exception:
-                    pass
-    except Exception:
-        pass
+        try:
+            if 'proc' in locals() and proc is not None and proc.is_alive():
+                proc.terminate()
+                proc.join(timeout=1.0)
+                if proc.is_alive():
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
-    # 2) Se o WS ainda estiver conectado, avisa o front e fecha
-    from starlette.websockets import WebSocketState
-    if ws.application_state == WebSocketState.CONNECTED:
-        try:
-            await ws.send_text(json.dumps({
-                "erro": "conexao_encerrada",
-                "mensagem": "A conexão com o servidor foi encerrada."
-            }))
-        except Exception:
-            pass
-        try:
-            await ws.close()
-        except Exception:
-            pass
+        # avisa o front se ainda estiver aberto
+        from starlette.websockets import WebSocketState
+        if ws.application_state == WebSocketState.CONNECTED:
+            try:
+                await _safe_ws_send_text(ws, {
+                    "erro": "conexao_encerrada",
+                    "mensagem": "A conexão com o servidor foi encerrada."
+                })
+            except Exception:
+                pass
+            try:
+                await ws.close()
+            except Exception:
+                pass

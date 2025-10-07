@@ -62,26 +62,48 @@ def list_gallery():
     return {"folders": result}
 
 @router.post("/decrypt_image")
-def decrypt_image(req: DecryptRequest = Body(...), token=Depends(verificar_token)):
+def decrypt_image(
+    req: DecryptRequest = Body(...),
+    token=Depends(verificar_token),
+    mode: str = "b64"
+):
     path = os.path.join(IMAGES_DIR, req.folder, req.filename)
     if not os.path.exists(path):
         raise HTTPException(404, "Arquivo não encontrado")
+
     data = open(path, "rb").read()
     try:
         dec = fernet.decrypt(data)
     except:
         raise HTTPException(400, "Falha na descriptografia")
-    b64 = base64.b64encode(dec).decode()
-    return JSONResponse({"frame": b64})
+
+    if mode == "blob":
+        return StreamingResponse(BytesIO(dec), media_type="image/jpeg")
+    else:
+        b64 = base64.b64encode(dec).decode()
+        return JSONResponse({"frame": b64})
+
 
 @router.post("/decrypt_video")
-def decrypt_video(req: DecryptRequest = Body(...), token=Depends(verificar_token)):
+def decrypt_video(
+    req: DecryptRequest = Body(...),
+    token=Depends(verificar_token),
+    mode: str = "blob"  # padrão para vídeo é blob
+):
     path = os.path.join(IMAGES_DIR, req.folder, req.filename)
     if not os.path.exists(path):
         raise HTTPException(404, "Vídeo não encontrado")
+    
     data = open(path, "rb").read()
     try:
         dec = fernet.decrypt(data)
     except:
         raise HTTPException(400, "Falha na descriptografia")
-    return StreamingResponse(BytesIO(dec), media_type="video/mp4")
+
+    if mode == "b64":
+        # vídeo em base64 (cuidado: fica pesado)
+        b64 = base64.b64encode(dec).decode()
+        return JSONResponse({"video": b64})
+    else:
+        # padrão: streaming de bytes mp4
+        return StreamingResponse(BytesIO(dec), media_type="video/mp4")

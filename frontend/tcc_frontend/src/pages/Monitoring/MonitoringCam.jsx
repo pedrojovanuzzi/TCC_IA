@@ -9,12 +9,13 @@ export const MonitoringCam = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [frame, setFrame] = useState(null); // string | null
+  const [frame, setFrame] = useState(null); // URL do blob
   const [camera, setCamera] = useState(null);
-  const closedRef = useRef(false); // evita setState após unmount
-  const alertedRef = useRef(false); // evita múltiplos alerts
+  const closedRef = useRef(false);
+  const alertedRef = useRef(false);
   const API_URL = getHostName();
   const API_URL_WEBSOCKET = getHostNameSocket();
+
   // Busca metadados da câmera
   useEffect(() => {
     let cancel = false;
@@ -34,107 +35,83 @@ export const MonitoringCam = () => {
     return () => {
       cancel = true;
     };
-  }, [id, navigate]);
+  }, [id, navigate, API_URL]);
 
   // WebSocket
-  useEffect(() => {
-    if (!camera) return;
-    const url = `${API_URL_WEBSOCKET}/ws/camera/${camera.id}`;
-    const ws = new WebSocket(url);
+useEffect(() => {
+  if (!camera) return;
+  let ws;
+  let reconnectTimer;
 
-    console.log(url);
-    
+  const connect = () => {
+    ws = new WebSocket(`${API_URL_WEBSOCKET}/ws/camera/${camera.id}`);
+    ws.binaryType = "arraybuffer";
 
     closedRef.current = false;
-
-    ws.onopen = () => {
-      // opcional: mostrar que conectou
-      // console.log("WS conectado!");
-    };
 
     ws.onmessage = (event) => {
       if (closedRef.current) return;
 
-      try {
-        const data = JSON.parse(event.data);
-
-        // Mensagens de erro vindas do backend
-        if (data.erro) {
-          if (!alertedRef.current) {
-            alertedRef.current = true;
-
-            // mensagens comuns que você mandou do backend:
-            // "não encontrada", "não conectou", "timeout_stream", "conexao_encerrada"
-            const msg =
-              data.mensagem ||
-              (data.erro === "não encontrada"
-                ? "Câmera não encontrada."
-                : data.erro === "não conectou"
-                ? "Não foi possível conectar à câmera."
-                : data.erro === "timeout_stream"
-                ? "Tempo de leitura esgotado (stream ficou sem frames)."
-                : data.erro === "conexao_encerrada"
-                ? "A conexão com o servidor foi encerrada."
-                : `Erro: ${data.erro}`);
-
-            alert(msg);
+      if (typeof event.data === "string") {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.erro) {
+            console.warn("Erro vindo do backend:", data);
+            return; // só loga, não derruba a tela
           }
-          // Volta para a página anterior
-          navigate(-1);
-          return;
+        } catch (e) {
+          console.error("Falha ao parsear mensagem WS:", e);
         }
+      } else {
+        const blob = new Blob([event.data], { type: "image/jpeg" });
+        const url = URL.createObjectURL(blob);
 
-        // Frame válido
-        if (data.frame) {
-          setFrame(`data:image/jpeg;base64,${data.frame}`);
-        }
-      } catch (e) {
-        console.error("Falha ao parsear mensagem WS:", e);
+        if (frame) URL.revokeObjectURL(frame);
+        setFrame(url);
       }
     };
 
-    ws.onerror = (error) => {
-      console.error("Erro no WebSocket:", error);
-      if (!alertedRef.current) {
-        alertedRef.current = true;
-        alert("Ocorreu um erro na conexão com o servidor.");
-      }
-      navigate(-1);
+    ws.onerror = (err) => {
+      console.error("Erro no WebSocket:", err);
+      ws.close();
     };
 
-    // Se o WS fechar sem avisar, garante voltar
     ws.onclose = () => {
-      if (closedRef.current) return; // já estamos desmontando
-      if (!alertedRef.current) {
-        alertedRef.current = true;
-        alert("Conexão encerrada.");
-      }
-      navigate(-1);
+      if (closedRef.current) return;
+      console.warn("WebSocket fechado. Tentando reconectar em 2s...");
+      reconnectTimer = setTimeout(connect, 2000);
     };
+  };
 
-    // Cleanup
-    return () => {
-      closedRef.current = true;
-      try {
-        ws.close();
-      } catch {}
-    };
-  }, [camera, navigate]);
+  connect();
+
+  return () => {
+    closedRef.current = true;
+    if (frame) URL.revokeObjectURL(frame);
+    clearTimeout(reconnectTimer);
+    try { ws && ws.close(); } catch {}
+  };
+}, [camera, API_URL_WEBSOCKET]);
+
 
   return (
-    <><Header></Header><div className="p-4 flex flex-col items-center justify-center">
-      <h2 className="text-xl font-bold mb-4">
-        Visualizando: {camera?.name || "..."}
-      </h2>
+    <>
+      <Header />
+      <div className="p-4 flex flex-col items-center justify-center">
+        <h2 className="text-xl font-bold mb-4">
+          Visualizando: {camera?.name || "..."}
+        </h2>
 
-      {frame ? (
-        <img
-          src={frame}
-          alt="Frame da câmera"
-          className="rounded border sm:w-1/2" />
-      ) : (
-        <p>🔄 Carregando stream da câmera...</p>
-      )}
-    </div></>
+        {frame ? (
+          <img
+            src={frame}
+            alt="Frame da câmera"
+            className="rounded border sm:w-1/2"
+          />
+        ) : (
+          <p>🔄 Carregando stream da câmera...</p>
+        )}
+      </div>
+    </>
   );
 };
