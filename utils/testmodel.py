@@ -3,7 +3,8 @@ from multiprocessing import freeze_support
 
 def run_validation():
     # Carrega o modelo
-    model = YOLO("../runs/detect/train5/weights/best.pt")
+    # model = YOLO("../runs/detect/train5/weights/best.pt")
+    model = YOLO("../testModel/train6.pt")
 
     # Executa a validação
     metrics = model.val(data="./data.yaml")
