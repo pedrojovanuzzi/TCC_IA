@@ -1,4 +1,6 @@
+import io
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
+from fastapi.responses import StreamingResponse
 from starlette.responses import JSONResponse
 from ..config import MODEL_PATH, CONFIDENCE, IMG_SIZE, IMG_STATIC_DIR, VIDEO_DIR, CORES_CLASSES, ENCRYPTION_KEY
 from ..database import get_connection
@@ -25,8 +27,12 @@ def draw_label(img, text, x, y, color):
 async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = YOLO(MODEL_PATH)
+
+    # lê o arquivo enviado
     content = await file.read()
     img = cv2.imdecode(np.frombuffer(content, np.uint8), cv2.IMREAD_COLOR)
+
+    # roda o modelo
     result = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE)[0]
     for box in result.boxes:
         x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -35,6 +41,8 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
         color = CORES_CLASSES.get(cls, (255, 255, 255))
         cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
         draw_label(img, f"{cls}:{conf:.2f}", x1, y1, color)
+
+    # salva imagem criptografada
     os.makedirs(IMG_STATIC_DIR, exist_ok=True)
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
     filename = f"detectado_{ts}.jpg"
@@ -45,11 +53,21 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
     encrypted = fernet.encrypt(data)
     with open(path, "wb") as f:
         f.write(encrypted)
-    _, buf = cv2.imencode(".jpg", img)
-    frame_b64 = base64.b64encode(buf.tobytes()).decode("utf-8")
-    log_operation(token["user_id"], f"Salvou e criptografou {filename}")
-    return JSONResponse({"frame": frame_b64, "path": path})
 
+    # loga a operação
+    log_operation(token["user_id"], f"Salvou e criptografou {filename}")
+
+    # converte imagem processada para bytes e devolve como blob
+    ok, buf = cv2.imencode(".jpg", img)
+    if not ok:
+        raise HTTPException(500, "Falha ao codificar imagem")
+    
+    return StreamingResponse(
+        io.BytesIO(buf.tobytes()),
+        media_type="image/jpeg"
+    )
+    
+    
 @router.post("/predict_video")
 async def inferir_video(file: UploadFile = File(...), token = Depends(verificar_token)):
     device = "cuda" if torch.cuda.is_available() else "cpu"
