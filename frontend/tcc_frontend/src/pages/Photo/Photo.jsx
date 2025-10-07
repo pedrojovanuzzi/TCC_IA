@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import axios from "axios";
 import img from "../../assets/imgs/photo.png";
 import getHostName from "../../../utils/getUrl";
@@ -13,6 +13,7 @@ export default function Photo() {
   const [loading, setLoading] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const API_URL = getHostName();
+  const [stream, setStream] = useState(null); // guarda o stream ativo
 
   const handleDragOver = (event) => {
     event.preventDefault();
@@ -49,17 +50,14 @@ export default function Photo() {
     try {
       const response = await axios.post(`${API_URL}/predict`, formData, {
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
-        responseType: "blob", // 👈 agora esperamos blob
+        responseType: "blob",
       });
 
-      // Criar URL temporária a partir do blob
       const url = URL.createObjectURL(response.data);
-      // liberar a anterior (se existir) para não vazar memória
       if (preview) URL.revokeObjectURL(preview);
       setPreview(url);
-
     } catch (error) {
       console.error("Erro ao enviar a imagem:", error.response?.data || error);
     } finally {
@@ -69,11 +67,12 @@ export default function Photo() {
 
   const startCamera = async () => {
     setCameraActive(true);
-    const stream = await navigator.mediaDevices.getUserMedia({
+    const s = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
     });
+    setStream(s);
     if (videoRef.current) {
-      videoRef.current.srcObject = stream;
+      videoRef.current.srcObject = s;
     }
   };
 
@@ -89,6 +88,15 @@ export default function Photo() {
     }
   };
 
+  // 👇 cleanup quando sair da página (desmontar componente)
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [stream]);
+
   return (
     <>
       <Header />
@@ -97,7 +105,9 @@ export default function Photo() {
           <img src={img} className="size-16 mt-5 sm:size-24" />
         </div>
         <div className="flex flex-col justify-center items-center">
-          <h1 className="font-semibold mb-4">Arraste ou clique para selecionar uma Foto</h1>
+          <h1 className="font-semibold mb-4">
+            Arraste ou clique para selecionar uma Foto
+          </h1>
 
           <input
             type="file"
@@ -164,7 +174,11 @@ export default function Photo() {
           {preview && (
             <div className="mt-4 flex flex-col">
               <h2 className="font-semibold text-center">Imagem Processada:</h2>
-              <img src={preview} alt="Imagem processada" className="mt-2 rounded-lg shadow-md" />
+              <img
+                src={preview}
+                alt="Imagem processada"
+                className="mt-2 rounded-lg shadow-md"
+              />
             </div>
           )}
         </div>

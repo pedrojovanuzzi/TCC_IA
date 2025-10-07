@@ -2,7 +2,7 @@ from ultralytics import YOLO
 
 
 # NANO yolov12n / MEDIUM yolov11m
-model_path = "./yolo12s.pt"
+model_path = "./yolo12l.pt"
 
 # Treinamento do modelo (se necessário)
 if __name__ == '__main__':
