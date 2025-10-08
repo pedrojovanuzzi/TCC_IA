@@ -20,8 +20,10 @@ QUEUE_MAXSIZE = 2         # evita backlog/latência
 @lru_cache(maxsize=1)
 def get_model(x: int = 0):
     if(x == 1):
+        print('Modelo Large')
         return YOLO(MODEL_PATH_LONG_DISTANCE)
     else:
+        print('Modelo Medium')
         return YOLO(MODEL_PATH)
     
 
