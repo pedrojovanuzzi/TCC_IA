@@ -23,12 +23,17 @@ ENCRYPTION_KEY = key_bytes
 # Outras configurações
 IS_LOCAL = os.getenv("LOCAL") == "true"
 TRAIN    = os.getenv("TRAIN", "train5")
+TRAIN_LONG_DISTANCE    = os.getenv("TRAIN", "train6")
 
 MONITORINGFRAMES = os.getenv("MONITORINGFRAMES")
 
 MODEL_PT    = os.path.join(BASE_DIR, "runs", "detect", TRAIN, "weights", "best.pt")
 MODEL_E     = os.path.join(BASE_DIR, "runs", "detect", TRAIN, "weights", "best.engine")
 MODEL_PATH  = MODEL_E if IS_LOCAL else MODEL_PT
+
+MODEL_PT_LONG_DISTANCE    = os.path.join(BASE_DIR, "runs", "detect", TRAIN_LONG_DISTANCE, "weights", "best.pt")
+MODEL_E_LONG_DISTANCE     = os.path.join(BASE_DIR, "runs", "detect", TRAIN_LONG_DISTANCE, "weights", "best.engine")
+MODEL_PATH_LONG_DISTANCE  = MODEL_E if IS_LOCAL else MODEL_PT
 
 VIDEO_DIR        = os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "video_treinado")
 IMG_STATIC_DIR   = os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "img_statica")

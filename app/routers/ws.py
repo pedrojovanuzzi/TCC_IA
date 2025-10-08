@@ -3,7 +3,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 import numpy as np
 from ..database import get_connection
-from ..config import CONFIDENCE, MODEL_PATH, IMG_REAL_TIME_DIR, CORES_CLASSES, IMG_SIZE, ENCRYPTION_KEY
+from ..config import CONFIDENCE, MODEL_PATH, MODEL_PATH_LONG_DISTANCE, IMG_REAL_TIME_DIR, CORES_CLASSES, IMG_SIZE, ENCRYPTION_KEY
 from ultralytics import YOLO
 from cryptography.fernet import Fernet
 import torch, cv2, json, os, time, base64
@@ -18,9 +18,12 @@ READ_IDLE_TIMEOUT = 20.0   # segundos sem frame -> encerra
 QUEUE_MAXSIZE = 2         # evita backlog/latência
 
 @lru_cache(maxsize=1)
-def get_model():
-    print("📦 Carregando YOLO...")
-    return YOLO(MODEL_PATH)
+def get_model(x):
+    if(x == 1):
+        return YOLO(MODEL_PATH_LONG_DISTANCE)
+    else:
+        return YOLO(MODEL_PATH)
+    
 
 def draw_label(img, text, x, y, color):
     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -141,7 +144,7 @@ async def ws_cam(ws: WebSocket, camera_id: int):
         return
     ip = row[0]
 
-    model = get_model()
+    model = get_model(1)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Captura em processo separado
