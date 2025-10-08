@@ -18,7 +18,7 @@ READ_IDLE_TIMEOUT = 20.0   # segundos sem frame -> encerra
 QUEUE_MAXSIZE = 2         # evita backlog/latência
 
 @lru_cache(maxsize=1)
-def get_model(x):
+def get_model(x: int = 0):
     if(x == 1):
         return YOLO(MODEL_PATH_LONG_DISTANCE)
     else:
