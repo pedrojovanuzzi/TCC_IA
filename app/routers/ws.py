@@ -51,7 +51,7 @@ async def ws_root(websocket: WebSocket):
             img = cv2.imdecode(np.frombuffer(frame_bytes, np.uint8), cv2.IMREAD_COLOR)
 
             # Faz a predição
-            results = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=0.5, stream=True)
+            results = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE, stream=True)
             for res in results:
                 for box in res.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
