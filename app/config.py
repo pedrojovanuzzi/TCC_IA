@@ -22,7 +22,7 @@ ENCRYPTION_KEY = key_bytes
 
 # Outras configurações
 IS_LOCAL = os.getenv("LOCAL") == "true"
-TRAIN    = os.getenv("TRAIN", "train5")
+TRAIN    = os.getenv("TRAIN", "train7")
 TRAIN_LONG_DISTANCE    = os.getenv("TRAIN", "train6")
 
 MONITORINGFRAMES = os.getenv("MONITORINGFRAMES")
