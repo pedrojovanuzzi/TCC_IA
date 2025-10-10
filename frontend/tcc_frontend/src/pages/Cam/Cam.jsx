@@ -61,9 +61,9 @@ export default function Cam() {
     const interval = setInterval(() => {
       if (!videoRef.current || !ws || ws.readyState !== WebSocket.OPEN) return;
       const c = document.createElement("canvas");
-      c.width = 640;
-      c.height = 480;
-      c.getContext("2d").drawImage(videoRef.current, 0, 0, 640, 480);
+      c.width = 1280;
+      c.height = 640;
+      c.getContext("2d").drawImage(videoRef.current, 0, 0, 1280, 640);
 
       c.toBlob((blob) => {
         if (blob) {
