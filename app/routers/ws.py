@@ -3,7 +3,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 import numpy as np
 from ..database import get_connection
-from ..config import CONFIDENCE, MODEL_PATH, MODEL_PATH_LONG_DISTANCE, IMG_REAL_TIME_DIR, CORES_CLASSES, IMG_SIZE, ENCRYPTION_KEY
+from ..config import CONFIDENCE, MODEL_PATH, MODEL_PATH_LONG_DISTANCE, IOU, IMG_REAL_TIME_DIR, CORES_CLASSES, IMG_SIZE, ENCRYPTION_KEY
 from ultralytics import YOLO
 from cryptography.fernet import Fernet
 import torch, cv2, json, os, time, base64
@@ -29,7 +29,7 @@ def get_model(x: int = 0):
 
 def draw_label(img, text, x, y, color):
     font = cv2.FONT_HERSHEY_SIMPLEX
-    scale = 0.4
+    scale = IOU
     thickness = 1
     (w, h), _ = cv2.getTextSize(text, font, scale, thickness)
     cv2.rectangle(img, (x, y - h - 4), (x + w + 4, y), color, -1)
@@ -181,7 +181,7 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                 device=device,
                 half=True,
                 conf=CONFIDENCE,
-                iou=0.4,
+                iou=IOU,
                 agnostic_nms=True
             )[0]
 
