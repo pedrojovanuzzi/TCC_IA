@@ -177,7 +177,7 @@ export default function Photo() {
               <img
                 src={preview}
                 alt="Imagem processada"
-                className="mt-2 rounded-lg shadow-md"
+                className="my-2 rounded-lg max-w-[80vw] shadow-md"
               />
             </div>
           )}
