@@ -1,33 +1,45 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 from database import get_connection
-import traceback
-import os
-import shutil
+import traceback, os, re
 
-# Instância global do agendador
 scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
 
+def parse_time_string(time_str: str) -> timedelta:
+    pattern = r'(\d+)\s*([DHMS])'
+    matches = re.findall(pattern, time_str.upper())
+    delta_kwargs = {'days': 0, 'hours': 0, 'minutes': 0, 'seconds': 0}
+    for value, unit in matches:
+        value = int(value)
+        if unit == 'D':
+            delta_kwargs['days'] += value
+        elif unit == 'H':
+            delta_kwargs['hours'] += value
+        elif unit == 'M':
+            delta_kwargs['minutes'] += value
+        elif unit == 'S':
+            delta_kwargs['seconds'] += value
+    return timedelta(**delta_kwargs)
+
 def verificar_cronjob():
-    """Verifica no banco se há cron ativo e executa quando chegar a hora"""
     try:
         conn = get_connection()
         c = conn.cursor()
-        c.execute("SELECT time, active FROM cronjob LIMIT 1")
+        c.execute("SELECT time, active, interval_text FROM cronjob LIMIT 1")
         result = c.fetchone()
         conn.close()
 
         if not result:
             return
         
-        dt_exec, ativo = result
-        if not ativo:
+        dt_exec, ativo, interval_text = result
+        if not ativo or not interval_text:
             return
 
         if datetime.now() >= dt_exec:
             print(f"🚀 Executando tarefa agendada em {datetime.now()}")
             executar_tarefa()
-            reagendar_cronjob(dt_exec)
+            reagendar_cronjob(interval_text)
 
     except Exception:
         print("❌ Erro ao verificar cronjob:")
@@ -35,68 +47,40 @@ def verificar_cronjob():
 
 
 def executar_tarefa():
-    """Ação que será executada pelo cronjob"""
     print("🧹 Limpando galeria agora...")
-
     try:
-        # Caminho absoluto da pasta 'imagens'
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "tcc_frontend", "public", "imagens"))
-        
-        # Verifica se a pasta existe
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "tcc_frontend", "public", "imagens"))
         if not os.path.exists(base_dir):
             print("⚠️ Diretório de imagens não encontrado:", base_dir)
             return
 
         total_removidos = 0
-        # Percorre cada subpasta (ex: img_catraca, img_real_time, etc.)
         for root, dirs, files in os.walk(base_dir):
-            if files:
-                removidos = 0
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    try:
-                        os.remove(file_path)
-                        removidos += 1
-                    except Exception as e:
-                        print(f"❌ Erro ao remover {file_path}: {e}")
-                total_removidos += removidos
-                print(f"🗑️ Pasta '{os.path.basename(root)}' — {removidos} arquivo(s) removido(s).")
+            for file in files:
+                os.remove(os.path.join(root, file))
+                total_removidos += 1
 
-        print(f"✅ Limpeza concluída — {total_removidos} arquivo(s) removido(s) no total.")
+        print(f"✅ Limpeza concluída — {total_removidos} arquivo(s) removido(s).")
 
     except Exception:
-        print("❌ Erro ao limpar galeria:")
         traceback.print_exc()
 
 
-
-def reagendar_cronjob(dt_exec):
-    """Reagenda o cronjob com base no tempo anterior"""
+def reagendar_cronjob(interval_text: str):
     try:
-        conn = get_connection()
-        c = conn.cursor()
-        # Lê novamente o valor original salvo (ex: '10D 5H')
-        c.execute("SELECT time, active FROM cronjob LIMIT 1")
-        result = c.fetchone()
-        conn.close()
-
-        if not result or not result[1]:
-            return
-
-        # Calcula o próximo horário (mantém o mesmo intervalo)
-        # Aqui lemos o último datetime salvo e somamos a diferença com o novo
-        proximo_exec = dt_exec + (dt_exec - datetime.now())
+        delta = parse_time_string(interval_text)
+        proxima_exec = datetime.now() + delta
 
         conn = get_connection()
         c = conn.cursor()
         c.execute(
-            "UPDATE cronjob SET time = %s, active = 1",
-            (proximo_exec.strftime("%Y-%m-%d %H:%M:%S"),)
+            "UPDATE cronjob SET time = %s WHERE id = 1",
+            (proxima_exec.strftime("%Y-%m-%d %H:%M:%S"),)
         )
         conn.commit()
         conn.close()
 
-        print(f"🔁 Próxima execução reagendada para: {proximo_exec}")
+        print(f"🔁 Próxima execução reagendada para: {proxima_exec}")
 
     except Exception:
         print("❌ Erro ao reagendar cronjob:")
@@ -104,17 +88,6 @@ def reagendar_cronjob(dt_exec):
 
 
 def iniciar_scheduler():
-    """Inicia o scheduler em background"""
-    try:
-        scheduler.add_job(
-            verificar_cronjob,
-            "interval",
-            seconds=10,
-            id="cron_checker",
-            replace_existing=True
-        )
-        scheduler.start()
-        print("🕒 Scheduler iniciado — verificando cronjobs a cada 60 segundos.")
-    except Exception:
-        print("❌ Erro ao iniciar scheduler:")
-        traceback.print_exc()
+    scheduler.add_job(verificar_cronjob, "interval", seconds=10, id="cron_checker", replace_existing=True)
+    scheduler.start()
+    print("🕒 Scheduler iniciado — verificando cronjobs a cada 10 segundos.")
