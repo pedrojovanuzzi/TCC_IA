@@ -4,7 +4,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 import numpy as np
 
-from app.utils import verificar_e_enviar_alerta
+from app.utils import enviar_email_em_background, verificar_e_enviar_alerta
 from ..database import get_connection
 from ..config import CONFIDENCE, MODEL_PATH, MODEL_PATH_LONG_DISTANCE, IOU, IMG_REAL_TIME_DIR, CORES_CLASSES, IMG_SIZE, ENCRYPTION_KEY
 from ultralytics import YOLO
@@ -49,9 +49,9 @@ async def ws_root(websocket: WebSocket):
     alert_start = None               # quando começou o risco contínuo atual
     last_email_sent_at = 0.0         # timestamp do último e-mail enviado (mesmo risco)
     duracao_limite = 5.0             # precisa manter risco por 5s para disparar o primeiro e-mail
-    cooldown_envio = 20.0            # reenvia a cada 60s se o risco continuar
+    cooldown_envio = 10.0            # reenvia a cada 60s se o risco continuar
     tempo_seguro_inicio = None       # quando começou a ficar “limpo”
-    tempo_limite_seguro = 5.0        # precisa ficar 5s limpo para zerar estado
+    tempo_limite_seguro = 0        # precisa ficar 5s limpo para zerar estado
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
@@ -101,7 +101,7 @@ async def ws_root(websocket: WebSocket):
                         with open(alert_path, "wb") as f:
                             f.write(fernet.encrypt(buf.tobytes()))
                         try:
-                            verificar_e_enviar_alerta(results, alert_path)
+                            enviar_email_em_background(results, alert_path)
                             last_email_sent_at = agora
                             await _safe_ws_send_text(websocket, {
                                 "alerta": True,
@@ -272,7 +272,7 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                         with open(path, "wb") as f:
                             f.write(fernet.encrypt(buf.tobytes()))
                         # Envia e-mail
-                        verificar_e_enviar_alerta(results, path)
+                        enviar_email_em_background(results, path)
                         # Notifica frontend em tempo real
                         await _safe_ws_send_text(ws, {
                             "alerta": True,

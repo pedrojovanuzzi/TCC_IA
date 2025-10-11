@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from starlette.responses import JSONResponse
 from ..config import MODEL_PATH, CONFIDENCE, IMG_SIZE, IMG_STATIC_DIR, IMG_CATRACA, VIDEO_DIR, CORES_CLASSES, ENCRYPTION_KEY
 from ..database import get_connection
-from ..utils import log_operation, verificar_e_enviar_alerta
+from ..utils import enviar_email_em_background, log_operation, verificar_e_enviar_alerta
 from ..auth import verificar_token
 from ultralytics import YOLO
 from cryptography.fernet import Fernet
@@ -57,7 +57,7 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
 
     # loga a operação
     log_operation(token["user_id"], f"Salvou e criptografou {filename}")
-    verificar_e_enviar_alerta(result, path)
+    enviar_email_em_background(result, path)
     # converte imagem processada para bytes e devolve como blob
     ok, buf = cv2.imencode(".jpg", img)
     if not ok:
@@ -105,7 +105,7 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
     log_operation(token["user_id"], f"Salvou e criptografou {filename}")
 
     # 🚨 verifica e envia alerta se necessário
-    verificar_e_enviar_alerta(result, path)
+    enviar_email_em_background(result, path)
 
     # converte imagem processada para bytes e devolve como blob
     ok, buf = cv2.imencode(".jpg", img)
@@ -217,7 +217,8 @@ async def inferir_video(file: UploadFile = File(...), token=Depends(verificar_to
     if alert_persistente:
         try:
             print("📤 Enviando vídeo de alerta...")
-            verificar_e_enviar_alerta(res, out_path)
+            
+            enviar_email_em_background(res, out_path)
         except Exception as e:
             print("❌ Falha ao enviar vídeo:", e)
 

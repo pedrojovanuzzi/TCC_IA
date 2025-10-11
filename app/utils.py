@@ -12,6 +12,7 @@ import traceback
 from dotenv import load_dotenv
 import mimetypes
 from cryptography.fernet import Fernet
+import threading
 
 load_dotenv()
 FERNET_KEY = ENCRYPTION_KEY
@@ -27,6 +28,16 @@ def log_operation(user_id: int, operacao: str):
     )
     conn.commit()
     conn.close()
+    
+    
+def enviar_email_em_background(results, alert_path):
+    """Executa o envio de e-mail em uma thread separada."""
+    def _thread_func():
+        try:
+            verificar_e_enviar_alerta(results, alert_path)
+        except Exception as e:
+            print("❌ Erro no envio de e-mail em background:", e)
+    threading.Thread(target=_thread_func, daemon=True).start()
 
 def verificar_e_enviar_alerta(result, media_path: str):
     """Verifica classes detectadas e envia alerta com imagem/vídeo descriptografado."""
