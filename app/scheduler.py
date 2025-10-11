@@ -49,7 +49,7 @@ def verificar_cronjob():
 def executar_tarefa():
     print("🧹 Limpando galeria agora...")
     try:
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "tcc_frontend", "public", "imagens"))
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "tcc_frontend", "public", "imagens"))
         if not os.path.exists(base_dir):
             print("⚠️ Diretório de imagens não encontrado:", base_dir)
             return
