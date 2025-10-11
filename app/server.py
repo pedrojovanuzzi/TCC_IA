@@ -17,7 +17,7 @@ from app.routers.files    import router as files_router
 from app.lifespan         import lifespan
 
 # Scheduler
-from app.scheduler import iniciar_scheduler
+from app.scheduler import scheduler, verificar_cronjob  # ✅ importa o objeto e a função
 
 # Configurações
 from app.config import VIDEO_DIR, IMAGES_DIR
@@ -50,12 +50,18 @@ app.include_router(cronjob,        prefix="/api")
 app.include_router(files_router,   prefix="/api")
 app.include_router(logs,           prefix="/api")
 
-# 🚀 Inicia o scheduler automaticamente ao subir o servidor
-@app.on_event("startup")
-def startup_event():
-    print("🟢 Iniciando Scheduler em segundo plano...")
-    iniciar_scheduler()  # chama a função que ativa o APScheduler
-    print("✅ Scheduler rodando!")
+# 🚀 Ativa o scheduler imediatamente ao rodar o arquivo
+def iniciar_scheduler_automatico():
+    try:
+        # Adiciona o job que roda a cada 5 segundos
+        scheduler.add_job(verificar_cronjob, "interval", seconds=5, id="cron_checker", replace_existing=True)
+        scheduler.start()
+        print("🕒 Scheduler iniciado — verificando cronjobs a cada 5 segundos.")
+    except Exception as e:
+        print("❌ Erro ao iniciar scheduler:", e)
+
+# Chama o scheduler direto (sem depender do startup do FastAPI)
+iniciar_scheduler_automatico()
 
 # 🔚 Comando para iniciar com certificado HTTPS local
 if __name__ == "__main__":

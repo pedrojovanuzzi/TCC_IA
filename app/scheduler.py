@@ -39,18 +39,35 @@ def executar_tarefa():
     print("🧹 Limpando galeria agora...")
 
     try:
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "/frontend/tcc_frontend/public/imagens/"))
-        if os.path.exists(base_dir):
-            for root, dirs, files in os.walk(base_dir):
+        # Caminho absoluto da pasta 'imagens'
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "tcc_frontend", "public", "imagens"))
+        
+        # Verifica se a pasta existe
+        if not os.path.exists(base_dir):
+            print("⚠️ Diretório de imagens não encontrado:", base_dir)
+            return
+
+        total_removidos = 0
+        # Percorre cada subpasta (ex: img_catraca, img_real_time, etc.)
+        for root, dirs, files in os.walk(base_dir):
+            if files:
+                removidos = 0
                 for file in files:
                     file_path = os.path.join(root, file)
-                    os.remove(file_path)
-            print("✅ Galeria limpa com sucesso!")
-        else:
-            print("⚠️ Diretório de imagens não encontrado:", base_dir)
+                    try:
+                        os.remove(file_path)
+                        removidos += 1
+                    except Exception as e:
+                        print(f"❌ Erro ao remover {file_path}: {e}")
+                total_removidos += removidos
+                print(f"🗑️ Pasta '{os.path.basename(root)}' — {removidos} arquivo(s) removido(s).")
+
+        print(f"✅ Limpeza concluída — {total_removidos} arquivo(s) removido(s) no total.")
+
     except Exception:
         print("❌ Erro ao limpar galeria:")
         traceback.print_exc()
+
 
 
 def reagendar_cronjob(dt_exec):
@@ -92,7 +109,7 @@ def iniciar_scheduler():
         scheduler.add_job(
             verificar_cronjob,
             "interval",
-            seconds=60,
+            seconds=10,
             id="cron_checker",
             replace_existing=True
         )
