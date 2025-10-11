@@ -1,7 +1,10 @@
 import asyncio
+from datetime import datetime
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 import numpy as np
+
+from app.utils import verificar_e_enviar_alerta
 from ..database import get_connection
 from ..config import CONFIDENCE, MODEL_PATH, MODEL_PATH_LONG_DISTANCE, IOU, IMG_REAL_TIME_DIR, CORES_CLASSES, IMG_SIZE, ENCRYPTION_KEY
 from ultralytics import YOLO
@@ -40,53 +43,76 @@ async def ws_root(websocket: WebSocket):
     await websocket.accept()
     model = get_model()
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    last_saved = 0
+
+    CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}
+    alert_start = None
+    ultima_notificacao = 0
+    duracao_limite = 5.0
+    cooldown_envio = 60.0
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
-            # Recebe frame como bytes (Blob vindo do React)
             frame_bytes = await websocket.receive_bytes()
-            
-            # Decodifica para imagem OpenCV
             img = cv2.imdecode(np.frombuffer(frame_bytes, np.uint8), cv2.IMREAD_COLOR)
 
-            # Faz a predição
-            results = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE, stream=True)
-            for res in results:
-                for box in res.boxes:
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    cls_id = int(box.cls[0])
-                    cls_name = model.names[cls_id]
-                    conf = float(box.conf[0])
-                    color = CORES_CLASSES.get(cls_name, (255, 255, 255))
-                    cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
-                    draw_label(img, f"{cls_name}:{conf:.2f}", x1, y1, color)
+            # --- inferência YOLO (sem stream=True) ---
+            results = model.predict(
+                img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE
+            )[0]
 
-            # Converte imagem processada para JPEG (bytes)
-            _, buf = cv2.imencode(".jpg", img)
+            classes_detectadas = {results.names[int(b.cls[0])] for b in results.boxes}
+            classes_perigosas = {c for c in classes_detectadas if c not in CLASSES_SEGURO}
 
-            # Envia os bytes de volta (não mais base64/JSON)
-            await websocket.send_bytes(buf.tobytes())
+            # desenha boxes
+            for box in results.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                cls_id = int(box.cls[0])
+                cls_name = results.names[cls_id]
+                conf = float(box.conf[0])
+                color = CORES_CLASSES.get(cls_name, (255, 255, 255))
+                cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
+                draw_label(img, f"{cls_name}:{conf:.2f}", x1, y1, color)
 
-            # A cada 3s salva a imagem criptografada
-            now = time.time()
-            if now - last_saved >= 3:
-                try:
-                    os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
-                    filename = f"webcam_{time.strftime('%Y-%m-%d_%H-%M-%S')}.jpg"
-                    path = os.path.join(IMG_REAL_TIME_DIR, filename)
-                    encrypted = fernet.encrypt(buf.tobytes())
-                    with open(path, "wb") as f:
-                        f.write(encrypted)
-                    print(f"✅ Imagem da webcam salva: {path}")
-                    last_saved = now
-                except Exception as e:
-                    print("❌ Erro ao salvar imagem da webcam:", e)
+            # --- lógica de alerta persistente ---
+            agora = time.time()
+            if classes_perigosas:
+                if alert_start is None:
+                    alert_start = agora
+                elif (agora - alert_start) >= duracao_limite:
+                    if (agora - ultima_notificacao) >= cooldown_envio:
+                        ultima_notificacao = agora
+                        print(f"🚨 Alerta persistente: {classes_perigosas}")
+
+                        os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
+                        alert_path = os.path.join(
+                            IMG_REAL_TIME_DIR,
+                            f"alerta_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"
+                        )
+                        ok, buf = cv2.imencode(".jpg", img)
+                        if ok:
+                            with open(alert_path, "wb") as f:
+                                f.write(fernet.encrypt(buf.tobytes()))
+                            verificar_e_enviar_alerta(results, alert_path)
+                            await _safe_ws_send_text(websocket, {
+                                "alerta": True,
+                                "mensagem": f"🚨 Alerta detectado ({', '.join(classes_perigosas)})! E-mail enviado."
+                            })
+            else:
+                alert_start = None
+                ultima_notificacao = 0  # 🔁 reinicia cooldown
+
+            # --- envia frame processado ---
+            ok, buf = cv2.imencode(".jpg", img)
+            if ok:
+                await websocket.send_bytes(buf.tobytes())
+
+            await asyncio.sleep(0.02)
 
     except WebSocketDisconnect:
         print("🔌 WebSocket desconectado.")
     finally:
         await websocket.close()
+
 
 async def _safe_ws_send_text(ws: WebSocket, payload: dict):
     if ws.application_state == WebSocketState.CONNECTED:
@@ -134,22 +160,23 @@ def capture_proc(ip: str, q: mp.Queue, stop: MpEvent = mp.Event()):
 async def ws_cam(ws: WebSocket, camera_id: int):
     await ws.accept()
 
-    # Busca IP no banco
-    conn = get_connection(); c = conn.cursor()
+    # 🔍 Busca IP da câmera no banco
+    conn = get_connection()
+    c = conn.cursor()
     c.execute("SELECT ip FROM cameras WHERE id=%s", (camera_id,))
     row = c.fetchone()
     conn.close()
-    if not row:
-        await _safe_ws_send_text(ws, {"erro": "não encontrada"})
-        if ws.application_state == WebSocketState.CONNECTED:
-            await ws.close()
-        return
-    ip = row[0]
 
+    if not row:
+        await _safe_ws_send_text(ws, {"erro": "Câmera não encontrada"})
+        await ws.close()
+        return
+
+    ip = row[0]
     model = get_model(1)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # Captura em processo separado
+    # 🎥 Processo separado para captura dos frames da câmera
     q: mp.Queue = mp.Queue(maxsize=QUEUE_MAXSIZE)
     stop = mp.Event()
     proc = mp.Process(target=capture_proc, args=(ip, q, stop), daemon=True)
@@ -158,12 +185,17 @@ async def ws_cam(ws: WebSocket, camera_id: int):
     last_frame_ts = time.time()
     last_save_ts = 0.0
 
+    # ⚠️ Controle de alerta persistente
+    CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}
+    alert_start = None
+    alerta_enviado = False
+    duracao_limite = 5.0  # segundos de risco contínuo
+
     try:
         while True:
+            # 🧠 Pega frame da fila (captura de outro processo)
             try:
-                frame = await asyncio.get_running_loop().run_in_executor(
-                    None, lambda: q.get(True, 0.5)
-                )
+                frame = await asyncio.get_running_loop().run_in_executor(None, lambda: q.get(True, 0.5))
                 last_frame_ts = time.time()
             except Exception:
                 if (time.time() - last_frame_ts) > READ_IDLE_TIMEOUT:
@@ -174,7 +206,7 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                     break
                 continue
 
-            # ---------- INFERÊNCIA ----------
+            # ---------- INFERÊNCIA YOLO ----------
             results = model.predict(
                 frame,
                 imgsz=IMG_SIZE,
@@ -185,6 +217,10 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                 agnostic_nms=True
             )[0]
 
+            classes_detectadas = {results.names[int(b.cls[0])] for b in results.boxes}
+            classes_perigosas = {c for c in classes_detectadas if c not in CLASSES_SEGURO}
+
+            # Desenha boxes e labels
             for b in results.boxes:
                 x1, y1, x2, y2 = map(int, b.xyxy[0])
                 cls_id = int(b.cls[0])
@@ -194,62 +230,78 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                 cv2.rectangle(frame, (x1, y1), (x2, y2), col, 1)
                 draw_label(frame, f"{name}:{conf:.2f}", x1, y1, col)
 
-            # ---------- SAVE CRIPTO a cada 3s ----------
+            # ---------- CONTROLE DE ALERTA PERSISTENTE ----------
+            if classes_perigosas:
+                if alert_start is None:
+                    alert_start = time.time()
+                elif (time.time() - alert_start) >= duracao_limite and not alerta_enviado:
+                    alerta_enviado = True
+                    print(f"🚨 Alerta persistente da câmera {camera_id}: {classes_perigosas}")
+
+                    # Salva frame atual criptografado
+                    os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
+                    filename = f"alerta_cam{camera_id}_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"
+                    path = os.path.join(IMG_REAL_TIME_DIR, filename)
+                    ok, buf = cv2.imencode(".jpg", frame)
+                    if ok:
+                        with open(path, "wb") as f:
+                            f.write(fernet.encrypt(buf.tobytes()))
+                        # Envia e-mail
+                        verificar_e_enviar_alerta(results, path)
+                        # Notifica frontend em tempo real
+                        await _safe_ws_send_text(ws, {
+                            "alerta": True,
+                            "mensagem": f"🚨 Alerta de segurança detectado pela câmera {camera_id} ({', '.join(classes_perigosas)}). E-mail enviado!"
+                        })
+            else:
+                alert_start = None
+                alerta_enviado = False
+
+            # ---------- SALVA FRAME CRIPTOGRAFADO A CADA 3s ----------
             now = time.time()
             if (now - last_save_ts) >= 3.0:
                 os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
-                filename = f"cam{camera_id}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.jpg"
+                filename = f"cam{camera_id}_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"
                 path = os.path.join(IMG_REAL_TIME_DIR, filename)
                 ok, buf = cv2.imencode(".jpg", frame)
                 if ok:
-                    encrypted = fernet.encrypt(buf.tobytes())
                     with open(path, "wb") as f:
-                        f.write(encrypted)
+                        f.write(fernet.encrypt(buf.tobytes()))
                 last_save_ts = now
 
-            # ---------- ENVIO WS (binário) ----------
+            # ---------- ENVIA FRAME PARA O FRONT ----------
             ok, buf = cv2.imencode(".jpg", frame)
-            if not ok:
-                await asyncio.sleep(0.001)
-                continue
-            try:
+            if ok:
                 await ws.send_bytes(buf.tobytes())
-            except WebSocketDisconnect:
-                break
-            await asyncio.sleep(0.001)
+
+            await asyncio.sleep(0.02)
 
     except WebSocketDisconnect:
-        pass
+        print(f"🔌 Câmera {camera_id}: conexão WS encerrada pelo cliente.")
     finally:
+        # ---------- ENCERRA CAPTURA E PROCESSO ----------
         try:
-            if 'stop' in locals() and stop is not None:
+            if stop:
                 stop.set()
         except Exception:
             pass
 
         try:
-            if 'proc' in locals() and proc is not None and proc.is_alive():
+            if proc and proc.is_alive():
                 proc.terminate()
                 proc.join(timeout=1.0)
                 if proc.is_alive():
-                    try:
-                        proc.kill()
-                    except Exception:
-                        pass
+                    proc.kill()
         except Exception:
             pass
 
-        # avisa o front se ainda estiver aberto
-        from starlette.websockets import WebSocketState
+        # ---------- AVISA FRONT SE AINDA CONECTADO ----------
         if ws.application_state == WebSocketState.CONNECTED:
             try:
                 await _safe_ws_send_text(ws, {
                     "erro": "conexao_encerrada",
                     "mensagem": "A conexão com o servidor foi encerrada."
                 })
-            except Exception:
-                pass
-            try:
                 await ws.close()
             except Exception:
                 pass
