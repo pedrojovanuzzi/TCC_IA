@@ -25,6 +25,15 @@ def listar(token=Depends(verificar_token)):
     conn.close()
     return u
 
+@router.get("/catracas_users")
+def listar(token=Depends(verificar_token)):
+    if token["nivel"]<2: raise HTTPException(403,"Permissão negada")
+    conn = get_connection(); c=conn.cursor()
+    c.execute("SELECT id,login,nivel FROM users")
+    u=[{"id":i[0],"login":i[1],"nivel":i[2]} for i in c.fetchall()]
+    conn.close()
+    return u
+
 @router.post("/users")
 def criar(user: dict = Body(...), token=Depends(verificar_token)):
     if not user.get("login") or not user.get("password"): raise HTTPException(400,"Dados obrigatórios")

@@ -51,3 +51,4 @@ app/study
 *.pyc
 *.pt
 *.pyc
+/frontend/tcc_frontend/public/imagens/img_catraca/*

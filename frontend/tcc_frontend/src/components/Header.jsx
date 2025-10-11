@@ -48,6 +48,9 @@ export const Header = () => {
                     <a href="/users" className="text-gray-900 font-medium">
                       Usuários
                     </a>
+                    <a href="/cronjob" className="text-gray-900 font-medium">
+                      CronJob
+                    </a>
                   </>
                 )}
                 {/* mostra botão de logout se autenticado */}
@@ -95,6 +98,9 @@ export const Header = () => {
                 </a>
                 <a href="/users" className="block text-gray-900 font-medium">
                   Usuários
+                </a>
+                <a href="/cronjob" className="block text-gray-900 font-medium">
+                  CronJob
                 </a>
               </>
             )}

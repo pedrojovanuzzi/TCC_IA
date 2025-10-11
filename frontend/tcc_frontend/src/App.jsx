@@ -15,6 +15,8 @@ import { MonitoringCam } from "./pages/Monitoring/MonitoringCam";
 import { Users } from "./pages/Users/Users";
 import AcessoNegado from "./pages/AcessoNegado/AcessoNegado";
 import { Logs } from "./pages/Logs/Logs";
+import Catraca from "./pages/Catraca/Catraca";
+import { CronJob } from "./pages/CronJob/CronJob";
 export default function App() {
   return (
     <Routes>
@@ -33,7 +35,9 @@ export default function App() {
       <Route path="/logs" element={<ProtectedRoute element={<Logs />} minPermission={2} />} />
       <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} minPermission={3} />} />
       <Route path="/users" element={<ProtectedRoute element={<Users />} minPermission={3}  />} />
+      <Route path="/catraca" element={<ProtectedRoute element={<Catraca />} minPermission={2}  />} />
       <Route path="/monitoring" element={<ProtectedRoute element={<Monitoring />} minPermission={2}  />} />
+      <Route path="/cronjob" element={<ProtectedRoute element={<CronJob />} minPermission={2}  />} />
       <Route path="/monitoring/:id" element={<ProtectedRoute element={<MonitoringCam />} minPermission={2}  />} />
 
       {/* Rota inválida */}
