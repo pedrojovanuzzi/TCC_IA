@@ -1,7 +1,10 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
+from app.utils import log_operation
 from database import get_connection
 import traceback, os, re
+ 
+
 
 scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
 
@@ -61,7 +64,10 @@ def executar_tarefa():
                 total_removidos += 1
 
         print(f"✅ Limpeza concluída — {total_removidos} arquivo(s) removido(s).")
-
+        log_operation(
+            user_id=0,  # 0 indica operação automática (cron)
+            operacao=f"Limpeza automática da galeria ({total_removidos} arquivo[s] removido[s])"
+        )
     except Exception:
         traceback.print_exc()
 
