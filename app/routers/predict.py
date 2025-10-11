@@ -118,9 +118,8 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
     )
 
 
-    
 @router.post("/predict_video")
-async def inferir_video(file: UploadFile = File(...), token = Depends(verificar_token)):
+async def inferir_video(file: UploadFile = File(...), token=Depends(verificar_token)):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = YOLO(MODEL_PATH)
 
@@ -148,18 +147,44 @@ async def inferir_video(file: UploadFile = File(...), token = Depends(verificar_
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     out = cv2.VideoWriter(out_path, fourcc, fps, (w, h))
 
+    # --- controle do alerta persistente ---
+    CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}
+    alert_start = None
+    alert_persistente = False
+    duracao_limite = 5.0  # segundos consecutivos de alerta
+
+    print(f"🎥 Iniciando processamento de vídeo ({fps} fps)...")
+
     while True:
         ret, frame = cap.read()
         if not ret:
             break
+
         res = model.predict(frame, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE)[0]
+        classes_detectadas = {res.names[int(b.cls[0])] for b in res.boxes}
+        classes_perigosas = {c for c in classes_detectadas if c not in CLASSES_SEGURO}
+
+        # desenha boxes
         for box in res.boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
-            cls = model.names[int(box.cls[0])]
+            cls = res.names[int(box.cls[0])]
             conf = float(box.conf[0])
             color = CORES_CLASSES.get(cls, (255, 255, 255))
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 1)
             draw_label(frame, f"{cls}:{conf:.2f}", x1, y1, color)
+
+        # monitora tempo do alerta
+        if classes_perigosas:
+            if alert_start is None:
+                alert_start = datetime.now()
+            else:
+                duracao = (datetime.now() - alert_start).total_seconds()
+                if duracao >= duracao_limite and not alert_persistente:
+                    alert_persistente = True
+                    print(f"🚨 Alerta persistente detectado ({duracao:.2f}s): {classes_perigosas}")
+        else:
+            alert_start = None  # reseta se não houver alerta
+
         out.write(frame)
 
     cap.release()
@@ -179,7 +204,7 @@ async def inferir_video(file: UploadFile = File(...), token = Depends(verificar_
         os.remove(out_path)
         out_path = web_path
 
-    # 🔒 criptografa no disco
+    # --- criptografa ---
     with open(out_path, "rb") as f:
         vid_data = f.read()
     enc_vid = fernet.encrypt(vid_data)
@@ -188,7 +213,15 @@ async def inferir_video(file: UploadFile = File(...), token = Depends(verificar_
 
     log_operation(token["user_id"], f"Salvou e criptografou vídeo {os.path.basename(out_path)}")
 
-    # 🔑 descriptografa em memória só para devolver
+    # 🚨 se houve alerta persistente, envia o vídeo por e-mail
+    if alert_persistente:
+        try:
+            print("📤 Enviando vídeo de alerta...")
+            verificar_e_enviar_alerta(res, out_path)
+        except Exception as e:
+            print("❌ Falha ao enviar vídeo:", e)
+
+    # --- descriptografa em memória para devolver ---
     dec_data = fernet.decrypt(enc_vid)
     return StreamingResponse(
         io.BytesIO(dec_data),
