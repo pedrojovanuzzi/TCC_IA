@@ -45,17 +45,20 @@ async def ws_root(websocket: WebSocket):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}
-    alert_start = None
-    ultima_notificacao = 0
-    duracao_limite = 5.0
-    cooldown_envio = 60.0
+
+    alert_start = None               # quando começou o risco contínuo atual
+    last_email_sent_at = 0.0         # timestamp do último e-mail enviado (mesmo risco)
+    duracao_limite = 5.0             # precisa manter risco por 5s para disparar o primeiro e-mail
+    cooldown_envio = 20.0            # reenvia a cada 60s se o risco continuar
+    tempo_seguro_inicio = None       # quando começou a ficar “limpo”
+    tempo_limite_seguro = 5.0        # precisa ficar 5s limpo para zerar estado
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
             frame_bytes = await websocket.receive_bytes()
             img = cv2.imdecode(np.frombuffer(frame_bytes, np.uint8), cv2.IMREAD_COLOR)
 
-            # --- inferência YOLO (sem stream=True) ---
+            # --- inferência YOLO ---
             results = model.predict(
                 img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE
             )[0]
@@ -73,35 +76,56 @@ async def ws_root(websocket: WebSocket):
                 cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
                 draw_label(img, f"{cls_name}:{conf:.2f}", x1, y1, color)
 
-            # --- lógica de alerta persistente ---
             agora = time.time()
+
+            # ---------- CONTROLE DE ALERTA: primeiro após 5s, depois a cada cooldown ----------
             if classes_perigosas:
+                tempo_seguro_inicio = None  # reset do período limpo
+
                 if alert_start is None:
                     alert_start = agora
-                elif (agora - alert_start) >= duracao_limite:
-                    if (agora - ultima_notificacao) >= cooldown_envio:
-                        ultima_notificacao = agora
-                        print(f"🚨 Alerta persistente: {classes_perigosas}")
 
-                        os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
-                        alert_path = os.path.join(
-                            IMG_REAL_TIME_DIR,
-                            f"alerta_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"
-                        )
-                        ok, buf = cv2.imencode(".jpg", img)
-                        if ok:
-                            with open(alert_path, "wb") as f:
-                                f.write(fernet.encrypt(buf.tobytes()))
+                tempo_risco = agora - alert_start
+                pode_enviar_primeiro = (tempo_risco >= duracao_limite)
+                pode_reenviar = (last_email_sent_at == 0.0) or ((agora - last_email_sent_at) >= cooldown_envio)
+
+                if pode_enviar_primeiro and pode_reenviar:
+                    # salva imagem atual criptografada e dispara o e-mail
+                    os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
+                    alert_path = os.path.join(
+                        IMG_REAL_TIME_DIR,
+                        f"alerta_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"
+                    )
+                    ok, buf = cv2.imencode(".jpg", img)
+                    if ok:
+                        with open(alert_path, "wb") as f:
+                            f.write(fernet.encrypt(buf.tobytes()))
+                        try:
                             verificar_e_enviar_alerta(results, alert_path)
+                            last_email_sent_at = agora
                             await _safe_ws_send_text(websocket, {
                                 "alerta": True,
-                                "mensagem": f"🚨 Alerta detectado ({', '.join(classes_perigosas)})! E-mail enviado."
+                                "mensagem": f"🚨 Alerta detectado ({', '.join(classes_perigosas)}). E-mail enviado!"
                             })
-            else:
-                alert_start = None
-                ultima_notificacao = 0  # 🔁 reinicia cooldown
+                        except Exception as e:
+                            print("❌ Falha ao enviar e-mail de alerta:", e)
 
-            # --- envia frame processado ---
+            else:
+                # Não há risco: iniciar janela “limpo” e resetar tudo após 5s limpo
+                alert_start = None
+                if tempo_seguro_inicio is None:
+                    tempo_seguro_inicio = agora
+                elif (agora - tempo_seguro_inicio) >= tempo_limite_seguro:
+                    # zera estado para permitir novo ciclo de alertas
+                    last_email_sent_at = 0.0
+                    tempo_seguro_inicio = None
+                    # opcionalmente notifica normalização
+                    await _safe_ws_send_text(websocket, {
+                        "alerta": False,
+                        "mensagem": "✅ Situação normalizada."
+                    })
+
+            # ---------- Envia frame processado ----------
             ok, buf = cv2.imencode(".jpg", img)
             if ok:
                 await websocket.send_bytes(buf.tobytes())
@@ -111,7 +135,8 @@ async def ws_root(websocket: WebSocket):
     except WebSocketDisconnect:
         print("🔌 WebSocket desconectado.")
     finally:
-        await websocket.close()
+        if websocket.application_state == WebSocketState.CONNECTED:
+            await websocket.close()
 
 
 async def _safe_ws_send_text(ws: WebSocket, payload: dict):
