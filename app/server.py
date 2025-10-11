@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 from dotenv import load_dotenv
+import mimetypes
 
 # Rotas do sistema
 from app.routers.users    import router as users_router

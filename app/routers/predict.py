@@ -4,13 +4,14 @@ from fastapi.responses import StreamingResponse
 from starlette.responses import JSONResponse
 from ..config import MODEL_PATH, CONFIDENCE, IMG_SIZE, IMG_STATIC_DIR, IMG_CATRACA, VIDEO_DIR, CORES_CLASSES, ENCRYPTION_KEY
 from ..database import get_connection
-from ..utils import log_operation
+from ..utils import log_operation, verificar_e_enviar_alerta
 from ..auth import verificar_token
 from ultralytics import YOLO
 from cryptography.fernet import Fernet
 import torch, cv2, numpy as np, base64, tempfile, shutil, time, os, subprocess
 from datetime import datetime
 import imageio_ffmpeg
+
 
 router = APIRouter()
 fernet = Fernet(ENCRYPTION_KEY)
@@ -41,7 +42,7 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
         color = CORES_CLASSES.get(cls, (255, 255, 255))
         cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
         draw_label(img, f"{cls}:{conf:.2f}", x1, y1, color)
-
+    
     # salva imagem criptografada
     os.makedirs(IMG_STATIC_DIR, exist_ok=True)
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
@@ -56,7 +57,7 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
 
     # loga a operação
     log_operation(token["user_id"], f"Salvou e criptografou {filename}")
-
+    verificar_e_enviar_alerta(result, path)
     # converte imagem processada para bytes e devolve como blob
     ok, buf = cv2.imencode(".jpg", img)
     if not ok:
@@ -100,8 +101,11 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
     with open(path, "wb") as f:
         f.write(encrypted)
 
-    # loga a operação
+    # loga operação no banco
     log_operation(token["user_id"], f"Salvou e criptografou {filename}")
+
+    # 🚨 verifica e envia alerta se necessário
+    verificar_e_enviar_alerta(result, path)
 
     # converte imagem processada para bytes e devolve como blob
     ok, buf = cv2.imencode(".jpg", img)
@@ -112,6 +116,7 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
         io.BytesIO(buf.tobytes()),
         media_type="image/jpeg"
     )
+
 
     
 @router.post("/predict_video")
