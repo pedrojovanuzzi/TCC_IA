@@ -47,7 +47,7 @@ async def delete_batch(request: DeleteRequest, token=Depends(verificar_token)):
 @router.get("/gallery")
 def list_gallery():
     result = []
-    for folder in ["video_treinado", "img_statica", "img_real_time"]:
+    for folder in ["video_treinado", "img_statica", "img_real_time", "img_catraca"]:
         p = os.path.join(IMAGES_DIR, folder)
         if os.path.isdir(p):
             files = []

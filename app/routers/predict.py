@@ -2,7 +2,7 @@ import io
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from starlette.responses import JSONResponse
-from ..config import MODEL_PATH, CONFIDENCE, IMG_SIZE, IMG_STATIC_DIR, VIDEO_DIR, CORES_CLASSES, ENCRYPTION_KEY
+from ..config import MODEL_PATH, CONFIDENCE, IMG_SIZE, IMG_STATIC_DIR, IMG_CATRACA, VIDEO_DIR, CORES_CLASSES, ENCRYPTION_KEY
 from ..database import get_connection
 from ..utils import log_operation
 from ..auth import verificar_token
@@ -67,6 +67,52 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
         media_type="image/jpeg"
     )
     
+
+
+@router.post("/predict_catraca")
+async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = YOLO(MODEL_PATH)
+
+    # lê o arquivo enviado
+    content = await file.read()
+    img = cv2.imdecode(np.frombuffer(content, np.uint8), cv2.IMREAD_COLOR)
+
+    # roda o modelo
+    result = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE)[0]
+    for box in result.boxes:
+        x1, y1, x2, y2 = map(int, box.xyxy[0])
+        cls = model.names[int(box.cls[0])]
+        conf = float(box.conf[0])
+        color = CORES_CLASSES.get(cls, (255, 255, 255))
+        cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
+        draw_label(img, f"{cls}:{conf:.2f}", x1, y1, color)
+
+    # salva imagem criptografada
+    os.makedirs(IMG_CATRACA, exist_ok=True)
+    ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+    filename = f"catraca_{ts}.jpg"
+    path = os.path.join(IMG_CATRACA, filename)
+    cv2.imwrite(path, img)
+    with open(path, "rb") as f:
+        data = f.read()
+    encrypted = fernet.encrypt(data)
+    with open(path, "wb") as f:
+        f.write(encrypted)
+
+    # loga a operação
+    log_operation(token["user_id"], f"Salvou e criptografou {filename}")
+
+    # converte imagem processada para bytes e devolve como blob
+    ok, buf = cv2.imencode(".jpg", img)
+    if not ok:
+        raise HTTPException(500, "Falha ao codificar imagem")
+    
+    return StreamingResponse(
+        io.BytesIO(buf.tobytes()),
+        media_type="image/jpeg"
+    )
+
     
 @router.post("/predict_video")
 async def inferir_video(file: UploadFile = File(...), token = Depends(verificar_token)):

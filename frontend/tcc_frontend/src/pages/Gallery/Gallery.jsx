@@ -23,7 +23,8 @@ export const Gallery = () => {
   // Carrega as pastas da galeria
   useEffect(() => {
     axios.get(`${API_URL}/gallery`)
-      .then(res => setFolders(res.data.folders || []))
+      .then(res => { setFolders(res.data.folders || []), console.log(res.data);
+      })
       .catch(err => setError(err))
   }, [API_URL])
 

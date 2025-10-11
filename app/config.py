@@ -36,6 +36,7 @@ MODEL_PATH_LONG_DISTANCE  = MODEL_E_LONG_DISTANCE
 
 VIDEO_DIR        = os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "video_treinado")
 IMG_STATIC_DIR   = os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "img_statica")
+IMG_CATRACA   = os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "img_catraca")
 IMG_REAL_TIME_DIR= os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens", "img_real_time")
 IMAGES_DIR       = os.path.join(BASE_DIR, "frontend", "tcc_frontend", "public", "imagens")
 
