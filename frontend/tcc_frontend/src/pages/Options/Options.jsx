@@ -62,7 +62,7 @@ export default function Options() {
                 type="button"
                 className="mt-5 px-20 py-5 sm:w-1/2 self-center cursor-pointer  bg-indigo-500 sm:px-3 sm:py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
                 onClick={() => {
-                  navigate("/catracaUsers");
+                  navigate("/catraca");
                 }}
               >
                 Acessar
