@@ -3,11 +3,11 @@
 
 import { Footer } from '../../components/Footer'
 import { Header } from '../../components/Header'
-import img from "../../assets/imgs/About1.png"
-import img2 from "../../assets/imgs/about2.png"
-import img3 from "../../assets/imgs/about3.png"
-import img4 from "../../assets/imgs/about4.png"
-import img5 from "../../assets/imgs/about5.png"
+import img from "../../assets/imgs/about1.jpg"
+import img2 from "../../assets/imgs/about2.jpg"
+import img3 from "../../assets/imgs/about3.jpg"
+import img4 from "../../assets/imgs/about4.jpg"
+import img5 from "../../assets/imgs/about5.jpg"
 
 const timeline = [
   {
@@ -35,39 +35,11 @@ const timeline = [
     name: 'Conclusão',
     description:
       'Finalização do projeto e da documentação do TCC',
-    date: 'Dec 2025',
+    date: 'Nov 2025',
     dateTime: '2025-12',
   },
 ]
-const jobOpenings = [
-  {
-    id: 1,
-    role: 'Full-time designer',
-    href: '#',
-    description:
-      'Quos sunt ad dolore ullam qui. Enim et quisquam dicta molestias. Corrupti quo voluptatum eligendi autem labore.',
-    salary: '$75,000 USD',
-    location: 'San Francisco, CA',
-  },
-  {
-    id: 2,
-    role: 'Laravel developer',
-    href: '#',
-    description:
-      'Et veniam et officia dolorum rerum. Et voluptas consequatur magni sapiente amet voluptates dolorum. Ut porro aut eveniet.',
-    salary: '$125,000 USD',
-    location: 'San Francisco, CA',
-  },
-  {
-    id: 3,
-    role: 'React Native developer',
-    href: '#',
-    description:
-      'Veniam ipsam nisi quas architecto eos non voluptatem in nemo. Est occaecati nihil omnis delectus illum est.',
-    salary: '$105,000 USD',
-    location: 'San Francisco, CA',
-  },
-]
+
 
 
 export default function About() {
@@ -176,11 +148,8 @@ export default function About() {
         <div className="mx-auto mt-32 max-w-7xl sm:mt-40 sm:px-6 lg:px-8">
           <div className="relative isolate overflow-hidden bg-orange-800 px-6 py-24 text-center shadow-2xl sm:rounded-3xl sm:px-16">
             <h2 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Agradecimentos a FIB
+              Metricas de Precisão
             </h2>
-            <p className="mx-auto mt-6 max-w-xl text-lg/8 text-gray-300">
-              E a todos os professores que nos acompanharam desde 2022 ate neste momento
-            </p>
             <div aria-hidden="true" className="absolute -top-24 right-0 -z-10 transform-gpu blur-3xl">
               <div
                 style={{
