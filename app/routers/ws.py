@@ -43,47 +43,48 @@ def draw_label(img, text, x, y, color):
 async def ws_root(websocket: WebSocket):
     await websocket.accept()
 
+    # 🔐 Autenticação via token
     token = websocket.query_params.get("token")
-    print(f"🧩 Token recebido: {token[:40]}..." if token else "❌ Nenhum token recebido")
-
     if not token:
-        print("❌ Nenhum token — fechando socket")
         await websocket.close()
         return
     
     try:
-        user = verificar_token(token)  # sua função padrão
+        user = verificar_token(token)
         user_id = user["user_id"]
-        print(f"✅ Token válido para user_id={user_id}")
+        print(f"✅ WebSocket autenticado: user_id={user_id}")
     except Exception as e:
         print(f"❌ Erro ao validar token: {e}")
         await websocket.close()
         return
 
+    # 🔧 Configuração do modelo
     model = get_model()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}
 
+    # ⏱️ Controle de alerta e gravação
     alert_start = None
     last_email_sent_at = 0.0
     duracao_limite = 5.0
     cooldown_envio = 10.0
     tempo_seguro_inicio = None
     tempo_limite_seguro = 0
-
-    # controle de persistência periódica
     ultimo_persist = time.time()
-    intervalo_segundos = 10.0  # salvar a cada 10s
+    intervalo_segundos = 10.0  # Salvar a cada 10 segundos
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
+            # 🧠 Recebe frame da câmera
             frame_bytes = await websocket.receive_bytes()
             img = cv2.imdecode(np.frombuffer(frame_bytes, np.uint8), cv2.IMREAD_COLOR)
 
+            # 🎯 YOLO detecta objetos
             results = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE)[0]
             classes_detectadas = {results.names[int(b.cls[0])] for b in results.boxes}
             classes_perigosas = {c for c in classes_detectadas if c not in CLASSES_SEGURO}
 
+            # 🔲 Desenha boxes na imagem
             for box in results.boxes:
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 cls_id = int(box.cls[0])
@@ -95,13 +96,13 @@ async def ws_root(websocket: WebSocket):
 
             agora = time.time()
 
-            # envio de alertas
+            # ⚠️ Controle de alertas persistentes
             if classes_perigosas:
                 tempo_seguro_inicio = None
                 if alert_start is None:
                     alert_start = agora
                 tempo_risco = agora - alert_start
-                pode_enviar_primeiro = (tempo_risco >= duracao_limite)
+                pode_enviar_primeiro = tempo_risco >= duracao_limite
                 pode_reenviar = (last_email_sent_at == 0.0) or ((agora - last_email_sent_at) >= cooldown_envio)
                 if pode_enviar_primeiro and pode_reenviar:
                     os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
@@ -115,7 +116,7 @@ async def ws_root(websocket: WebSocket):
                             last_email_sent_at = agora
                             await _safe_ws_send_text(websocket, {
                                 "alerta": True,
-                                "mensagem": f"🚨 Alerta detectado ({', '.join(classes_perigosas)}). E-mail enviado!"
+                                "mensagem": f"🚨 Alerta detectado ({', '.join(classes_perigosas)})"
                             })
                         except Exception as e:
                             print("❌ Falha ao enviar e-mail de alerta:", e)
@@ -128,30 +129,34 @@ async def ws_root(websocket: WebSocket):
                     tempo_seguro_inicio = None
                     await _safe_ws_send_text(websocket, {
                         "alerta": False,
-                        "mensagem": "✅ Situação normalizada."
+                        "mensagem": "✅ Situação normalizada"
                     })
 
-            # 🔸 persistência no banco a cada 10s
+            # 💾 Grava todas as detecções a cada 10 s
             if (agora - ultimo_persist) >= intervalo_segundos:
                 try:
-                    # salva snapshot criptografado para registrar image_name/path
                     os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
                     snap_name = f"ws_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"
                     snap_path = os.path.join(IMG_REAL_TIME_DIR, snap_name)
+
                     ok, buf = cv2.imencode(".jpg", img)
                     if ok:
                         with open(snap_path, "wb") as f:
                             f.write(fernet.encrypt(buf.tobytes()))
 
-                        # insere TODAS as detecções do frame no banco
                         conn = get_connection()
                         cur = conn.cursor()
-                        dados = []
+
+                        # 🔹 Cria um registro para cada detecção do frame atual
                         for box in results.boxes:
                             x1, y1, x2, y2 = map(int, box.xyxy[0])
                             cls_name = results.names[int(box.cls[0])]
                             conf = float(box.conf[0])
-                            dados.append((
+                            cur.execute("""
+                                INSERT INTO detections
+                                (user_id, image_name, image_path, class_name, confidence, x1, y1, x2, y2, device, model_name)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """, (
                                 user_id,
                                 snap_name,
                                 snap_path,
@@ -162,22 +167,17 @@ async def ws_root(websocket: WebSocket):
                                 "YOLO"
                             ))
 
-                        if dados:
-                            cur.executemany("""
-                                INSERT INTO detections
-                                (user_id, image_name, image_path, class_name, confidence, x1, y1, x2, y2, device, model_name)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            """, dados)
-                            conn.commit()
+                        conn.commit()
                         cur.close()
                         conn.close()
 
+                        print(f"💾 {len(results.boxes)} detecções salvas ({snap_name})")
+
                     ultimo_persist = agora
                 except Exception as e:
-                    # não derruba o WS por falha ao persistir
-                    print("❌ Falha ao persistir detecções (WS):", e)
+                    print(f"❌ Erro ao salvar detecções: {e}")
 
-            # retorna frame processado
+            # 🔁 Envia frame processado de volta
             ok, buf = cv2.imencode(".jpg", img)
             if ok:
                 await websocket.send_bytes(buf.tobytes())
@@ -189,6 +189,7 @@ async def ws_root(websocket: WebSocket):
     finally:
         if websocket.application_state == WebSocketState.CONNECTED:
             await websocket.close()
+
 
 
 async def _safe_ws_send_text(ws: WebSocket, payload: dict):
