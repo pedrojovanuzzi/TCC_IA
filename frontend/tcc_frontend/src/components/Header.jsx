@@ -7,6 +7,7 @@ import { MenuIcon, XIcon } from "@heroicons/react/outline";
 
 export const Header = () => {
   const { nivel, isLoading, logout } = useAuth();
+  const name = localStorage.getItem('username');
 
   // while loading auth info, render nothing or a spinner
   if (isLoading) return null;
@@ -23,6 +24,9 @@ export const Header = () => {
                 </a>
               </div>
               <div className="hidden md:flex space-x-6 items-center">
+                {name && <span className="text-cyan-500 font-medium">
+                  {name}
+                </span>}
                 <a href="/" className="text-gray-900 font-medium">
                   Home
                 </a>
@@ -78,6 +82,9 @@ export const Header = () => {
             </div>
           </div>
           <Disclosure.Panel className="md:hidden px-4 pb-3 space-y-1">
+            {name && <span className="block text-cyan-500 font-medium">
+                  {name}
+                </span>}
             <a href="/" className="block text-gray-900 font-medium">
               Home
             </a>

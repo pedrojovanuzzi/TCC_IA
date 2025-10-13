@@ -55,7 +55,7 @@ export default function Options() {
                   Catraca
                 </p>
                 <p className="mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center">
-                  Simula uma câmera acoplada a um sistema de catraca
+                  Simula uma câmera acoplada a um sistema de catraca com passagem de cracha
                 </p>
               </div>
               <button
