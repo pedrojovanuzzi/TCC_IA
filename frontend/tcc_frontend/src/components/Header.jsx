@@ -37,6 +37,9 @@ export const Header = () => {
                     <a href="/logs" className="text-gray-900 font-medium">
                       Logs
                     </a>
+                    <a href="/dashboard" className="text-gray-900 font-medium">
+                      Dashboard
+                    </a>
                   </>
                 )}
                 {/* apenas usuários com nível >=3 */}
@@ -88,6 +91,9 @@ export const Header = () => {
               <>
                 <a href="/logs" className="block text-gray-900 font-medium">
                   Logs
+                </a>
+                <a href="/dashboard" className="block text-gray-900 font-medium">
+                  Dashboard
                 </a>
               </>
             )}
