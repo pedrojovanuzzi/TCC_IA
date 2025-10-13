@@ -20,6 +20,8 @@ fernet = Fernet(ENCRYPTION_KEY)
 async def listar_detections(token=Depends(verificar_token)):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
+    
+   
     cursor.execute("""
         SELECT 
             d.class_name,
@@ -28,17 +30,18 @@ async def listar_detections(token=Depends(verificar_token)):
             d.camera_name,
             d.created_at,
             d.user_id,
-            u.login AS employee_name   -- 👈 pega o nome completo do usuário
+            u.login AS employee_name
         FROM detections d
         LEFT JOIN users u ON u.id = d.user_id
-        WHERE d.user_id = %s
         ORDER BY d.created_at DESC
-        LIMIT 500
-    """, (token["user_id"],))
+        LIMIT 1000
+    """)
+
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
     return rows
+
 
 
 @router.delete("/delete")
