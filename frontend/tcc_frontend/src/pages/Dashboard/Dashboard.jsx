@@ -1,4 +1,3 @@
-// Importa bibliotecas e componentes necessários
 import React, { useEffect, useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
@@ -9,12 +8,15 @@ import Header from "../../components/Header";
 import getHostName from "../../../utils/getUrl";
 
 export const Dashboard = () => {
-  // Estados principais
   const [dados, setDados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mesSelecionado, setMesSelecionado] = useState("Todos");
-  const [tipoGrafico, setTipoGrafico] = useState("classe"); // 🔹 "classe" | "camera" | "usuario"
-  
+  const [tipoGrafico, setTipoGrafico] = useState("classe");
+  const [filtroAno, setFiltroAno] = useState("Todos");
+  const [filtroMes, setFiltroMes] = useState("Todos");
+  const [filtroDia, setFiltroDia] = useState("Todos");
+  const [filtroHora, setFiltroHora] = useState("Todos");
+
   const API_URL = getHostName();
   const token = localStorage.getItem("access_token") || "";
 
@@ -38,20 +40,11 @@ export const Dashboard = () => {
   const meses = [
     "Todos",
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
   ];
 
-  // 🔹 Filtro por mês
-  const dadosFiltrados =
-    mesSelecionado === "Todos"
-      ? dados
-      : dados.filter((item) => {
-          const data = new Date(item.created_at);
-          const mes = data.toLocaleString("pt-BR", { month: "long" });
-          return mes.toLowerCase() === mesSelecionado.toLowerCase();
-        });
+  const CLASSES_SEGURO = ["helmet", "glove", "glasses", "belt", "boots"];
 
-  // 🔹 Paleta de cores
   const coresPorClasse = {
     glasses: "#800080",
     helmet: "#00FF00",
@@ -63,10 +56,21 @@ export const Dashboard = () => {
     no_belt: "#FF0000",
     boots: "#0080FF",
   };
+
   const getCorClasse = (nome, index) => {
     const cores = Object.values(coresPorClasse);
     return coresPorClasse[nome] || cores[index % cores.length];
   };
+
+  // 🔹 Filtro por mês (gráfico principal)
+  const dadosFiltrados =
+    mesSelecionado === "Todos"
+      ? dados
+      : dados.filter((item) => {
+          const data = new Date(item.created_at);
+          const mes = data.toLocaleString("pt-BR", { month: "long" });
+          return mes.toLowerCase() === mesSelecionado.toLowerCase();
+        });
 
   // 🔹 Agrupa por classe
   const agruparPorClasse = () =>
@@ -88,24 +92,55 @@ export const Dashboard = () => {
       }, {})
     );
 
-  // 🔹 Agrupa por usuário
-  const agruparPorUsuario = () =>
-    Object.values(
-      dadosFiltrados.reduce((acc, item) => {
-        const nome = item.user_id ? `Usuário ${item.user_id}` : "Desconhecido";
-        acc[nome] = acc[nome] || { nome, valor: 0 };
-        acc[nome].valor++;
-        return acc;
-      }, {})
-    );
+  // 🔹 Dados da catraca (riscos)
+  const dadosCatraca = dados
+    .filter(
+      (d) =>
+        d.camera_name?.toLowerCase().includes("catraca_entrada") &&
+        !CLASSES_SEGURO.includes(d.class_name)
+    )
+    .map((d) => {
+      const data = new Date(d.created_at);
+      return {
+        user: d.employee_name || `Usuário ${d.user_id || "?"}`,
+        ano: data.getFullYear(),
+        mes: data.getMonth() + 1,
+        dia: data.getDate(),
+        hora: data.getHours(),
+        class_name: d.class_name,
+        color: coresPorClasse[d.class_name] || "#FF0000",
+      };
+    });
 
-  // Escolhe qual agrupamento mostrar
-  let dadosGrafico = [];
-  if (tipoGrafico === "classe") dadosGrafico = agruparPorClasse();
-  else if (tipoGrafico === "camera") dadosGrafico = agruparPorCamera();
+  // 🔹 Filtros de data aplicados no gráfico da catraca
+  const dadosCatracaFiltrados = dadosCatraca.filter((d) => {
+    const condAno = filtroAno === "Todos" || d.ano === Number(filtroAno);
+    const condMes = filtroMes === "Todos" || d.mes === Number(filtroMes);
+    const condDia = filtroDia === "Todos" || d.dia === Number(filtroDia);
+    const condHora = filtroHora === "Todos" || d.hora === Number(filtroHora);
+    return condAno && condMes && condDia && condHora;
+  });
 
-  // 🔹 Cores dinâmicas
+  // 🔹 Agrupa por funcionário
+  const dadosCatracaAgrupados = Object.values(
+    dadosCatracaFiltrados.reduce((acc, item) => {
+      acc[item.user] = acc[item.user] || { nome: item.user, valor: 0, color: item.color };
+      acc[item.user].valor++;
+      return acc;
+    }, {})
+  );
+
+  // 🔹 Escolhe gráfico principal
+  const dadosGrafico =
+    tipoGrafico === "classe" ? agruparPorClasse() : agruparPorCamera();
+
   const getCor = (i) => Object.values(coresPorClasse)[i % 9];
+
+  // 🔹 Gerar opções dinâmicas de filtros
+  const anos = ["Todos", ...new Set(dadosCatraca.map((d) => d.ano))];
+  const mesesFiltro = ["Todos", ...new Set(dadosCatraca.map((d) => d.mes))];
+  const dias = ["Todos", ...new Set(dadosCatraca.map((d) => d.dia))];
+  const horas = ["Todos", ...new Set(dadosCatraca.map((d) => d.hora))];
 
   return (
     <>
@@ -113,24 +148,20 @@ export const Dashboard = () => {
       <div className="min-h-screen bg-gray-200 text-gray-900 p-6 flex flex-col gap-8">
         <h1 className="text-3xl font-bold text-center text-cyan-600">Painel de Detecções YOLO</h1>
 
-        {/* 🔽 Filtros */}
+        {/* 🔽 Filtros principais */}
         <div className="flex flex-wrap justify-center gap-4 mb-6">
-          {/* Filtro de Mês */}
           <select
-            className="bg-gray-800 text-white border border-cyan-500 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500"
+            className="bg-gray-800 text-white border border-cyan-500 rounded-lg px-4 py-2"
             value={mesSelecionado}
             onChange={(e) => setMesSelecionado(e.target.value)}
           >
             {meses.map((mes) => (
-              <option key={mes} value={mes}>
-                {mes}
-              </option>
+              <option key={mes}>{mes}</option>
             ))}
           </select>
 
-          {/* Tipo de gráfico */}
           <select
-            className="bg-gray-800 text-white border border-green-500 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500"
+            className="bg-gray-800 text-white border border-green-500 rounded-lg px-4 py-2"
             value={tipoGrafico}
             onChange={(e) => setTipoGrafico(e.target.value)}
           >
@@ -143,20 +174,14 @@ export const Dashboard = () => {
           <p className="text-center text-gray-600">Carregando dados...</p>
         ) : (
           <>
-            {/* 🧩 Gráfico Dinâmico */}
+            {/* 🧩 Gráfico principal */}
             <div className="bg-gray-800 text-white rounded-2xl shadow-md p-6 mx-auto w-full lg:w-2/3">
               <h3 className="text-lg font-semibold mb-4 text-cyan-400 text-center">
-                {tipoGrafico === "classe"
-                  ? "Detecções por Classe"
-                  : tipoGrafico === "camera"
-                  ? "Detecções por Câmera"
-                  : "Detecções por Funcionário"}
+                {tipoGrafico === "classe" ? "Detecções por Classe" : "Detecções por Câmera"}
               </h3>
-
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   {tipoGrafico === "camera" ? (
-                    // 🎥 Câmeras → gráfico de pizza
                     <PieChart>
                       <Pie
                         data={dadosGrafico}
@@ -166,17 +191,13 @@ export const Dashboard = () => {
                         label
                       >
                         {dadosGrafico.map((entry, index) => (
-                          <Cell key={index}  fill={getCor(index)} />
+                          <Cell key={index} fill={getCor(index)} />
                         ))}
                       </Pie>
-                      <Tooltip
-                        contentStyle={{ backgroundColor: "#e4e4e4", borderRadius: "10px" }}
-                        labelStyle={{ color: "#fff" }}
-                      />
+                      <Tooltip contentStyle={{ backgroundColor: "#1f2937" }} />
                       <Legend />
                     </PieChart>
                   ) : (
-                    // 📊 Classe ou Usuário → gráfico de barras
                     <BarChart
                       data={dadosGrafico}
                       margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -184,12 +205,9 @@ export const Dashboard = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke="#555" />
                       <XAxis dataKey="nome" stroke="#fff" />
                       <YAxis stroke="#fff" />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: "#1f2937", borderRadius: "10px" }}
-                        labelStyle={{ color: "#fff" }}
-                      />
+                      <Tooltip contentStyle={{ backgroundColor: "#1f2937" }} />
                       <Legend />
-                      <Bar dataKey="valor" fill="#00FFFF" name="Quantidade">
+                      <Bar dataKey="valor" fill="white" name="Quantidade">
                         {dadosGrafico.map((obj, i) => (
                           <Cell key={i} fill={getCorClasse(obj.nome, i)} />
                         ))}
@@ -200,17 +218,54 @@ export const Dashboard = () => {
               </div>
             </div>
 
-            {/* Resumo */}
-            <div className="bg-white rounded-2xl shadow p-6 text-center mt-8 w-full lg:w-2/3 mx-auto">
-              <h2 className="text-2xl font-bold text-cyan-600 mb-4">Resumo</h2>
-              <p className="text-lg">
-                Total de detecções:{" "}
-                <span className="font-bold text-cyan-700">{dadosFiltrados.length}</span>
-              </p>
-              <p className="text-gray-600">
-                Agrupado por: {tipoGrafico} | Última atualização:{" "}
-                {new Date().toLocaleString("pt-BR")}
-              </p>
+            {/* 📆 Gráfico de Catraca */}
+            <div className="bg-gray-900 text-white rounded-2xl shadow-md p-6 mx-auto w-full lg:w-2/3 mt-10">
+              <h3 className="text-lg font-semibold mb-4 text-red-400 text-center">
+                Funcionários Detectados sem EPI - Catraca Entrada
+              </h3>
+
+              {/* 🔹 Filtros de data */}
+              <div className="flex flex-wrap justify-center gap-3 mb-4">
+                <select className="bg-gray-800 px-3 py-2 rounded" value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)}>
+                  {anos.map((ano) => <option key={ano}>{ano}</option>)}
+                </select>
+                <select className="bg-gray-800 px-3 py-2 rounded" value={filtroMes} onChange={(e) => setFiltroMes(e.target.value)}>
+                  {mesesFiltro.map((m) => <option key={m}>{m}</option>)}
+                </select>
+                <select className="bg-gray-800 px-3 py-2 rounded" value={filtroDia} onChange={(e) => setFiltroDia(e.target.value)}>
+                  {dias.map((d) => <option key={d}>{d}</option>)}
+                </select>
+                <select className="bg-gray-800 px-3 py-2 rounded" value={filtroHora} onChange={(e) => setFiltroHora(e.target.value)}>
+                  {horas.map((h) => <option key={h}>{h}</option>)}
+                </select>
+              </div>
+
+              {/* 🔹 Gráfico de barras por funcionário */}
+              {dadosCatracaAgrupados.length > 0 ? (
+                <div className="h-96">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={dadosCatracaAgrupados}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                      <XAxis dataKey="nome" stroke="#fff" tick={{ fontSize: 10 }} />
+                      <YAxis stroke="#fff" />
+                      <Tooltip contentStyle={{ backgroundColor: "#1f2937" }} />
+                      <Legend />
+                      <Bar dataKey="valor" fill="white" name="Detecções sem EPI">
+                        {dadosCatracaAgrupados.map((obj, i) => (
+                          <Cell key={i} fill={obj.color || "#FF5555"} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-center text-gray-400">
+                  Nenhum funcionário detectado sem EPI na catraca.
+                </p>
+              )}
             </div>
           </>
         )}
