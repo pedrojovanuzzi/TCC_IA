@@ -12,9 +12,12 @@ export default function Photo() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
-  const API_URL = getHostName();
-  const [stream, setStream] = useState(null); // guarda o stream ativo
+  const [stream, setStream] = useState(null);
 
+  const API_URL = getHostName();
+  const CAMERA_NAME = "cam_photo"; // 🔸 nome fixo da câmera/fonte
+
+  // --- Manipuladores de arrastar e soltar ---
   const handleDragOver = (event) => {
     event.preventDefault();
     setDragging(true);
@@ -33,6 +36,7 @@ export default function Photo() {
     }
   };
 
+  // --- Upload de arquivo manual ---
   const handleFileChange = (event) => {
     if (event.target.files.length > 0) {
       const file = event.target.files[0];
@@ -40,31 +44,35 @@ export default function Photo() {
     }
   };
 
+  // --- Envio para o backend /predict ---
   const handleUpload = async (file) => {
     setLoading(true);
     const token = localStorage.getItem("access_token");
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("camera_name", CAMERA_NAME); // ✅ envia o nome da câmera
 
     try {
       const response = await axios.post(`${API_URL}/predict`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
         },
-        responseType: "blob",
+        responseType: "blob", // recebe imagem processada
       });
 
       const url = URL.createObjectURL(response.data);
       if (preview) URL.revokeObjectURL(preview);
       setPreview(url);
     } catch (error) {
-      console.error("Erro ao enviar a imagem:", error.response?.data || error);
+      console.error("❌ Erro ao enviar a imagem:", error.response?.data || error);
     } finally {
       setLoading(false);
     }
   };
 
+  // --- Ativar webcam ---
   const startCamera = async () => {
     setCameraActive(true);
     const s = await navigator.mediaDevices.getUserMedia({
@@ -76,6 +84,7 @@ export default function Photo() {
     }
   };
 
+  // --- Capturar foto da webcam e enviar ---
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current) {
       const context = canvasRef.current.getContext("2d");
@@ -83,12 +92,12 @@ export default function Photo() {
       canvasRef.current.height = videoRef.current.videoHeight;
       context.drawImage(videoRef.current, 0, 0);
       canvasRef.current.toBlob((blob) => {
-        if (blob) handleUpload(blob);
+        if (blob) handleUpload(blob); // envia a imagem capturada
       }, "image/jpeg");
     }
   };
 
-  // 👇 cleanup quando sair da página (desmontar componente)
+  // --- Encerrar stream da câmera ao desmontar ---
   useEffect(() => {
     return () => {
       if (stream) {
@@ -102,13 +111,14 @@ export default function Photo() {
       <Header />
       <div className="flex justify-center flex-col">
         <div className="flex justify-center">
-          <img src={img} className="size-16 mt-5 sm:size-24" />
+          <img src={img} className="size-16 mt-5 sm:size-24" alt="Ícone" />
         </div>
         <div className="flex flex-col justify-center items-center">
           <h1 className="font-semibold mb-4">
             Arraste ou clique para selecionar uma Foto
           </h1>
 
+          {/* INPUT DE ARQUIVO */}
           <input
             type="file"
             ref={inputRef}
@@ -117,6 +127,7 @@ export default function Photo() {
             onChange={handleFileChange}
           />
 
+          {/* ÁREA DE ARRASTO */}
           <div
             className={`relative cursor-pointer block w-2/4 rounded-lg border-2 border-dashed ${
               dragging ? "border-blue-500 bg-blue-100" : "border-gray-300"
@@ -151,6 +162,7 @@ export default function Photo() {
             )}
           </div>
 
+          {/* BOTÃO WEBCAM */}
           <button
             className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             onClick={startCamera}
@@ -158,6 +170,7 @@ export default function Photo() {
             Ativar Webcam
           </button>
 
+          {/* CAPTURA E PREVIEW */}
           {cameraActive && (
             <div className="mt-4 flex flex-col items-center">
               <video ref={videoRef} autoPlay className="w-full max-w-md rounded-lg" />
@@ -171,6 +184,7 @@ export default function Photo() {
             </div>
           )}
 
+          {/* IMAGEM PROCESSADA */}
           {preview && (
             <div className="mt-4 flex flex-col">
               <h2 className="font-semibold text-center">Imagem Processada:</h2>

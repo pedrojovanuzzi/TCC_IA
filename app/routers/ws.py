@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 import numpy as np
 
@@ -75,8 +75,22 @@ async def ws_root(websocket: WebSocket):
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
-            # 🧠 Recebe frame da câmera
-            frame_bytes = await websocket.receive_bytes()
+             # 📦 Recebe o pacote JSON enviado do frontend
+            message = await websocket.receive_text()
+
+            # Converte o texto em dicionário
+            data = json.loads(message)
+
+            # Extrai o nome da câmera e o frame
+            camera_name = data.get("camera_name", "cam_desconhecida")
+            frame_b64 = data.get("frame")
+
+            # ❗ Se não houver frame, ignora este ciclo
+            if not frame_b64:
+                continue
+
+            # 🔄 Decodifica imagem Base64 → bytes → OpenCV Mat
+            frame_bytes = base64.b64decode(frame_b64)
             img = cv2.imdecode(np.frombuffer(frame_bytes, np.uint8), cv2.IMREAD_COLOR)
 
             # 🎯 YOLO detecta objetos
@@ -153,19 +167,20 @@ async def ws_root(websocket: WebSocket):
                             cls_name = results.names[int(box.cls[0])]
                             conf = float(box.conf[0])
                             cur.execute("""
-                                INSERT INTO detections
-                                (user_id, image_name, image_path, class_name, confidence, x1, y1, x2, y2, device, model_name)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            """, (
-                                user_id,
-                                snap_name,
-                                snap_path,
-                                cls_name,
-                                conf,
-                                x1, y1, x2, y2,
-                                device,
-                                "YOLO"
-                            ))
+                            INSERT INTO detections
+                            (user_id, image_name, image_path, class_name, confidence, x1, y1, x2, y2, device, model_name, camera_name)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            user_id,          # ID do usuário logado (via token)
+                            snap_name,        # nome da imagem (ex: ws_2025-10-13_12-00-00.jpg)
+                            snap_path,        # caminho criptografado
+                            cls_name,         # classe detectada (ex: helmet)
+                            conf,             # confiança da detecção
+                            x1, y1, x2, y2,   # coordenadas do objeto detectado
+                            device,           # CPU ou GPU usada
+                            "YOLO",           # modelo
+                            camera_name     # 🔸 nome da câmera ("cam_ws", por exemplo)
+                        ))
 
                         conn.commit()
                         cur.close()
@@ -238,10 +253,27 @@ def capture_proc(ip: str, q: mp.Queue, stop: MpEvent = mp.Event()):
 async def ws_cam(ws: WebSocket, camera_id: int):
     await ws.accept()
 
-    # 🔍 Busca IP da câmera
+    # 🔒 Token via query string
+    token = ws.query_params.get("token")
+    if not token:
+        print("❌ Nenhum token recebido.")
+        await ws.close()
+        return
+
+    # ✅ Verifica o token manualmente
+    try:
+        user = verificar_token(token)
+        user_id = user["user_id"]
+        print(f"🔑 Token válido — user_id={user_id}")
+    except Exception as e:
+        print(f"❌ Token inválido: {e}")
+        await ws.close()
+        return
+
+    # 🔍 Busca IP e nome da câmera
     conn = get_connection()
     c = conn.cursor()
-    c.execute("SELECT ip FROM cameras WHERE id=%s", (camera_id,))
+    c.execute("SELECT ip, name FROM cameras WHERE id=%s", (camera_id,))
     row = c.fetchone()
     conn.close()
 
@@ -250,7 +282,8 @@ async def ws_cam(ws: WebSocket, camera_id: int):
         await ws.close()
         return
 
-    ip = row[0]
+    ip, camera_name = row
+
     model = get_model(1)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -262,13 +295,14 @@ async def ws_cam(ws: WebSocket, camera_id: int):
 
     last_frame_ts = time.time()
     last_save_ts = 0.0
-    last_db_ts = 0.0  # 💾 controle de gravação no banco
+    last_db_ts = 0.0
     intervalo_db = 10.0  # segundos entre gravações
 
+    # Configuração de segurança e alerta
     CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}
     alert_start = None
     alerta_enviado = False
-    duracao_limite = 5.0
+    duracao_limite = 5.0  # segundos de risco contínuo
 
     try:
         while True:
@@ -304,7 +338,7 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                     alert_start = time.time()
                 elif (time.time() - alert_start) >= duracao_limite and not alerta_enviado:
                     alerta_enviado = True
-                    print(f"🚨 Alerta persistente na câmera {camera_id}: {classes_perigosas}")
+                    print(f"🚨 Alerta persistente na câmera {camera_name} ({camera_id}): {classes_perigosas}")
                     os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
                     filename = f"alerta_cam{camera_id}_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"
                     path = os.path.join(IMG_REAL_TIME_DIR, filename)
@@ -312,28 +346,18 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                     if ok:
                         with open(path, "wb") as f:
                             f.write(fernet.encrypt(buf.tobytes()))
+                        # 📧 Envia e-mail em background
                         enviar_email_em_background(results, path)
                         await _safe_ws_send_text(ws, {
                             "alerta": True,
-                            "mensagem": f"🚨 Alerta da câmera {camera_id} ({', '.join(classes_perigosas)}). E-mail enviado!"
+                            "mensagem": f"🚨 Alerta da câmera {camera_name} ({', '.join(classes_perigosas)}). E-mail enviado!"
                         })
             else:
                 alert_start = None
                 alerta_enviado = False
 
-            # ---------- SALVA FRAME CRIPTOGRAFADO A CADA 3s ----------
-            now = time.time()
-            if (now - last_save_ts) >= 3.0:
-                os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
-                filename = f"cam{camera_id}_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"
-                path = os.path.join(IMG_REAL_TIME_DIR, filename)
-                ok, buf = cv2.imencode(".jpg", frame)
-                if ok:
-                    with open(path, "wb") as f:
-                        f.write(fernet.encrypt(buf.tobytes()))
-                last_save_ts = now
-
             # ---------- 💾 SALVA DETECÇÕES NO BANCO A CADA 10s ----------
+            now = time.time()
             if (now - last_db_ts) >= intervalo_db:
                 try:
                     conn = get_connection()
@@ -345,29 +369,32 @@ async def ws_cam(ws: WebSocket, camera_id: int):
                     if ok:
                         with open(path_db, "wb") as f:
                             f.write(fernet.encrypt(buf.tobytes()))
+
                         for b in results.boxes:
                             x1, y1, x2, y2 = map(int, b.xyxy[0])
                             cls_name = results.names[int(b.cls[0])]
                             conf = float(b.conf[0])
                             cur.execute("""
                                 INSERT INTO detections
-                                (user_id, image_name, image_path, class_name, confidence, x1, y1, x2, y2, device, model_name)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                (user_id, image_name, image_path, class_name, confidence,
+                                 x1, y1, x2, y2, device, model_name, camera_name)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """, (
-                                1,  # ou associe a user_id real
+                                user_id,           # ✅ vem do token
                                 filename_db,
                                 path_db,
                                 cls_name,
                                 conf,
                                 x1, y1, x2, y2,
                                 device,
-                                "YOLO"
+                                "YOLO",
+                                camera_name
                             ))
                         conn.commit()
                     cur.close()
                     conn.close()
                     last_db_ts = now
-                    print(f"💾 Detecções da câmera {camera_id} salvas no banco.")
+                    print(f"💾 Detecções da câmera {camera_name} salvas no banco.")
                 except Exception as e:
                     print(f"❌ Erro ao salvar detecções no banco: {e}")
 

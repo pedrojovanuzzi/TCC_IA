@@ -64,16 +64,19 @@ export const Dashboard = () => {
     }, {})
   );
 
-  // 🔹 Mapeia cores fixas para cada classe
-  const coresPorClasse = {
-    helmet: "#3b82f6", // azul
-    glove: "#10b981", // verde
-    glasses: "#facc15", // amarelo
-    belt: "#ef4444", // vermelho
-    boots: "#8b5cf6", // roxo
-    vest: "#14b8a6", // ciano
-    jacket: "#f97316", // laranja
-  };
+// 🔹 Paleta idêntica à do backend (convertida BGR → HEX)
+const coresPorClasse = {
+  glasses: "#800080",     // roxo (128,0,128)
+  helmet: "#00FF00",      // verde (0,255,0)
+  glove: "#00FFFF",       // ciano (255,255,0 → RGB)
+  hands: "#FFFF00",       // amarelo (0,255,255 → RGB)
+  head: "#0000FF",        // azul (255,0,0 → RGB)
+  belt: "#FFA500",        // laranja (0,165,255 → RGB)
+  no_glasses: "#FF00FF",  // magenta (255,0,255)
+  no_belt: "#FF0000",     // vermelho (0,0,255 → RGB)
+  boots: "#0080FF",       // azul claro (255,128,0 → RGB)
+};
+
 
   // Função que retorna a cor da classe ou uma cor padrão se não existir
   const getCorClasse = (nome, index) => {

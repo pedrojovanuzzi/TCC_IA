@@ -1,5 +1,5 @@
 import io
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
+from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from starlette.responses import JSONResponse
 from ..config import MODEL_PATH, CONFIDENCE, IMG_SIZE, IMG_STATIC_DIR, IMG_CATRACA, VIDEO_DIR, CORES_CLASSES, ENCRYPTION_KEY
@@ -25,41 +25,61 @@ def draw_label(img, text, x, y, color):
     cv2.putText(img, text, (x + 5, y - 5), font, scale, (0, 0, 0), thickness)
 
 @router.post("/predict")
-async def inferir(file: UploadFile = File(...), token=Depends(verificar_token)):
+async def inferir(
+    file: UploadFile = File(...),
+    camera_name: str = Form(...),  # ✅ nome da câmera vindo do frontend
+    token=Depends(verificar_token)
+):
+    # --- Configuração YOLO ---
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = YOLO(MODEL_PATH)
 
-    # lê o arquivo enviado
+    # --- Leitura do arquivo ---
     content = await file.read()
     img = cv2.imdecode(np.frombuffer(content, np.uint8), cv2.IMREAD_COLOR)
 
-    # roda o modelo YOLO
-    result = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE)[0]
+    # --- Inferência ---
+    result = model.predict(
+        img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE
+    )[0]
 
-    # --- conexão ao banco
+    # --- Conexão ao banco ---
     conn = get_connection()
     cursor = conn.cursor()
 
-    # nome e caminho da imagem
+    # --- Gera nome e caminho da imagem ---
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
     filename = f"detectado_{ts}.jpg"
     os.makedirs(IMG_STATIC_DIR, exist_ok=True)
     path = os.path.join(IMG_STATIC_DIR, filename)
 
-    # desenha bounding boxes e registra no banco
+    # --- Classes consideradas seguras ---
+    CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}
+
+    # --- Variável para controlar se houve risco ---
+    houve_risco = False
+
+    # --- Processa resultados e grava no banco ---
     for box in result.boxes:
         x1, y1, x2, y2 = map(int, box.xyxy[0])
         cls = model.names[int(box.cls[0])]
         conf = float(box.conf[0])
         color = CORES_CLASSES.get(cls, (255, 255, 255))
+
+        # desenha bounding box
         cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
         draw_label(img, f"{cls}:{conf:.2f}", x1, y1, color)
 
-        # insere registro no banco
+        # ⚠️ marca risco se a classe não for segura
+        if cls not in CLASSES_SEGURO:
+            houve_risco = True
+
+        # insere no banco
         cursor.execute("""
             INSERT INTO detections 
-            (user_id, image_name, image_path, class_name, confidence, x1, y1, x2, y2, device, model_name)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (user_id, image_name, image_path, class_name, confidence,
+             x1, y1, x2, y2, device, model_name, camera_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             token["user_id"],
             filename,
@@ -68,14 +88,16 @@ async def inferir(file: UploadFile = File(...), token=Depends(verificar_token)):
             conf,
             x1, y1, x2, y2,
             device,
-            "YOLO"
+            "YOLO",
+            camera_name
         ))
 
+    # --- Finaliza gravação ---
     conn.commit()
     cursor.close()
     conn.close()
 
-    # salva imagem criptografada
+    # --- Salva e criptografa a imagem ---
     cv2.imwrite(path, img)
     with open(path, "rb") as f:
         data = f.read()
@@ -83,19 +105,23 @@ async def inferir(file: UploadFile = File(...), token=Depends(verificar_token)):
     with open(path, "wb") as f:
         f.write(encrypted)
 
-    # loga e envia alerta
-    log_operation(token["user_id"], f"Salvou e criptografou {filename}")
-    enviar_email_em_background(result, path)
+    # --- Loga operação ---
+    log_operation(token["user_id"], f"Salvou e criptografou {filename} ({camera_name})")
 
-    # converte imagem processada para bytes
+    # 🚨 Envia e-mail apenas se houver risco
+    if houve_risco:
+        print(f"🚨 Risco detectado — enviando alerta por e-mail ({camera_name})")
+        enviar_email_em_background(result, path)
+    else:
+        print(f"✅ Nenhum risco detectado ({camera_name}) — e-mail não enviado")
+
+    # --- Retorna imagem processada ---
     ok, buf = cv2.imencode(".jpg", img)
     if not ok:
         raise HTTPException(500, "Falha ao codificar imagem")
 
-    return StreamingResponse(
-        io.BytesIO(buf.tobytes()),
-        media_type="image/jpeg"
-    )
+    return StreamingResponse(io.BytesIO(buf.tobytes()), media_type="image/jpeg")
+
 
 @router.post("/predict_catraca")
 async def inferir(file: UploadFile = File(...), token=Depends(verificar_token)):
@@ -173,7 +199,11 @@ async def inferir(file: UploadFile = File(...), token=Depends(verificar_token)):
     )
 
 @router.post("/predict_video")
-async def inferir_video(file: UploadFile = File(...), token=Depends(verificar_token)):
+async def inferir_video(
+    file: UploadFile = File(...),
+    camera_name: str = Form(...),  # ✅ nome da câmera recebido do frontend
+    token=Depends(verificar_token)
+):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = YOLO(MODEL_PATH)
 
@@ -201,17 +231,18 @@ async def inferir_video(file: UploadFile = File(...), token=Depends(verificar_to
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     out = cv2.VideoWriter(out_path, fourcc, fps, (w, h))
 
+    # ⚙️ classes seguras e controle de alerta
     CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}
     alert_start = None
     alert_persistente = False
     duracao_limite = 5.0
+    houve_risco = False  # ✅ flag para e-mail
 
     print(f"🎥 Processando vídeo ({fps} fps)...")
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    # ⏱️ Intervalo de 10 segundos
     frame_interval = int(fps * 10)
     frame_count = 0
 
@@ -225,7 +256,11 @@ async def inferir_video(file: UploadFile = File(...), token=Depends(verificar_to
         classes_detectadas = {res.names[int(b.cls[0])] for b in res.boxes}
         classes_perigosas = {c for c in classes_detectadas if c not in CLASSES_SEGURO}
 
-        # Desenha boxes no frame
+        # se houver classes perigosas em qualquer frame → marca risco
+        if classes_perigosas:
+            houve_risco = True
+
+        # Desenha boxes
         for box in res.boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
             cls = res.names[int(box.cls[0])]
@@ -234,7 +269,7 @@ async def inferir_video(file: UploadFile = File(...), token=Depends(verificar_to
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 1)
             draw_label(frame, f"{cls}:{conf:.2f}", x1, y1, color)
 
-        # 🚨 alerta contínuo
+        # 🚨 alerta persistente visual
         if classes_perigosas:
             if alert_start is None:
                 alert_start = datetime.now()
@@ -242,18 +277,17 @@ async def inferir_video(file: UploadFile = File(...), token=Depends(verificar_to
                 duracao = (datetime.now() - alert_start).total_seconds()
                 if duracao >= duracao_limite and not alert_persistente:
                     alert_persistente = True
-                    print(f"🚨 Alerta persistente detectado ({duracao:.2f}s): {classes_perigosas}")
+                    print(f"🚨 Alerta persistente ({duracao:.2f}s): {classes_perigosas}")
         else:
             alert_start = None
 
         out.write(frame)
 
-        # 💾 Salva todas as detecções a cada 10 segundos
+        # 💾 salva no banco a cada 10s
         if frame_count % frame_interval == 0:
             tempo_segundos = frame_count / fps
             tempo_formatado = str(datetime.utcfromtimestamp(tempo_segundos).strftime("%H:%M:%S"))
-
-            print(f"💾 Salvando detecções do segundo {tempo_formatado}...")
+            print(f"💾 Salvando detecções ({tempo_formatado})...")
 
             for box in res.boxes:
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -262,17 +296,19 @@ async def inferir_video(file: UploadFile = File(...), token=Depends(verificar_to
 
                 cursor.execute("""
                     INSERT INTO detections
-                    (user_id, image_name, image_path, class_name, confidence, x1, y1, x2, y2, device, model_name)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    (user_id, image_name, image_path, class_name, confidence,
+                     x1, y1, x2, y2, device, model_name, camera_name)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
-                    token["user_id"],
+                    token["user_id"],  # ✅ ID do usuário
                     out_name,
                     out_path,
                     cls,
                     conf,
                     x1, y1, x2, y2,
                     device,
-                    "YOLO"
+                    "YOLO",
+                    camera_name        # ✅ nome da câmera
                 ))
             conn.commit()
 
@@ -280,7 +316,7 @@ async def inferir_video(file: UploadFile = File(...), token=Depends(verificar_to
     out.release()
     os.remove(tmp.name)
 
-    # --- conversão para web ---
+    # --- converte e criptografa ---
     web_path = out_path.replace(".mp4", "_web.mp4")
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     subprocess.run([
@@ -288,27 +324,27 @@ async def inferir_video(file: UploadFile = File(...), token=Depends(verificar_to
         "-c:v", "libx264", "-preset", "fast",
         "-crf", "23", "-movflags", "+faststart", web_path
     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
     if os.path.exists(web_path):
         os.remove(out_path)
         out_path = web_path
 
-    # --- criptografa ---
     with open(out_path, "rb") as f:
         vid_data = f.read()
     enc_vid = fernet.encrypt(vid_data)
     with open(out_path, "wb") as f:
         f.write(enc_vid)
 
-    log_operation(token["user_id"], f"Salvou e criptografou vídeo {os.path.basename(out_path)}")
+    log_operation(token["user_id"], f"Salvou e criptografou vídeo {os.path.basename(out_path)} ({camera_name})")
 
-    # 🚨 envia alerta se necessário
-    if alert_persistente:
+    # 🚨 só envia se houve risco
+    if houve_risco:
         try:
-            print("📤 Enviando vídeo de alerta...")
+            print(f"📤 Enviando alerta por e-mail ({camera_name})...")
             enviar_email_em_background(res, out_path)
         except Exception as e:
-            print("❌ Falha ao enviar vídeo:", e)
+            print(f"❌ Falha ao enviar vídeo: {e}")
+    else:
+        print(f"✅ Nenhum risco detectado ({camera_name}) — e-mail não enviado")
 
     cursor.close()
     conn.close()
