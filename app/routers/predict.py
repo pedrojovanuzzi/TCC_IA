@@ -126,59 +126,73 @@ async def inferir(
 @router.post("/predict_catraca")
 async def inferir(
     file: UploadFile = File(...),
-    camera_name: str = Form(...),  # ✅ nome da câmera enviado pelo frontend
-    token=Depends(verificar_token)
+    camera_name: str = Form(...),
+    user_id: int = Form(...),   # ✅ ID do funcionário vem do frontend
+    token=Depends(verificar_token),
 ):
-    # --- Configura o modelo YOLO ---
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = YOLO(MODEL_PATH)
 
-    # --- Lê a imagem enviada ---
-    content = await file.read()
-    img = cv2.imdecode(np.frombuffer(content, np.uint8), cv2.IMREAD_COLOR)
-
-    # --- Executa inferência ---
-    result = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE)[0]
-
-    # --- Conecta ao banco de dados ---
+    # --- 1️⃣ Conexão com o banco
     conn = get_connection()
     cursor = conn.cursor()
 
-    # --- Define nome e caminho do arquivo ---
-    os.makedirs(IMG_CATRACA, exist_ok=True)
+    # --- 2️⃣ Verifica se o usuário existe na tabela `users`
+    cursor.execute("SELECT id, login FROM users WHERE id = %s", (user_id,))
+    user = cursor.fetchone()
+
+    if not user:
+        cursor.close()
+        conn.close()
+        raise HTTPException(
+            status_code=404,
+            detail=f"Usuário com ID {user_id} não encontrado."
+        )
+
+    user_login = user[1]  # nome de login (só para log)
+    print(f"🧍 Funcionário encontrado: {user_login} (id={user_id})")
+
+    # --- 3️⃣ Lê a imagem recebida
+    content = await file.read()
+    img = cv2.imdecode(np.frombuffer(content, np.uint8), cv2.IMREAD_COLOR)
+
+    # --- 4️⃣ Executa YOLO
+    result = model.predict(
+        img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE
+    )[0]
+
+    # --- 5️⃣ Define caminho para salvar imagem
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
     filename = f"catraca_{ts}.jpg"
+    os.makedirs(IMG_CATRACA, exist_ok=True)
     path = os.path.join(IMG_CATRACA, filename)
 
-    # --- Classes consideradas seguras ---
+    # --- 6️⃣ Analisa classes detectadas
     CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}
-
-    # --- Flag de risco (para envio de e-mail) ---
     houve_risco = False
 
-    # --- Percorre detecções e desenha bounding boxes ---
     for box in result.boxes:
         x1, y1, x2, y2 = map(int, box.xyxy[0])
         cls = model.names[int(box.cls[0])]
         conf = float(box.conf[0])
         color = CORES_CLASSES.get(cls, (255, 255, 255))
 
-        # desenha o rótulo na imagem
+        # desenha no frame
         cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
         draw_label(img, f"{cls}:{conf:.2f}", x1, y1, color)
 
-        # 🚨 marca risco se a classe não for segura
+        # marca se houve risco
         if cls not in CLASSES_SEGURO:
             houve_risco = True
 
-        # 💾 insere a detecção no banco
+        # insere detecção no banco
         cursor.execute("""
-            INSERT INTO detections 
+            INSERT INTO detections
             (user_id, image_name, image_path, class_name, confidence,
              x1, y1, x2, y2, device, model_name, camera_name)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            token["user_id"],    # ✅ ID do usuário via token JWT
+            user_id,
             filename,
             path,
             cls,
@@ -186,41 +200,35 @@ async def inferir(
             x1, y1, x2, y2,
             device,
             "YOLO",
-            camera_name          # ✅ nome da câmera via frontend
+            camera_name
         ))
 
-    # --- Finaliza transação ---
     conn.commit()
     cursor.close()
     conn.close()
 
-    # --- Salva e criptografa a imagem ---
+    # --- 7️⃣ Salva imagem criptografada
     cv2.imwrite(path, img)
     with open(path, "rb") as f:
-        data = f.read()
-    encrypted = fernet.encrypt(data)
+        enc = fernet.encrypt(f.read())
     with open(path, "wb") as f:
-        f.write(encrypted)
+        f.write(enc)
 
-    # --- Loga operação ---
-    log_operation(token["user_id"], f"Salvou e criptografou {filename} ({camera_name})")
+    # --- 8️⃣ Loga operação
+    log_operation(user_id, f"Funcionário {user_login} passou na catraca ({camera_name})")
 
-    # 🚨 Envia e-mail apenas se houver risco
+    # --- 9️⃣ Se houve risco, envia alerta
     if houve_risco:
-        try:
-            print(f"📤 Enviando alerta — risco detectado ({camera_name})...")
-            enviar_email_em_background(result, path)
-        except Exception as e:
-            print(f"❌ Falha ao enviar alerta: {e}")
-    else:
-        print(f"✅ Nenhum risco detectado ({camera_name}) — e-mail não enviado.")
+        enviar_email_em_background(result, path)
 
-    # --- Converte imagem processada para bytes e retorna ---
+    # --- 🔟 Retorna imagem processada
     ok, buf = cv2.imencode(".jpg", img)
     if not ok:
         raise HTTPException(500, "Falha ao codificar imagem")
 
     return StreamingResponse(io.BytesIO(buf.tobytes()), media_type="image/jpeg")
+
+
 
 
 @router.post("/predict_video")
