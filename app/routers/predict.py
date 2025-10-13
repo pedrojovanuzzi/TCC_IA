@@ -25,7 +25,7 @@ def draw_label(img, text, x, y, color):
     cv2.putText(img, text, (x + 5, y - 5), font, scale, (0, 0, 0), thickness)
 
 @router.post("/predict")
-async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)):
+async def inferir(file: UploadFile = File(...), token=Depends(verificar_token)):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = YOLO(MODEL_PATH)
 
@@ -33,8 +33,20 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
     content = await file.read()
     img = cv2.imdecode(np.frombuffer(content, np.uint8), cv2.IMREAD_COLOR)
 
-    # roda o modelo
+    # roda o modelo YOLO
     result = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE)[0]
+
+    # --- conexão ao banco
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # nome e caminho da imagem
+    ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+    filename = f"detectado_{ts}.jpg"
+    os.makedirs(IMG_STATIC_DIR, exist_ok=True)
+    path = os.path.join(IMG_STATIC_DIR, filename)
+
+    # desenha bounding boxes e registra no banco
     for box in result.boxes:
         x1, y1, x2, y2 = map(int, box.xyxy[0])
         cls = model.names[int(box.cls[0])]
@@ -42,12 +54,28 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
         color = CORES_CLASSES.get(cls, (255, 255, 255))
         cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
         draw_label(img, f"{cls}:{conf:.2f}", x1, y1, color)
-    
+
+        # insere registro no banco
+        cursor.execute("""
+            INSERT INTO detections 
+            (user_id, image_name, image_path, class_name, confidence, x1, y1, x2, y2, device, model_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            token["user_id"],
+            filename,
+            path,
+            cls,
+            conf,
+            x1, y1, x2, y2,
+            device,
+            "YOLO"
+        ))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
     # salva imagem criptografada
-    os.makedirs(IMG_STATIC_DIR, exist_ok=True)
-    ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
-    filename = f"detectado_{ts}.jpg"
-    path = os.path.join(IMG_STATIC_DIR, filename)
     cv2.imwrite(path, img)
     with open(path, "rb") as f:
         data = f.read()
@@ -55,20 +83,19 @@ async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)
     with open(path, "wb") as f:
         f.write(encrypted)
 
-    # loga a operação
+    # loga e envia alerta
     log_operation(token["user_id"], f"Salvou e criptografou {filename}")
     enviar_email_em_background(result, path)
-    # converte imagem processada para bytes e devolve como blob
+
+    # converte imagem processada para bytes
     ok, buf = cv2.imencode(".jpg", img)
     if not ok:
         raise HTTPException(500, "Falha ao codificar imagem")
-    
+
     return StreamingResponse(
         io.BytesIO(buf.tobytes()),
         media_type="image/jpeg"
     )
-    
-
 
 @router.post("/predict_catraca")
 async def inferir(file: UploadFile = File(...), token = Depends(verificar_token)):
