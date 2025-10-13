@@ -194,7 +194,7 @@ export const Dashboard = () => {
                           <Cell key={index} fill={getCor(index)} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: "#1f2937" }} />
+                      <Tooltip contentStyle={{ backgroundColor: "#eef1f5" }} />
                       <Legend />
                     </PieChart>
                   ) : (

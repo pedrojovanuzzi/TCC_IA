@@ -18,60 +18,28 @@ fernet = Fernet(ENCRYPTION_KEY)
 
 @router.get("/detections")
 async def listar_detections(token=Depends(verificar_token)):
-    """
-    Retorna as detecções registradas no banco.
-    - Admins (nível >= 3) veem tudo.
-    - Usuários comuns veem apenas suas próprias detecções.
-    Inclui dados de classe, câmera, usuário e data.
-    """
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT 
+            d.class_name,
+            d.confidence,
+            d.device,
+            d.camera_name,
+            d.created_at,
+            d.user_id,
+            u.login AS employee_name   -- 👈 pega o nome completo do usuário
+        FROM detections d
+        LEFT JOIN users u ON u.id = d.user_id
+        WHERE d.user_id = %s
+        ORDER BY d.created_at DESC
+        LIMIT 500
+    """, (token["user_id"],))
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return rows
 
-    try:
-        # 🔹 Se for admin, vê todas as detecções
-        if token["nivel"] >= 3:
-            cursor.execute("""
-                SELECT 
-                    id,
-                    user_id,
-                    camera_name,
-                    class_name,
-                    confidence,
-                    device,
-                    model_name,
-                    created_at
-                FROM detections
-                ORDER BY created_at DESC
-                LIMIT 500
-            """)
-        else:
-            # 🔹 Usuário comum vê apenas as suas
-            cursor.execute("""
-                SELECT 
-                    id,
-                    user_id,
-                    camera_name,
-                    class_name,
-                    confidence,
-                    device,
-                    model_name,
-                    created_at
-                FROM detections
-                WHERE user_id = %s
-                ORDER BY created_at DESC
-                LIMIT 200
-            """, (token["user_id"],))
-
-        rows = cursor.fetchall()
-        return rows
-
-    except Exception as e:
-        print("❌ Erro ao buscar detecções:", e)
-        raise HTTPException(500, f"Erro ao buscar detecções: {e}")
-
-    finally:
-        cursor.close()
-        conn.close()
 
 @router.delete("/delete")
 def delete_file(request: DeleteFileRequest, token=Depends(verificar_token)):
