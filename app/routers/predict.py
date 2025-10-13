@@ -124,57 +124,77 @@ async def inferir(
 
 
 @router.post("/predict_catraca")
-async def inferir(file: UploadFile = File(...), token=Depends(verificar_token)):
+async def inferir(
+    file: UploadFile = File(...),
+    camera_name: str = Form(...),  # ✅ nome da câmera enviado pelo frontend
+    token=Depends(verificar_token)
+):
+    # --- Configura o modelo YOLO ---
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = YOLO(MODEL_PATH)
 
-    # 🖼️ Lê a imagem recebida
+    # --- Lê a imagem enviada ---
     content = await file.read()
     img = cv2.imdecode(np.frombuffer(content, np.uint8), cv2.IMREAD_COLOR)
 
-    # 🚀 Roda o modelo YOLO
+    # --- Executa inferência ---
     result = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE)[0]
 
-    # 🔗 Conecta ao banco
+    # --- Conecta ao banco de dados ---
     conn = get_connection()
     cursor = conn.cursor()
 
-    # 📸 Define nome e caminho da imagem
+    # --- Define nome e caminho do arquivo ---
     os.makedirs(IMG_CATRACA, exist_ok=True)
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
     filename = f"catraca_{ts}.jpg"
     path = os.path.join(IMG_CATRACA, filename)
 
-    # 🎯 Percorre as detecções
+    # --- Classes consideradas seguras ---
+    CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}
+
+    # --- Flag de risco (para envio de e-mail) ---
+    houve_risco = False
+
+    # --- Percorre detecções e desenha bounding boxes ---
     for box in result.boxes:
         x1, y1, x2, y2 = map(int, box.xyxy[0])
         cls = model.names[int(box.cls[0])]
         conf = float(box.conf[0])
         color = CORES_CLASSES.get(cls, (255, 255, 255))
+
+        # desenha o rótulo na imagem
         cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
         draw_label(img, f"{cls}:{conf:.2f}", x1, y1, color)
 
-        # 💾 Insere detecção no banco
+        # 🚨 marca risco se a classe não for segura
+        if cls not in CLASSES_SEGURO:
+            houve_risco = True
+
+        # 💾 insere a detecção no banco
         cursor.execute("""
             INSERT INTO detections 
-            (user_id, image_name, image_path, class_name, confidence, x1, y1, x2, y2, device, model_name)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (user_id, image_name, image_path, class_name, confidence,
+             x1, y1, x2, y2, device, model_name, camera_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            token["user_id"],
+            token["user_id"],    # ✅ ID do usuário via token JWT
             filename,
             path,
             cls,
             conf,
             x1, y1, x2, y2,
             device,
-            "YOLO"
+            "YOLO",
+            camera_name          # ✅ nome da câmera via frontend
         ))
 
+    # --- Finaliza transação ---
     conn.commit()
     cursor.close()
     conn.close()
 
-    # 🧩 Salva imagem criptografada
+    # --- Salva e criptografa a imagem ---
     cv2.imwrite(path, img)
     with open(path, "rb") as f:
         data = f.read()
@@ -182,21 +202,26 @@ async def inferir(file: UploadFile = File(...), token=Depends(verificar_token)):
     with open(path, "wb") as f:
         f.write(encrypted)
 
-    # 🧾 Loga operação no banco
-    log_operation(token["user_id"], f"Salvou e criptografou {filename}")
+    # --- Loga operação ---
+    log_operation(token["user_id"], f"Salvou e criptografou {filename} ({camera_name})")
 
-    # 🚨 Envia alerta se necessário
-    enviar_email_em_background(result, path)
+    # 🚨 Envia e-mail apenas se houver risco
+    if houve_risco:
+        try:
+            print(f"📤 Enviando alerta — risco detectado ({camera_name})...")
+            enviar_email_em_background(result, path)
+        except Exception as e:
+            print(f"❌ Falha ao enviar alerta: {e}")
+    else:
+        print(f"✅ Nenhum risco detectado ({camera_name}) — e-mail não enviado.")
 
-    # 🔁 Converte imagem processada para blob e devolve
+    # --- Converte imagem processada para bytes e retorna ---
     ok, buf = cv2.imencode(".jpg", img)
     if not ok:
         raise HTTPException(500, "Falha ao codificar imagem")
 
-    return StreamingResponse(
-        io.BytesIO(buf.tobytes()),
-        media_type="image/jpeg"
-    )
+    return StreamingResponse(io.BytesIO(buf.tobytes()), media_type="image/jpeg")
+
 
 @router.post("/predict_video")
 async def inferir_video(
