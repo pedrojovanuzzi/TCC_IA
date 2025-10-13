@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
+from app.database import get_connection
 from app.utils import log_operation
 from ..schemas import DecryptRequest, DeleteFileRequest, DeleteRequest
 from ..config import IMAGES_DIR, ENCRYPTION_KEY
@@ -14,6 +15,32 @@ from datetime import datetime
 
 router = APIRouter()
 fernet = Fernet(ENCRYPTION_KEY)
+
+@router.get("/detections")
+async def listar_detections(token=Depends(verificar_token)):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+   
+    cursor.execute("""
+        SELECT 
+            d.class_name,
+            d.confidence,
+            d.device,
+            d.camera_name,
+            d.created_at,
+            d.user_id,
+            u.login AS employee_name
+        FROM detections d
+        LEFT JOIN users u ON u.id = d.user_id
+        ORDER BY d.created_at DESC
+        LIMIT 1000
+    """)
+
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return rows
 
 
 

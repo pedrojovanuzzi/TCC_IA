@@ -1,6 +1,6 @@
 # app/routers/cronjob.py
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from database import get_connection
 from auth import verificar_token
 from datetime import datetime, timedelta
@@ -8,9 +8,12 @@ import re, traceback
 
 router = APIRouter()
 
+# ✅ Inclui o campo 'email'
 class CronJobConfig(BaseModel):
     time: str
     active: bool
+    email: EmailStr
+
 
 def parse_time_string(time_str: str) -> datetime:
     """Converte '10D 2H 30M' → datetime"""
@@ -31,6 +34,7 @@ def parse_time_string(time_str: str) -> datetime:
 
     return datetime.now() + timedelta(**delta_kwargs)
 
+
 @router.post("/cronjob")
 def salvar_cronjob(config: CronJobConfig, token=Depends(verificar_token)):
     if token["nivel"] < 2:
@@ -43,18 +47,29 @@ def salvar_cronjob(config: CronJobConfig, token=Depends(verificar_token)):
         dt_result = parse_time_string(config.time)
         print(f"⏰ Próxima execução agendada para: {dt_result}")
 
+        # Verifica se já existe um registro
         c.execute("SELECT COUNT(*) FROM cronjob")
         existe = c.fetchone()[0]
 
         if existe > 0:
             c.execute(
-                "UPDATE cronjob SET time = %s, active = %s, interval_text = %s",
-                (dt_result.strftime("%Y-%m-%d %H:%M:%S"), int(config.active), config.time)
+                "UPDATE cronjob SET time=%s, active=%s, interval_text=%s, email=%s",
+                (
+                    dt_result.strftime("%Y-%m-%d %H:%M:%S"),
+                    int(config.active),
+                    config.time,
+                    config.email,
+                ),
             )
         else:
             c.execute(
-                "INSERT INTO cronjob (time, active, interval_text) VALUES (%s, %s, %s)",
-                (dt_result.strftime("%Y-%m-%d %H:%M:%S"), int(config.active), config.time)
+                "INSERT INTO cronjob (time, active, interval_text, email) VALUES (%s, %s, %s, %s)",
+                (
+                    dt_result.strftime("%Y-%m-%d %H:%M:%S"),
+                    int(config.active),
+                    config.time,
+                    config.email,
+                ),
             )
 
         conn.commit()
@@ -67,7 +82,6 @@ def salvar_cronjob(config: CronJobConfig, token=Depends(verificar_token)):
         raise HTTPException(500, f"Erro ao salvar configuração: {e}")
 
 
-# GET - Retorna configuração atual do cronjob
 @router.get("/cronjob")
 def listar_cronjob(token=Depends(verificar_token)):
     if token["nivel"] < 2:
@@ -76,18 +90,18 @@ def listar_cronjob(token=Depends(verificar_token)):
     try:
         conn = get_connection()
         c = conn.cursor()
-        c.execute("SELECT time, active, interval_text FROM cronjob LIMIT 1")
+        c.execute("SELECT time, active, interval_text, email FROM cronjob LIMIT 1")
         result = c.fetchone()
         conn.close()
 
-        # Caso não exista nenhum registro ainda
         if not result:
-            return {"time": "", "active": False}
+            return {"time": "", "active": False, "email": ""}
 
-        dt_exec, ativo, intervalo = result
+        dt_exec, ativo, intervalo, email = result
         return {
-            "time": intervalo or "",  # devolve o texto original (ex: "10M 5S")
-            "active": bool(ativo)
+            "time": intervalo or "",
+            "active": bool(ativo),
+            "email": email or "",
         }
 
     except Exception as e:

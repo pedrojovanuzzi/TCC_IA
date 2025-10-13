@@ -6,22 +6,27 @@ import getHostName from "../../../utils/getUrl";
 import Header from "../../components/Header";
 
 export const MonitoringCam = () => {
-  const { id } = useParams();
+  const { id } = useParams(); // ID da câmera na rota
   const navigate = useNavigate();
 
-  const [frame, setFrame] = useState(null); // URL do blob
+  const [frame, setFrame] = useState(null); // URL do frame recebido
   const [camera, setCamera] = useState(null);
   const closedRef = useRef(false);
   const alertedRef = useRef(false);
   const API_URL = getHostName();
   const API_URL_WEBSOCKET = getHostNameSocket();
+  const token = localStorage.getItem("access_token") || ""; // 🔑 token JWT
 
   // Busca metadados da câmera
   useEffect(() => {
     let cancel = false;
     (async () => {
       try {
-        const response = await axios.get(`${API_URL}/cameras/${id}`);
+        const response = await axios.get(`${API_URL}/cameras/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`, // envia o token no GET
+          },
+        });
         if (!cancel) setCamera(response.data);
       } catch (error) {
         console.error("Erro ao buscar dados da câmera:", error);
@@ -35,64 +40,69 @@ export const MonitoringCam = () => {
     return () => {
       cancel = true;
     };
-  }, [id, navigate, API_URL]);
+  }, [id, navigate, API_URL, token]);
 
   // WebSocket
-useEffect(() => {
-  if (!camera) return;
-  let ws;
-  let reconnectTimer;
+  useEffect(() => {
+    if (!camera) return;
+    let ws;
+    let reconnectTimer;
 
-  const connect = () => {
-    ws = new WebSocket(`${API_URL_WEBSOCKET}/ws/camera/${camera.id}`);
-    ws.binaryType = "arraybuffer";
+    const connect = () => {
+      // 🔗 inclui o token JWT como query param
+      const wsUrl = `${API_URL_WEBSOCKET}/ws/camera/${camera.id}?token=${token}`;
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = "arraybuffer";
 
-    closedRef.current = false;
+      closedRef.current = false;
 
-    ws.onmessage = (event) => {
-      if (closedRef.current) return;
+      ws.onopen = () => console.log("📡 WebSocket conectado com sucesso!");
 
-      if (typeof event.data === "string") {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.erro) {
-            console.warn("Erro vindo do backend:", data);
-            return; // só loga, não derruba a tela
+      ws.onmessage = (event) => {
+        if (closedRef.current) return;
+
+        if (typeof event.data === "string") {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.erro) {
+              console.warn("⚠️ Erro vindo do backend:", data);
+              return; // apenas loga, não quebra
+            }
+          } catch (e) {
+            console.error("Erro ao parsear mensagem WS:", e);
           }
-        } catch (e) {
-          console.error("Falha ao parsear mensagem WS:", e);
+        } else {
+          const blob = new Blob([event.data], { type: "image/jpeg" });
+          const url = URL.createObjectURL(blob);
+
+          if (frame) URL.revokeObjectURL(frame);
+          setFrame(url);
         }
-      } else {
-        const blob = new Blob([event.data], { type: "image/jpeg" });
-        const url = URL.createObjectURL(blob);
+      };
 
-        if (frame) URL.revokeObjectURL(frame);
-        setFrame(url);
-      }
+      ws.onerror = (err) => {
+        console.error("❌ Erro no WebSocket:", err);
+        ws.close();
+      };
+
+      ws.onclose = () => {
+        if (closedRef.current) return;
+        console.warn("🔌 WebSocket fechado. Tentando reconectar em 2s...");
+        reconnectTimer = setTimeout(connect, 2000);
+      };
     };
 
-    ws.onerror = (err) => {
-      console.error("Erro no WebSocket:", err);
-      ws.close();
+    connect();
+
+    return () => {
+      closedRef.current = true;
+      if (frame) URL.revokeObjectURL(frame);
+      clearTimeout(reconnectTimer);
+      try {
+        ws && ws.close();
+      } catch {}
     };
-
-    ws.onclose = () => {
-      if (closedRef.current) return;
-      console.warn("WebSocket fechado. Tentando reconectar em 2s...");
-      reconnectTimer = setTimeout(connect, 2000);
-    };
-  };
-
-  connect();
-
-  return () => {
-    closedRef.current = true;
-    if (frame) URL.revokeObjectURL(frame);
-    clearTimeout(reconnectTimer);
-    try { ws && ws.close(); } catch {}
-  };
-}, [camera, API_URL_WEBSOCKET]);
-
+  }, [camera, API_URL_WEBSOCKET, token]);
 
   return (
     <>

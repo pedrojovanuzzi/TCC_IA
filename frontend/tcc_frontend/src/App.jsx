@@ -17,6 +17,7 @@ import AcessoNegado from "./pages/AcessoNegado/AcessoNegado";
 import { Logs } from "./pages/Logs/Logs";
 import Catraca from "./pages/Catraca/Catraca";
 import { CronJob } from "./pages/CronJob/CronJob";
+import { Dashboard } from "./pages/Dashboard/Dashboard";
 export default function App() {
   return (
     <Routes>
@@ -33,6 +34,7 @@ export default function App() {
       <Route path="/camsahi" element={<ProtectedRoute element={<CamSahi />} />} />
       <Route path="/about" element={<About />}/>
       <Route path="/logs" element={<ProtectedRoute element={<Logs />} minPermission={2} />} />
+      <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} minPermission={2} />} />
       <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} minPermission={3} />} />
       <Route path="/users" element={<ProtectedRoute element={<Users />} minPermission={3}  />} />
       <Route path="/catraca" element={<ProtectedRoute element={<Catraca />} minPermission={2}  />} />

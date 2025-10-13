@@ -58,7 +58,21 @@ def verificar_e_enviar_alerta(result, media_path: str):
         <p>Verifique o anexo para mais detalhes.</p>
         """
 
-        destinatario = os.getenv("EMAIL_ALERT_RECEIVER", "seuemail@empresa.com")
+        # 🧩 Busca e-mail do banco de dados do cronjob
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT email FROM cronjob LIMIT 1")
+        row = c.fetchone()
+        conn.close()
+
+        if not row or not row[0]:
+            print("⚠️ Nenhum e-mail configurado no cronjob. Alerta não enviado.")
+            return
+
+        destinatario = row[0].strip()
+        print(f"📨 E-mail do cronjob encontrado: {destinatario}")
+
+        # 🔐 Credenciais SMTP (continuam vindas do .env)
         SMTP_SERVER = os.getenv("SMTP_SERVER")
         SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
         EMAIL_USER = os.getenv("EMAIL_USER")
@@ -81,7 +95,7 @@ def verificar_e_enviar_alerta(result, media_path: str):
             print("⚠️ Arquivo não estava criptografado, enviando como está.")
             media_data = encrypted_data
 
-        # 📩 Monta o e-mail
+        # 🧱 Monta o e-mail
         msg = MIMEMultipart()
         msg["From"] = EMAIL_USER
         msg["To"] = destinatario
@@ -89,7 +103,7 @@ def verificar_e_enviar_alerta(result, media_path: str):
         msg["Subject"] = assunto
         msg.attach(MIMEText(corpo, "html"))
 
-        # 🧩 Detecta tipo MIME (automático)
+        # 🧩 Detecta tipo MIME (imagem/vídeo)
         mime_type, _ = mimetypes.guess_type(media_path)
         if mime_type is None:
             mime_type = "application/octet-stream"
@@ -97,17 +111,10 @@ def verificar_e_enviar_alerta(result, media_path: str):
 
         filename = os.path.basename(media_path)
 
-        # 🔁 Escolhe tipo correto (imagem, vídeo, etc.)
+        # 🔁 Anexa arquivo corretamente
         if main_type == "image":
             from email.mime.image import MIMEImage
             part = MIMEImage(media_data, _subtype=sub_type, name=filename)
-        elif main_type == "video":
-            from email.mime.base import MIMEBase
-            from email import encoders
-            part = MIMEBase(main_type, sub_type)
-            part.set_payload(media_data)
-            encoders.encode_base64(part)
-            part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
         else:
             from email.mime.base import MIMEBase
             from email import encoders
@@ -118,8 +125,8 @@ def verificar_e_enviar_alerta(result, media_path: str):
 
         msg.attach(part)
 
+        # 📤 Envia
         print(f"📡 Enviando alerta via {SMTP_SERVER}:{SMTP_PORT} para {destinatario} ({filename})")
-
         smtp = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         smtp.starttls()
         smtp.login(EMAIL_USER, EMAIL_PASS)
