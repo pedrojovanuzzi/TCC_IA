@@ -103,7 +103,6 @@ export const Dashboard = () => {
   let dadosGrafico = [];
   if (tipoGrafico === "classe") dadosGrafico = agruparPorClasse();
   else if (tipoGrafico === "camera") dadosGrafico = agruparPorCamera();
-  else if (tipoGrafico === "usuario") dadosGrafico = agruparPorUsuario();
 
   // 🔹 Cores dinâmicas
   const getCor = (i) => Object.values(coresPorClasse)[i % 9];
@@ -137,7 +136,6 @@ export const Dashboard = () => {
           >
             <option value="classe">Por Classe Detectada</option>
             <option value="camera">Por Câmera</option>
-            <option value="usuario">Por Funcionário</option>
           </select>
         </div>
 
