@@ -7,10 +7,12 @@ export default function Cam() {
   const [ws, setWs] = useState(null); // conexão websocket
   const [frame, setFrame] = useState(""); // frame recebido
   const API_URL = getHostNameSocket();
+  const token = localStorage.getItem("access_token") || ""
 
   // Conexão WebSocket
   useEffect(() => {
-    const wsUrl = `${API_URL}/ws`;
+    const wsUrl = `${API_URL}/ws?token=${token}`;
+    
     const w = new WebSocket(wsUrl);
 
     w.binaryType = "arraybuffer"; // vamos trabalhar com binário
@@ -70,7 +72,7 @@ export default function Cam() {
           ws.send(blob); // envia o blob binário direto
         }
       }, "image/jpeg", 1);
-    }, 80);
+    }, 60);
 
     return () => clearInterval(interval);
   }, [ws]);
