@@ -118,7 +118,7 @@ export default function About() {
                 <p className="mt-6 text-xl/8 text-gray-600">
                   Nosso modelo é capaz de distinguir, o humano do objeto, se por
                   exemplo, um colaborador retirar seu capacete, uma caixa
-                  vermelha irá aparecer detectando a ausencia dele, isso também
+                  azul escuro irá aparecer detectando a ausencia dele, isso também
                   serve para luvas, sapatos, oculos e talabarte
                 </p>
               </div>

@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
-  PieChart, Pie,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Cell,
+  PieChart,
+  Pie,
 } from "recharts";
 import axios from "axios";
 import Header from "../../components/Header";
@@ -39,8 +48,18 @@ export const Dashboard = () => {
 
   const meses = [
     "Todos",
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
   ];
 
   const CLASSES_SEGURO = ["helmet", "glove", "glasses", "belt", "boots"];
@@ -76,7 +95,10 @@ export const Dashboard = () => {
   const agruparPorClasse = () =>
     Object.values(
       dadosFiltrados.reduce((acc, item) => {
-        acc[item.class_name] = acc[item.class_name] || { nome: item.class_name, valor: 0 };
+        acc[item.class_name] = acc[item.class_name] || {
+          nome: item.class_name,
+          valor: 0,
+        };
         acc[item.class_name].valor++;
         return acc;
       }, {})
@@ -86,7 +108,10 @@ export const Dashboard = () => {
   const agruparPorCamera = () =>
     Object.values(
       dadosFiltrados.reduce((acc, item) => {
-        acc[item.camera_name] = acc[item.camera_name] || { nome: item.camera_name, valor: 0 };
+        acc[item.camera_name] = acc[item.camera_name] || {
+          nome: item.camera_name,
+          valor: 0,
+        };
         acc[item.camera_name].valor++;
         return acc;
       }, {})
@@ -124,7 +149,11 @@ export const Dashboard = () => {
   // 🔹 Agrupa por funcionário
   const dadosCatracaAgrupados = Object.values(
     dadosCatracaFiltrados.reduce((acc, item) => {
-      acc[item.user] = acc[item.user] || { nome: item.user, valor: 0, color: item.color };
+      acc[item.user] = acc[item.user] || {
+        nome: item.user,
+        valor: 0,
+        color: item.color,
+      };
       acc[item.user].valor++;
       return acc;
     }, {})
@@ -146,7 +175,9 @@ export const Dashboard = () => {
     <>
       <Header />
       <div className="min-h-screen bg-gray-200 text-gray-900 p-6 flex flex-col gap-8">
-        <h1 className="text-3xl font-bold text-center text-cyan-600">Painel de Detecções YOLO</h1>
+        <h1 className="text-3xl font-bold text-center text-cyan-600">
+          Painel de Detecções YOLO
+        </h1>
 
         {/* 🔽 Filtros principais */}
         <div className="flex flex-wrap justify-center gap-4 mb-6">
@@ -177,7 +208,9 @@ export const Dashboard = () => {
             {/* 🧩 Gráfico principal */}
             <div className="bg-gray-800 text-white rounded-2xl shadow-md p-6 mx-auto w-full lg:w-2/3">
               <h3 className="text-lg font-semibold mb-4 text-cyan-400 text-center">
-                {tipoGrafico === "classe" ? "Detecções por Classe" : "Detecções por Câmera"}
+                {tipoGrafico === "classe"
+                  ? "Detecções por Classe"
+                  : "Detecções por Câmera"}
               </h3>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
@@ -226,37 +259,102 @@ export const Dashboard = () => {
 
               {/* 🔹 Filtros de data */}
               <div className="flex flex-wrap justify-center gap-3 mb-4">
-                <select className="bg-gray-800 px-3 py-2 rounded" value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)}>
-                  {anos.map((ano) => <option key={ano}>{ano}</option>)}
+                <select
+                  className="bg-gray-800 px-3 py-2 rounded"
+                  value={filtroAno}
+                  onChange={(e) => setFiltroAno(e.target.value)}
+                >
+                  {anos.map((ano) => (
+                    <option key={ano}>{ano}</option>
+                  ))}
                 </select>
-                <select className="bg-gray-800 px-3 py-2 rounded" value={filtroMes} onChange={(e) => setFiltroMes(e.target.value)}>
-                  {mesesFiltro.map((m) => <option key={m}>{m}</option>)}
+                <select
+                  className="bg-gray-800 px-3 py-2 rounded"
+                  value={filtroMes}
+                  onChange={(e) => setFiltroMes(e.target.value)}
+                >
+                  {mesesFiltro.map((m) => (
+                    <option key={m}>{m}</option>
+                  ))}
                 </select>
-                <select className="bg-gray-800 px-3 py-2 rounded" value={filtroDia} onChange={(e) => setFiltroDia(e.target.value)}>
-                  {dias.map((d) => <option key={d}>{d}</option>)}
+                <select
+                  className="bg-gray-800 px-3 py-2 rounded"
+                  value={filtroDia}
+                  onChange={(e) => setFiltroDia(e.target.value)}
+                >
+                  {dias.map((d) => (
+                    <option key={d}>{d}</option>
+                  ))}
                 </select>
-                <select className="bg-gray-800 px-3 py-2 rounded" value={filtroHora} onChange={(e) => setFiltroHora(e.target.value)}>
-                  {horas.map((h) => <option key={h}>{h}</option>)}
+                <select
+                  className="bg-gray-800 px-3 py-2 rounded"
+                  value={filtroHora}
+                  onChange={(e) => setFiltroHora(e.target.value)}
+                >
+                  {horas.map((h) => (
+                    <option key={h}>{h}</option>
+                  ))}
                 </select>
               </div>
 
               {/* 🔹 Gráfico de barras por funcionário */}
               {dadosCatracaAgrupados.length > 0 ? (
                 <div className="h-96">
+                  {/* Container responsivo do gráfico */}
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={dadosCatracaAgrupados}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      data={dadosCatracaAgrupados} // Dados de entrada do gráfico
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }} // Margens
                     >
+                      {/* Grade de fundo */}
                       <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                      <XAxis dataKey="nome" stroke="#fff" tick={{ fontSize: 10 }} />
+
+                      {/* Eixo X com os nomes dos funcionários */}
+                      <XAxis
+                        dataKey="nome"
+                        stroke="#fff"
+                        tick={{ fontSize: 10 }}
+                      />
+
+                      {/* Eixo Y com a contagem de detecções */}
                       <YAxis stroke="#fff" />
-                      <Tooltip contentStyle={{ backgroundColor: "#1f2937" }} />
+
+                      {/* Tooltip (caixa de informação ao passar o mouse) */}
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1f2937",
+                          color: "#fff",
+                          borderRadius: "8px",
+                        }}
+                      />
+
+                      {/* Legenda superior */}
                       <Legend />
-                      <Bar dataKey="valor" fill="white" name="Detecções sem EPI">
-                        {dadosCatracaAgrupados.map((obj, i) => (
-                          <Cell key={i} fill={obj.color || "#FF5555"} />
-                        ))}
+
+                      {/* 🔹 Barras de detecção com cor gerada automaticamente */}
+                      <Bar
+                        dataKey="valor"
+                        fill="white"
+                        name="Detecções sem EPI"
+                      >
+                        {dadosCatracaAgrupados.map((obj, i) => {
+                          // 🔸 Função que gera uma cor única com base no nome (hash simples)
+                          const gerarCor = (str) => {
+                            let hash = 0;
+                            for (let j = 0; j < str.length; j++) {
+                              hash = str.charCodeAt(j) + ((hash << 5) - hash);
+                            }
+                            // Converte hash em cor HSL (hue 0-360)
+                            const h = hash % 360;
+                            return `hsl(${h}, 70%, 55%)`; // Saturação e brilho fixos → cores vibrantes e equilibradas
+                          };
+
+                          // 🔹 Usa a cor específica da classe, se existir; senão gera baseada no nome do usuário
+                          const corFinal = gerarCor(obj.nome);
+
+                          // Cria a célula (barra) com a cor correspondente
+                          return <Cell key={i} fill={corFinal} />;
+                        })}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>

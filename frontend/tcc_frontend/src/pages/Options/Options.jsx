@@ -10,7 +10,7 @@ export default function Options() {
   const navigate = useNavigate();
 
   return (
-    <>
+    <div className="h-screen bg-gray-50">
     <Header />
         <div className="bg-gray-50 py-5">
       <div className="mx-auto max-w-3xl px-6 lg:max-w-7xl lg:px-8">
@@ -155,6 +155,6 @@ export default function Options() {
         </div>
       </div>
     </div>
-    </>
+    </div>
   );
 }
