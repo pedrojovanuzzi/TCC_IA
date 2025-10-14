@@ -177,6 +177,12 @@ export default function About() {
               {/* Confusion Matrix */}
               <section>
                 <h3 className="text-2xl font-semibold text-cyan-600 mb-3">
+                  ℹ️ Introdução
+                </h3>
+                <p className="text-lg mb-6 text-gray-700">
+                O modelo foi treinado utilizando um dataset de 9 mil imagens, a biblioteca YOLO utilizada gera graficos automaticamente com base no dataset e na precisão, com esses gráficos podemos nos guiar e tomar decisoes para melhorar o modelo na aprendizagem.
+                </p>
+                <h3 className="text-2xl font-semibold text-cyan-600 mb-3">
                   📉 Matriz de Confusão Normalizada
                 </h3>
                 <p className="text-lg mb-6 text-gray-700">
