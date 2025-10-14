@@ -232,26 +232,6 @@ export default function About() {
                   className="rounded-2xl shadow-lg w-full"
                 />
               </section>
-
-              {/* Loss & Metrics */}
-              <section>
-                <h3 className="text-2xl font-semibold text-cyan-600 mb-3">
-                  🧩 Evolução das Métricas e Perdas
-                </h3>
-                <p className="text-lg mb-6 text-gray-700">
-                  Cada gráfico representa a evolução das perdas (<b>box_loss</b>
-                  , <b>cls_loss</b>, <b>dfl_loss</b>) e das métricas de
-                  desempenho (<b>precisão</b>, <b>recall</b>, <b>mAP</b>).
-                  Durante o treinamento, as perdas diminuem e as métricas se
-                  estabilizam, indicando convergência do modelo. O mAP50-95
-                  atinge cerca de <b>0.55</b>.
-                </p>
-                <img
-                  src={results}
-                  alt="Gráficos de métricas YOLO"
-                  className="rounded-2xl shadow-lg w-full"
-                />
-              </section>
             </div>
           </div>
         </div>
