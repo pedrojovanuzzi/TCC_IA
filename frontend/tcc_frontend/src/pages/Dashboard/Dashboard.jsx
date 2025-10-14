@@ -127,7 +127,7 @@ export const Dashboard = () => {
     .map((d) => {
       const data = new Date(d.created_at);
       return {
-        user: d.employee_name || `Usuário ${d.user_id || "?"}`,
+        user: d.employee_name || d.name || `Usuário ${d.user_id || "?"}`,
         ano: data.getFullYear(),
         mes: data.getMonth() + 1,
         dia: data.getDate(),

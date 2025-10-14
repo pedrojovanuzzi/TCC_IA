@@ -37,7 +37,7 @@ export default function App() {
       <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} minPermission={2} />} />
       <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} minPermission={3} />} />
       <Route path="/users" element={<ProtectedRoute element={<Users />} minPermission={3}  />} />
-      <Route path="/catraca" element={<ProtectedRoute element={<Catraca />} minPermission={2}  />} />
+      <Route path="/catraca" element={<ProtectedRoute element={<Catraca />} minPermission={1}  />} />
       <Route path="/monitoring" element={<ProtectedRoute element={<Monitoring />} minPermission={2}  />} />
       <Route path="/cronjob" element={<ProtectedRoute element={<CronJob />} minPermission={2}  />} />
       <Route path="/monitoring/:id" element={<ProtectedRoute element={<MonitoringCam />} minPermission={2}  />} />

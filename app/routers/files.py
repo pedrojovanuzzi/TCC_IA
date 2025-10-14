@@ -30,7 +30,7 @@ async def listar_detections(token=Depends(verificar_token)):
             d.camera_name,
             d.created_at,
             d.user_id,
-            u.login AS employee_name
+            u.name AS employee_name
         FROM detections d
         LEFT JOIN users u ON u.id = d.user_id
         ORDER BY d.created_at DESC
