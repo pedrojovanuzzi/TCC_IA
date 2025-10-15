@@ -78,7 +78,7 @@ export default function Cam() {
       });
 
       ws.send(payload);
-    }, 100); // 10 fps
+    }, 80); // 10 fps
 
     return () => clearInterval(interval);
   }, [ws]);
