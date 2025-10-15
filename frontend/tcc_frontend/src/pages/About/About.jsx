@@ -186,12 +186,10 @@ export default function About() {
                   📉 Matriz de Confusão Normalizada
                 </h3>
                 <p className="text-lg mb-6 text-gray-700">
-                  A matriz de confusão mostra o desempenho do modelo em cada
-                  classe. Os valores na diagonal principal representam acertos —
-                  por exemplo, o YOLO identificou corretamente capacetes (
-                  <b>helmet</b>) em 95% dos casos. Já os valores fora da
-                  diagonal representam confusões, ou seja, quando uma classe foi
-                  prevista incorretamente como outra.
+                  Nesse Grafico de matrix de confusão, podemos ver o nivel de precisão das classes e o nivel de erro com relação as outras, por exemplo na classe "boots", ela tem uma precisão de 0.75 ou 75%, Abaixo dela, é possível observar que a classe background — que representa o fundo do ambiente — apresenta uma confusão de 0,24 com a classe boots.
+
+Isso indica que em 24% dos cenarios do dataset o background se confundiu com as botas, esse grafico é muito importante pois ele consegue identificar confusão entre classes e a partir dele corrigir esses problemas durante o treinamento.
+
                 </p>
                 <img
                   src={confusionMatrix}
@@ -206,12 +204,7 @@ export default function About() {
                   📈 Curva F1-Confidence
                 </h3>
                 <p className="text-lg mb-6 text-gray-700">
-                  A curva F1 mede o equilíbrio entre precisão e recall
-                  (sensibilidade). O ponto mais alto indica o melhor limiar de
-                  confiança — neste caso, o modelo alcançou <b>F1 = 0.82</b> com
-                  confiança de <b>0.47</b>. Isso mostra que o YOLO consegue
-                  manter alta precisão mesmo com variações na confiança da
-                  detecção.
+                 Esse grafico indica e nos guia quais classes tiveram bom desempenho, o F1 é a mistura da precisão (Grau de certeza do modelo na detecção) e o recall (Sensibilidade do modelo na detecção), com ele conseguimos saber a precisão do modelo e qual o melhor nivel de sensibilidade precisamos ajustar para ele ter a melhor detecção e ao mesmo tempo ter o menor nivel de falsos positivos.
                 </p>
                 <img
                   src={f1Curve}
@@ -226,11 +219,12 @@ export default function About() {
                   🔍 Distribuição e Posições dos Rótulos
                 </h3>
                 <p className="text-lg mb-6 text-gray-700">
-                  O gráfico apresenta a distribuição das classes no dataset de
-                  treinamento. É possível observar quais EPIs aparecem com maior
-                  frequência — como <b>hands</b> e <b>helmet</b> — além da
-                  distribuição espacial (posição dos objetos e tamanhos nas
-                  imagens).
+                  No gráfico Labels podemos ver outras observações importantes, em instances podemos ver quantas vezes as classes foram detectadas nas imagens, e quais classes tem mais intancias do que outras.
+
+                  as classes com mais instancias geralmente significam que tem mais precisão, mas nem sempre podemos levar isso como regra.
+
+                  Outra observação interessante são esses heatmaps, e cubos, ambos indicam a região media onde os objetos são detectados.
+
                 </p>
                 <img
                   src={labels}
