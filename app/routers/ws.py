@@ -162,7 +162,7 @@ async def ws_root(websocket: WebSocket):
                         cur = conn.cursor()
 
                         # 🔹 Cria um registro para cada detecção do frame atual
-                        for box in results.boxes:
+                        for box in sorted(results.boxes, key=lambda b: float(b.conf[0]), reverse=True):
                             x1, y1, x2, y2 = map(int, box.xyxy[0])
                             cls_name = results.names[int(box.cls[0])]
                             conf = float(box.conf[0])
