@@ -95,9 +95,10 @@ export default function Cam() {
               className="rounded-sm h-[80vh] sm:h-[90vh] ring-1 ring-black"
             />
           ) : (
-            <h1 className="text-3xl font-semibold text-gray-500">
-              Vídeo ainda não iniciado
-            </h1>
+             
+              <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10 rounded">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-cyan-500"></div>
+              </div>
           )}
           <video ref={videoRef} style={{ display: "none" }} autoPlay />
         </div>

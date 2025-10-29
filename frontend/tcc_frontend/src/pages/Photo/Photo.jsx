@@ -138,7 +138,9 @@ export default function Photo() {
             onDrop={handleDrop}
           >
             {loading ? (
-              <p className="text-gray-600">Processando...</p>
+              <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10 rounded">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-cyan-500"></div>
+              </div>
             ) : (
               <>
                 <svg

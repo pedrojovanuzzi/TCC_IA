@@ -81,7 +81,9 @@ export default function Video() {
           onDrop={handleDrop}
         >
           <span className="text-gray-600">
-            {uploading ? "Processando..." : "Clique ou arraste um vídeo aqui"}
+            {uploading ? <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10 rounded">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-cyan-500"></div>
+              </div> : "Clique ou arraste um vídeo aqui"}
           </span>
         </div>
 
