@@ -12,7 +12,6 @@ export const MonitoringCam = () => {
   const [frame, setFrame] = useState(null);
   const [camera, setCamera] = useState(null);
   const [fallback, setFallback] = useState(false);
-  const [timestamp, setTimestamp] = useState("");
   const closedRef = useRef(false);
   const alertedRef = useRef(false);
   const retryRef = useRef(0);
@@ -27,23 +26,7 @@ export const MonitoringCam = () => {
     retryRef.current = 0;
   }, [id]);
 
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-      const dia = String(now.getDate()).padStart(2, "0");
-      const mes = String(now.getMonth() + 1).padStart(2, "0");
-      const ano = now.getFullYear();
-      const hora = String(now.getHours()).padStart(2, "0");
-      const min = String(now.getMinutes()).padStart(2, "0");
-      const seg = String(now.getSeconds()).padStart(2, "0");
-      const diaSemana = dias[now.getDay()];
-      setTimestamp(`${dia}-${mes}-${ano} ${hora}:${min}:${seg} ${diaSemana}`);
-    };
-    const timer = setInterval(updateTime, 1000);
-    updateTime();
-    return () => clearInterval(timer);
-  }, []);
+
 
   useEffect(() => {
     let cancel = false;
