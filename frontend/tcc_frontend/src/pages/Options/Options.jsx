@@ -73,32 +73,7 @@ export default function Options() {
             </div>
             <div className="pointer-events-none absolute inset-px  shadow ring-1 ring-black/5 "></div>
           </div>
-          <div className="relative max-lg:row-start-1 row-span-2">
-            <div className="absolute inset-px  bg-white "></div>
-            <div className="relative flex h-full flex-col overflow-hidden  ">
-              <div className="px-8 pt-8 sm:px-10 sm:pt-10">
-                <p className="mt-2 text-lg font-medium tracking-tight text-gray-950 max-lg:text-center">
-                  Monitoramento
-                </p>
-                <p className="mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center">
-                  Vizualize, Adicione, Modifique ou Remova Câmeras de Monitoramento
-                </p>
-              </div>
-              <button
-                type="button"
-                className="mt-5 px-20 py-5 sm:w-1/2 self-center cursor-pointer  bg-indigo-500 sm:px-3 sm:py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
-                onClick={() => {
-                  navigate("/monitoring");
-                }}
-              >
-                Acessar
-              </button>
-              <div className="flex flex-1 items-center justify-center px-8 max-lg:pb-12 max-lg:pt-10 mt-4 sm:px-10 lg:pb-2">
-                <img className="w-32 sm:w-44 lg:w-full max-lg:max-w-xs" src={precision} alt="" />
-              </div>
-            </div>
-            <div className="pointer-events-none absolute inset-px  shadow ring-1 ring-black/5 "></div>
-          </div>
+          
           <div className="relative max-lg:row-start-1 row-span-2">
             <div className="absolute inset-px  bg-white "></div>
             <div className="relative flex h-full flex-col overflow-hidden  ">
@@ -151,6 +126,32 @@ export default function Options() {
               </div>
             </div>
             <div className="pointer-events-none absolute inset-px  shadow ring-1 ring-black/5  "></div>
+          </div>
+          <div className="relative max-lg:row-start-1 row-span-2">
+            <div className="absolute inset-px  bg-white "></div>
+            <div className="relative flex h-full flex-col overflow-hidden  ">
+              <div className="px-8 pt-8 sm:px-10 sm:pt-10">
+                <p className="mt-2 text-lg font-medium tracking-tight text-gray-950 max-lg:text-center">
+                  Monitoramento
+                </p>
+                <p className="mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center">
+                  Vizualize, Adicione, Modifique ou Remova Câmeras de Monitoramento
+                </p>
+              </div>
+              <button
+                type="button"
+                className="mt-5 px-20 py-5 sm:w-1/2 self-center cursor-pointer  bg-indigo-500 sm:px-3 sm:py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                onClick={() => {
+                  navigate("/monitoring");
+                }}
+              >
+                Acessar
+              </button>
+              <div className="flex flex-1 items-center justify-center px-8 max-lg:pb-12 max-lg:pt-10 mt-4 sm:px-10 lg:pb-2">
+                <img className="w-32 sm:w-44 lg:w-full max-lg:max-w-xs" src={precision} alt="" />
+              </div>
+            </div>
+            <div className="pointer-events-none absolute inset-px  shadow ring-1 ring-black/5 "></div>
           </div>
         </div>
       </div>

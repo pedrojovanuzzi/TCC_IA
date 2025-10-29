@@ -109,8 +109,16 @@ export const MonitoringCam = () => {
           retryRef.current = 0;
           const blob = new Blob([event.data], { type: "image/jpeg" });
           const url = URL.createObjectURL(blob);
-          if (frame) URL.revokeObjectURL(frame);
-          setFrame(url);
+
+          // 🧠 Pré-carrega o frame antes de trocar a imagem (evita "piscar")
+          const img = new Image();
+          img.onload = () => {
+            setFrame((prev) => {
+              if (prev) URL.revokeObjectURL(prev);
+              return url;
+            });
+          };
+          img.src = url;
         }
       };
 
@@ -141,6 +149,78 @@ export const MonitoringCam = () => {
     };
   }, [camera, API_URL_WEBSOCKET, token]);
 
+  useEffect(() => {
+    if (!fallback) return; // só roda no modo fallback
+
+    const video = document.createElement("video");
+    video.src = "/1029.mp4";
+    video.autoplay = true;
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+
+    // Força o navegador a manter o vídeo ativo
+    document.body.appendChild(video);
+    video.style.position = "absolute";
+    video.style.left = "-9999px";
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const wsUrl = `${API_URL_WEBSOCKET}/ws?token=${token}`;
+    const ws = new WebSocket(wsUrl);
+    ws.binaryType = "arraybuffer";
+    wsRef.current = ws;
+
+    ws.onopen = () => console.log("🎥 WebSocket fallback conectado");
+
+    ws.onmessage = (event) => {
+      const blob = new Blob([event.data], { type: "image/jpeg" });
+      const url = URL.createObjectURL(blob);
+      // Atualiza imagem no estado React → re-renderiza <img>
+      setFrame((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
+    };
+
+    ws.onerror = (err) => console.error("Erro WS fallback:", err);
+    ws.onclose = () => console.log("❌ WS fallback fechado");
+
+    let rafId;
+    const sendFrame = () => {
+      if (video.readyState >= 2 && ws.readyState === WebSocket.OPEN) {
+        // Desenha frame atual
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Converte para base64 e envia
+        const frameB64 = canvas.toDataURL("image/jpeg").split(",")[1];
+        ws.send(
+          JSON.stringify({
+            camera_name: "demo_apresentacao",
+            frame: frameB64,
+          })
+        );
+      }
+      // Mantém loop constante (30 fps ~ 33ms)
+      rafId = setTimeout(sendFrame, 33);
+    };
+
+    video.addEventListener("play", () => {
+      console.log("🎞️ Vídeo fallback iniciado");
+      sendFrame();
+    });
+
+    video.play().catch((err) => console.error("Erro ao tocar vídeo:", err));
+
+    return () => {
+      clearTimeout(rafId);
+      ws.close();
+      video.remove();
+    };
+  }, [fallback, API_URL_WEBSOCKET, token]);
+
   return (
     <>
       <Header />
@@ -149,22 +229,32 @@ export const MonitoringCam = () => {
           Visualizando: {camera?.name || "..."}
         </h2>
 
-        {fallback && 
-        <>
-        <h1 className="text-2xl font-bold mb-2">Fallback Para Apresentação</h1>
-        </>
-        }
+        {fallback && (
+          <>
+            <h1 className="text-2xl font-bold mb-2">
+              Fallback Para Apresentação
+            </h1>
+          </>
+        )}
 
         <div className="relative sm:w-1/2">
           {fallback ? (
-            <><video
-              src="/1029.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              controls={false}
-              className="rounded border object-cover w-full" /></>
+            <>
+              <div className="w-full flex flex-col items-center">
+                <h3 className="text-lg mb-2">
+                  🎬 Simulação ao vivo (vídeo processado)
+                </h3>
+                {frame ? (
+                  <img
+                    src={frame}
+                    alt="Frame processado"
+                    className="rounded border object-cover w-full"
+                  />
+                ) : (
+                  <p className="text-center">🔄 Iniciando simulação...</p>
+                )}
+              </div>
+            </>
           ) : frame ? (
             <img
               src={frame}
@@ -174,8 +264,6 @@ export const MonitoringCam = () => {
           ) : (
             <p className="text-center">🔄 Tentando conectar à câmera...</p>
           )}
-
-          
         </div>
       </div>
     </>
