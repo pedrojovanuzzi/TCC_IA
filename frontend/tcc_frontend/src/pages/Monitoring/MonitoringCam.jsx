@@ -151,7 +151,7 @@ export const MonitoringCam = () => {
 
         {fallback && 
         <>
-        <h1 className="text-2xl mb-2">Fallback Para Apresentação</h1>
+        <h1 className="text-2xl font-bold mb-2">Fallback Para Apresentação</h1>
         </>
         }
 
