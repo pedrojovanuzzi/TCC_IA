@@ -111,6 +111,7 @@ export const MonitoringCam = () => {
       setFallback(false);
 
       ws.onopen = () => console.log(`📡 WebSocket tentativa ${retryRef.current + 1}/1 conectada.`);
+      
 
       ws.onmessage = (event) => {
         if (closedRef.current) return;
