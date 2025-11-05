@@ -1,418 +1,418 @@
-import asyncio  # utilitários assíncronos
-from datetime import datetime  # datas/horas para timestamps
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect  # roteador e tipos de WebSocket
-from fastapi.websockets import WebSocketState  # enum de estados do WebSocket
-import numpy as np  # arrays (para decodificar imagem)
+import asyncio
+from datetime import datetime
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi.websockets import WebSocketState
+import numpy as np
 
-from app.auth import verificar_token  # valida token JWT (versão app.auth)
-from app.utils import enviar_email_em_background, verificar_e_enviar_alerta  # e-mail/alerta utilitários
-from ..database import get_connection  # conexão com banco (import relativo)
-from ..config import CONFIDENCE, MODEL_PATH, MODEL_PATH_LONG_DISTANCE, IOU, IMG_REAL_TIME_DIR, CORES_CLASSES, IMG_SIZE, ENCRYPTION_KEY  # configs do modelo e paths
-from ultralytics import YOLO  # modelo YOLO
-from cryptography.fernet import Fernet  # criptografia simétrica (Fernet)
-import torch, cv2, json, os, time, base64  # GPU/visão/JSON/SO/tempo/Base64
-from functools import lru_cache  # cache de função (memoization)
-import os, cv2, time, json, base64, asyncio, multiprocessing as mp  # imports redundantes conforme original
-from multiprocessing.synchronize import Event as MpEvent  # tipo Event do multiprocessing
+from app.auth import verificar_token
+from app.utils import enviar_email_em_background, verificar_e_enviar_alerta
+from ..database import get_connection
+from ..config import CONFIDENCE, MODEL_PATH, MODEL_PATH_LONG_DISTANCE, IOU, IMG_REAL_TIME_DIR, CORES_CLASSES, IMG_SIZE, ENCRYPTION_KEY
+from ultralytics import YOLO
+from cryptography.fernet import Fernet
+import torch, cv2, json, os, time, base64
+from functools import lru_cache
+import os, cv2, time, json, base64, asyncio, multiprocessing as mp
+from multiprocessing.synchronize import Event as MpEvent
 
-router = APIRouter()  # instancia roteador FastAPI
-fernet = Fernet(ENCRYPTION_KEY)  # inicializa cifrador com chave
+router = APIRouter()
+fernet = Fernet(ENCRYPTION_KEY)
 
-READ_IDLE_TIMEOUT = 20.0   # segundos sem frame -> encerra  # timeout de leitura
-QUEUE_MAXSIZE = 2         # evita backlog/latência  # tamanho máximo da fila
+READ_IDLE_TIMEOUT = 20.0   # segundos sem frame -> encerra
+QUEUE_MAXSIZE = 2         # evita backlog/latência
 
-@lru_cache(maxsize=1)  # mantém instância do modelo em cache
-def get_model(x: int = 0):  # seleciona pesos conforme x
-    if(x == 1):  # usa modelo de longa distância
-        print('Modelo Large')  # log
-        return YOLO(MODEL_PATH_LONG_DISTANCE)  # carrega pesos long distance
-    else:  # caso padrão
-        print('Modelo Medium')  # log
-        return YOLO(MODEL_PATH)  # carrega pesos medium
+@lru_cache(maxsize=1)
+def get_model(x: int = 0):
+    if(x == 1):
+        print('Modelo Large')
+        return YOLO(MODEL_PATH_LONG_DISTANCE)
+    else:
+        print('Modelo Medium')
+        return YOLO(MODEL_PATH)
     
 
-def draw_label(img, text, x, y, color):  # desenha fundo e texto no frame
-    font = cv2.FONT_HERSHEY_SIMPLEX  # fonte do texto
-    scale = IOU  # escala do texto (reutiliza IOU)
-    thickness = 1  # espessura do texto
-    (w, h), _ = cv2.getTextSize(text, font, scale, thickness)  # mede texto
-    cv2.rectangle(img, (x, y - h - 4), (x + w + 4, y), color, -1)  # retângulo de fundo
-    cv2.putText(img, text, (x + 2, y - 2), font, scale, (0, 0, 0), thickness)  # escreve texto
+def draw_label(img, text, x, y, color):
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    scale = IOU
+    thickness = 1
+    (w, h), _ = cv2.getTextSize(text, font, scale, thickness)
+    cv2.rectangle(img, (x, y - h - 4), (x + w + 4, y), color, -1)
+    cv2.putText(img, text, (x + 2, y - 2), font, scale, (0, 0, 0), thickness)
 
-@router.websocket("/ws")  # endpoint WS para frames base64
-async def ws_root(websocket: WebSocket):  # handler do websocket
-    await websocket.accept()  # aceita conexão
+@router.websocket("/ws")
+async def ws_root(websocket: WebSocket):
+    await websocket.accept()
 
     # 🔐 Autenticação via token
-    token = websocket.query_params.get("token")  # lê token da querystring
-    if not token:  # sem token
-        await websocket.close()  # fecha WS
-        return  # encerra
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close()
+        return
     
     try:
-        user = verificar_token(token)  # valida token e extrai payload
-        user_id = user["user_id"]  # id do usuário autenticado
-        print(f"✅ WebSocket autenticado: user_id={user_id}")  # log
+        user = verificar_token(token)
+        user_id = user["user_id"]
+        print(f"✅ WebSocket autenticado: user_id={user_id}")
     except Exception as e:
-        print(f"❌ Erro ao validar token: {e}")  # log erro
-        await websocket.close()  # fecha WS
-        return  # encerra
+        print(f"❌ Erro ao validar token: {e}")
+        await websocket.close()
+        return
 
     # 🔧 Configuração do modelo
-    model = get_model()  # obtém modelo em cache
-    device = "cuda" if torch.cuda.is_available() else "cpu"  # escolhe GPU/CPU
-    CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}  # classes seguras
+    model = get_model()
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}
 
     # ⏱️ Controle de alerta e gravação
-    alert_start = None  # início do risco
-    last_email_sent_at = 0.0  # último envio de e-mail
-    duracao_limite = 5.0  # risco contínuo mínimo
-    cooldown_envio = 10.0  # intervalo entre e-mails
-    tempo_seguro_inicio = None  # início de período seguro
-    tempo_limite_seguro = 0  # janela para normalização
-    ultimo_persist = time.time()  # controle de persistência
-    intervalo_segundos = 10.0  # Salvar a cada 10 segundos  # período de persistência
+    alert_start = None
+    last_email_sent_at = 0.0
+    duracao_limite = 5.0
+    cooldown_envio = 10.0
+    tempo_seguro_inicio = None
+    tempo_limite_seguro = 0
+    ultimo_persist = time.time()
+    intervalo_segundos = 10.0  # Salvar a cada 10 segundos
 
     try:
-        while websocket.client_state == WebSocketState.CONNECTED:  # loop enquanto conectado
+        while websocket.client_state == WebSocketState.CONNECTED:
              # 📦 Recebe o pacote JSON enviado do frontend
-            message = await websocket.receive_text()  # lê string JSON
+            message = await websocket.receive_text()
 
             # Converte o texto em dicionário
-            data = json.loads(message)  # parse JSON
+            data = json.loads(message)
 
             # Extrai o nome da câmera e o frame
-            camera_name = data.get("camera_name", "cam_desconhecida")  # nome da câmera
-            frame_b64 = data.get("frame")  # frame em base64
+            camera_name = data.get("camera_name", "cam_desconhecida")
+            frame_b64 = data.get("frame")
 
             # ❗ Se não houver frame, ignora este ciclo
-            if not frame_b64:  # sem frame
-                continue  # próximo loop
+            if not frame_b64:
+                continue
 
             # 🔄 Decodifica imagem Base64 → bytes → OpenCV Mat
-            frame_bytes = base64.b64decode(frame_b64)  # base64 -> bytes
-            img = cv2.imdecode(np.frombuffer(frame_bytes, np.uint8), cv2.IMREAD_COLOR)  # bytes -> imagem
+            frame_bytes = base64.b64decode(frame_b64)
+            img = cv2.imdecode(np.frombuffer(frame_bytes, np.uint8), cv2.IMREAD_COLOR)
 
             # 🎯 YOLO detecta objetos
-            results = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE)[0]  # inferência
-            classes_detectadas = {results.names[int(b.cls[0])] for b in results.boxes}  # classes no frame
-            classes_perigosas = {c for c in classes_detectadas if c not in CLASSES_SEGURO}  # não seguras
+            results = model.predict(img, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE)[0]
+            classes_detectadas = {results.names[int(b.cls[0])] for b in results.boxes}
+            classes_perigosas = {c for c in classes_detectadas if c not in CLASSES_SEGURO}
 
             # 🔲 Desenha boxes na imagem
-            for box in results.boxes:  # itera detecções
-                x1, y1, x2, y2 = map(int, box.xyxy[0])  # bbox
-                cls_id = int(box.cls[0])  # id da classe
-                cls_name = results.names[cls_id]  # nome da classe
-                conf = float(box.conf[0])  # confiança
-                color = CORES_CLASSES.get(cls_name, (255, 255, 255))  # cor por classe
-                cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)  # desenha box
-                draw_label(img, f"{cls_name}:{conf:.2f}", x1, y1, color)  # escreve rótulo
+            for box in results.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                cls_id = int(box.cls[0])
+                cls_name = results.names[cls_id]
+                conf = float(box.conf[0])
+                color = CORES_CLASSES.get(cls_name, (255, 255, 255))
+                cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
+                draw_label(img, f"{cls_name}:{conf:.2f}", x1, y1, color)
 
-            agora = time.time()  # timestamp atual
+            agora = time.time()
 
             # ⚠️ Controle de alertas persistentes
-            if classes_perigosas:  # se há risco
-                tempo_seguro_inicio = None  # reseta seguro
-                if alert_start is None:  # inicia medição
-                    alert_start = agora  # marca início
-                tempo_risco = agora - alert_start  # duração do risco
-                pode_enviar_primeiro = tempo_risco >= duracao_limite  # passou limiar?
-                pode_reenviar = (last_email_sent_at == 0.0) or ((agora - last_email_sent_at) >= cooldown_envio)  # cooldown
-                if pode_enviar_primeiro and pode_reenviar:  # envia alerta
-                    os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)  # garante pasta
-                    alert_path = os.path.join(IMG_REAL_TIME_DIR, f"alerta_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg")  # nomeia arquivo
-                    ok, buf = cv2.imencode(".jpg", img)  # codifica JPEG
-                    if ok:  # sucesso
-                        with open(alert_path, "wb") as f:  # abre arquivo
-                            f.write(fernet.encrypt(buf.tobytes()))  # grava cifrado
+            if classes_perigosas:
+                tempo_seguro_inicio = None
+                if alert_start is None:
+                    alert_start = agora
+                tempo_risco = agora - alert_start
+                pode_enviar_primeiro = tempo_risco >= duracao_limite
+                pode_reenviar = (last_email_sent_at == 0.0) or ((agora - last_email_sent_at) >= cooldown_envio)
+                if pode_enviar_primeiro and pode_reenviar:
+                    os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
+                    alert_path = os.path.join(IMG_REAL_TIME_DIR, f"alerta_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg")
+                    ok, buf = cv2.imencode(".jpg", img)
+                    if ok:
+                        with open(alert_path, "wb") as f:
+                            f.write(fernet.encrypt(buf.tobytes()))
                         try:
-                            enviar_email_em_background(results, alert_path)  # e-mail em background
-                            last_email_sent_at = agora  # atualiza cooldown
-                            await _safe_ws_send_text(websocket, {  # notifica cliente
+                            enviar_email_em_background(results, alert_path)
+                            last_email_sent_at = agora
+                            await _safe_ws_send_text(websocket, {
                                 "alerta": True,
                                 "mensagem": f"🚨 Alerta detectado ({', '.join(classes_perigosas)})"
-                            })  # fim payload
+                            })
                         except Exception as e:
-                            print("❌ Falha ao enviar e-mail de alerta:", e)  # log erro
-            else:  # sem risco
-                alert_start = None  # reseta medição
-                if tempo_seguro_inicio is None:  # inicia seguro
-                    tempo_seguro_inicio = agora  # marca início
-                elif (agora - tempo_seguro_inicio) >= tempo_limite_seguro:  # já normalizou
-                    last_email_sent_at = 0.0  # zera cooldown
-                    tempo_seguro_inicio = None  # reseta
-                    await _safe_ws_send_text(websocket, {  # avisa normalização
+                            print("❌ Falha ao enviar e-mail de alerta:", e)
+            else:
+                alert_start = None
+                if tempo_seguro_inicio is None:
+                    tempo_seguro_inicio = agora
+                elif (agora - tempo_seguro_inicio) >= tempo_limite_seguro:
+                    last_email_sent_at = 0.0
+                    tempo_seguro_inicio = None
+                    await _safe_ws_send_text(websocket, {
                         "alerta": False,
                         "mensagem": "✅ Situação normalizada"
-                    })  # fim payload
+                    })
 
             # 💾 Grava todas as detecções a cada 10 s
-            if (agora - ultimo_persist) >= intervalo_segundos:  # checa janela
+            if (agora - ultimo_persist) >= intervalo_segundos:
                 try:
-                    os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)  # garante pasta
-                    snap_name = f"ws_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"  # nome snapshot
-                    snap_path = os.path.join(IMG_REAL_TIME_DIR, snap_name)  # caminho snapshot
+                    os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
+                    snap_name = f"ws_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"
+                    snap_path = os.path.join(IMG_REAL_TIME_DIR, snap_name)
 
-                    ok, buf = cv2.imencode(".jpg", img)  # codifica JPEG
-                    if ok:  # sucesso
-                        with open(snap_path, "wb") as f:  # abre arquivo
-                            f.write(fernet.encrypt(buf.tobytes()))  # grava cifrado
+                    ok, buf = cv2.imencode(".jpg", img)
+                    if ok:
+                        with open(snap_path, "wb") as f:
+                            f.write(fernet.encrypt(buf.tobytes()))
 
-                        conn = get_connection()  # abre conexão BD
-                        cur = conn.cursor()  # cria cursor
+                        conn = get_connection()
+                        cur = conn.cursor()
 
                         # 🔹 Cria um registro para cada detecção do frame atual
-                        for box in sorted(results.boxes, key=lambda b: float(b.conf[0]), reverse=True):  # ordena por conf
-                            x1, y1, x2, y2 = map(int, box.xyxy[0])  # bbox
-                            cls_name = results.names[int(box.cls[0])]  # classe
-                            conf = float(box.conf[0])  # confiança
-                            cur.execute("""  # insere detecção
+                        for box in sorted(results.boxes, key=lambda b: float(b.conf[0]), reverse=True):
+                            x1, y1, x2, y2 = map(int, box.xyxy[0])
+                            cls_name = results.names[int(box.cls[0])]
+                            conf = float(box.conf[0])
+                            cur.execute("""
                             INSERT INTO detections
                             (user_id, image_name, image_path, class_name, confidence, x1, y1, x2, y2, device, model_name, camera_name)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """, (
-                            user_id,          # ID do usuário logado (via token)  # parâmetro
-                            snap_name,        # nome da imagem (ex: ws_2025-10-13_12-00-00.jpg)  # parâmetro
-                            snap_path,        # caminho criptografado  # parâmetro
-                            cls_name,         # classe detectada (ex: helmet)  # parâmetro
-                            conf,             # confiança da detecção  # parâmetro
-                            x1, y1, x2, y2,   # coordenadas do objeto detectado  # parâmetro
-                            device,           # CPU ou GPU usada  # parâmetro
-                            "YOLO",           # modelo  # parâmetro
-                            camera_name     # 🔸 nome da câmera ("cam_ws", por exemplo)  # parâmetro
-                        ))  # fim execute
+                            user_id,          # ID do usuário logado (via token)
+                            snap_name,        # nome da imagem (ex: ws_2025-10-13_12-00-00.jpg)
+                            snap_path,        # caminho criptografado
+                            cls_name,         # classe detectada (ex: helmet)
+                            conf,             # confiança da detecção
+                            x1, y1, x2, y2,   # coordenadas do objeto detectado
+                            device,           # CPU ou GPU usada
+                            "YOLO",           # modelo
+                            camera_name     # 🔸 nome da câmera ("cam_ws", por exemplo)
+                        ))
 
-                        conn.commit()  # commit
-                        cur.close()  # fecha cursor
-                        conn.close()  # fecha conexão
+                        conn.commit()
+                        cur.close()
+                        conn.close()
 
-                        print(f"💾 {len(results.boxes)} detecções salvas ({snap_name})")  # log persistência
+                        print(f"💾 {len(results.boxes)} detecções salvas ({snap_name})")
 
-                    ultimo_persist = agora  # atualiza marcador
+                    ultimo_persist = agora
                 except Exception as e:
-                    print(f"❌ Erro ao salvar detecções: {e}")  # log erro
+                    print(f"❌ Erro ao salvar detecções: {e}")
 
             # 🔁 Envia frame processado de volta
-            ok, buf = cv2.imencode(".jpg", img)  # codifica imagem
-            if ok:  # sucesso
-                await websocket.send_bytes(buf.tobytes())  # envia bytes JPEG
+            ok, buf = cv2.imencode(".jpg", img)
+            if ok:
+                await websocket.send_bytes(buf.tobytes())
 
-            await asyncio.sleep(0.02)  # pequena pausa (limita CPU)
+            await asyncio.sleep(0.02)
 
     except WebSocketDisconnect:
-        print("🔌 WebSocket desconectado.")  # log desconexão
+        print("🔌 WebSocket desconectado.")
     finally:
-        if websocket.application_state == WebSocketState.CONNECTED:  # se ainda conectado
-            await websocket.close()  # fecha WS
+        if websocket.application_state == WebSocketState.CONNECTED:
+            await websocket.close()
 
 
 
-async def _safe_ws_send_text(ws: WebSocket, payload: dict):  # envia texto ao WS se conectado
-    if ws.application_state == WebSocketState.CONNECTED:  # verifica estado
-        await ws.send_text(json.dumps(payload))  # envia JSON como texto
+async def _safe_ws_send_text(ws: WebSocket, payload: dict):
+    if ws.application_state == WebSocketState.CONNECTED:
+        await ws.send_text(json.dumps(payload))
 
-def capture_proc(ip: str, q: mp.Queue, stop: MpEvent = mp.Event()):  # processo separado para capturar frames
-    """Roda em PROCESSO separado. Lê frames e joga na fila."""  # docstring da função
-    cap = cv2.VideoCapture(ip, cv2.CAP_FFMPEG)  # abre stream com backend FFMPEG
+def capture_proc(ip: str, q: mp.Queue, stop: MpEvent = mp.Event()):
+    """Roda em PROCESSO separado. Lê frames e joga na fila."""
+    cap = cv2.VideoCapture(ip, cv2.CAP_FFMPEG)
 
     # Tenta aplicar timeouts nativos (OpenCV >= 4.8/4.9 + FFMPEG build)
     try:
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # reduz buffer interno
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         # Se sua build suportar:
-        cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000)   # 5s para abrir  # timeout de abertura
-        cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000)   # 5s por leitura  # timeout de leitura
+        cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000)   # 5s para abrir
+        cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000)   # 5s por leitura
     except Exception:
-        pass  # ignora se não suportado
+        pass
 
-    last_put = 0.0  # último envio à fila
+    last_put = 0.0
     try:
-        while not stop.is_set():  # roda até sinal de parada
-            ret, frame = cap.read()  # lê frame da câmera
-            if not ret:  # falha/queda do stream
+        while not stop.is_set():
+            ret, frame = cap.read()
+            if not ret:
                 # pequena espera para evitar tight loop quando o stream cai
-                time.sleep(0.05)  # dorme 50ms
-                continue  # tenta de novo
+                time.sleep(0.05)
+                continue
 
             # Mantém no máx 1-2 itens na fila (drop de frames antigos)
-            if q.qsize() >= QUEUE_MAXSIZE:  # fila cheia
+            if q.qsize() >= QUEUE_MAXSIZE:
                 try:
-                    q.get_nowait()  # descarta o mais antigo
+                    q.get_nowait()
                 except Exception:
-                    pass  # ignora falha
+                    pass
             try:
-                q.put_nowait(frame)  # insere frame atual
-                last_put = time.time()  # atualiza timestamp
+                q.put_nowait(frame)
+                last_put = time.time()
             except Exception:
                 # fila cheia inesperadamente
-                time.sleep(0.01)  # espera 10ms e tenta novamente
+                time.sleep(0.01)
     finally:
-        cap.release()  # libera recursos de captura
+        cap.release()
 
 
-@router.websocket("/ws/camera/{camera_id}")  # endpoint WS por câmera cadastrada
-async def ws_cam(ws: WebSocket, camera_id: int):  # handler de WS da câmera
-    await ws.accept()  # aceita conexão
+@router.websocket("/ws/camera/{camera_id}")
+async def ws_cam(ws: WebSocket, camera_id: int):
+    await ws.accept()
 
     # 🔒 Token via query string
-    token = ws.query_params.get("token")  # obtém token
-    if not token:  # sem token
-        print("❌ Nenhum token recebido.")  # log
-        await ws.close()  # fecha WS
-        return  # encerra
+    token = ws.query_params.get("token")
+    if not token:
+        print("❌ Nenhum token recebido.")
+        await ws.close()
+        return
 
     # ✅ Verifica o token manualmente
     try:
-        user = verificar_token(token)  # valida token
-        user_id = user["user_id"]  # id do usuário
-        print(f"🔑 Token válido — user_id={user_id}")  # log
+        user = verificar_token(token)
+        user_id = user["user_id"]
+        print(f"🔑 Token válido — user_id={user_id}")
     except Exception as e:
-        print(f"❌ Token inválido: {e}")  # log erro
-        await ws.close()  # fecha WS
-        return  # encerra
+        print(f"❌ Token inválido: {e}")
+        await ws.close()
+        return
 
     # 🔍 Busca IP e nome da câmera
-    conn = get_connection()  # abre conexão
-    c = conn.cursor()  # cursor
-    c.execute("SELECT ip, name FROM cameras WHERE id=%s", (camera_id,))  # consulta câmera
-    row = c.fetchone()  # obtém resultado
-    conn.close()  # fecha conexão
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT ip, name FROM cameras WHERE id=%s", (camera_id,))
+    row = c.fetchone()
+    conn.close()
 
-    if not row:  # câmera não encontrada
-        await _safe_ws_send_text(ws, {"erro": "Câmera não encontrada"})  # notifica
-        await ws.close()  # fecha WS
-        return  # encerra
+    if not row:
+        await _safe_ws_send_text(ws, {"erro": "Câmera não encontrada"})
+        await ws.close()
+        return
 
-    ip, camera_name = row  # IP e nome da câmera
+    ip, camera_name = row
 
-    model = get_model(1)  # usa modelo long distance
-    device = "cuda" if torch.cuda.is_available() else "cpu"  # escolhe dispositivo
+    model = get_model(1)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # 🎥 Captura em processo separado
-    q: mp.Queue = mp.Queue(maxsize=QUEUE_MAXSIZE)  # fila de frames
-    stop = mp.Event()  # evento de parada
-    proc = mp.Process(target=capture_proc, args=(ip, q, stop), daemon=True)  # processo de captura
-    proc.start()  # inicia processo
+    q: mp.Queue = mp.Queue(maxsize=QUEUE_MAXSIZE)
+    stop = mp.Event()
+    proc = mp.Process(target=capture_proc, args=(ip, q, stop), daemon=True)
+    proc.start()
 
-    last_frame_ts = time.time()  # tempo do último frame
-    last_save_ts = 0.0  # não usado explicitamente (mantido)
-    last_db_ts = 0.0  # último commit no BD
-    intervalo_db = 10.0  # segundos entre gravações  # período de persistência
+    last_frame_ts = time.time()
+    last_save_ts = 0.0
+    last_db_ts = 0.0
+    intervalo_db = 10.0  # segundos entre gravações
 
     # Configuração de segurança e alerta
-    CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}  # EPIs válidos
-    alert_start = None  # início do risco contínuo
-    alerta_enviado = False  # previne reenvios
-    duracao_limite = 5.0  # segundos de risco contínuo  # limiar
+    CLASSES_SEGURO = {"helmet", "glove", "glasses", "belt", "boots"}
+    alert_start = None
+    alerta_enviado = False
+    duracao_limite = 5.0  # segundos de risco contínuo
 
     try:
-        while True:  # loop principal
+        while True:
             try:
-                frame = await asyncio.get_running_loop().run_in_executor(None, lambda: q.get(True, 0.5))  # busca da fila
-                last_frame_ts = time.time()  # atualiza heartbeat
+                frame = await asyncio.get_running_loop().run_in_executor(None, lambda: q.get(True, 0.5))
+                last_frame_ts = time.time()
             except Exception:
-                if (time.time() - last_frame_ts) > READ_IDLE_TIMEOUT:  # sem frames por muito tempo
-                    await _safe_ws_send_text(ws, {"erro": "timeout_stream"})  # informa timeout
-                    break  # encerra loop
-                continue  # tenta novamente
+                if (time.time() - last_frame_ts) > READ_IDLE_TIMEOUT:
+                    await _safe_ws_send_text(ws, {"erro": "timeout_stream"})
+                    break
+                continue
 
             # ---------- INFERÊNCIA ----------
-            results = model.predict(  # roda YOLO
+            results = model.predict(
                 frame, imgsz=IMG_SIZE, device=device, half=True, conf=CONFIDENCE, iou=IOU, agnostic_nms=True
-            )[0]  # primeiro resultado
-            classes_detectadas = {results.names[int(b.cls[0])] for b in results.boxes}  # classes detectadas
-            classes_perigosas = {c for c in classes_detectadas if c not in CLASSES_SEGURO}  # não seguras
+            )[0]
+            classes_detectadas = {results.names[int(b.cls[0])] for b in results.boxes}
+            classes_perigosas = {c for c in classes_detectadas if c not in CLASSES_SEGURO}
 
             # ---------- DESENHA ----------
-            for b in results.boxes:  # itera boxes
-                x1, y1, x2, y2 = map(int, b.xyxy[0])  # bbox
-                cls_id = int(b.cls[0])  # id da classe
-                name = model.names[cls_id]  # nome da classe
-                col = CORES_CLASSES.get(name, (255, 255, 255))  # cor por classe
-                conf = float(b.conf[0])  # confiança
-                cv2.rectangle(frame, (x1, y1), (x2, y2), col, 1)  # desenha retângulo
-                draw_label(frame, f"{name}:{conf:.2f}", x1, y1, col)  # escreve rótulo
+            for b in results.boxes:
+                x1, y1, x2, y2 = map(int, b.xyxy[0])
+                cls_id = int(b.cls[0])
+                name = model.names[cls_id]
+                col = CORES_CLASSES.get(name, (255, 255, 255))
+                conf = float(b.conf[0])
+                cv2.rectangle(frame, (x1, y1), (x2, y2), col, 1)
+                draw_label(frame, f"{name}:{conf:.2f}", x1, y1, col)
 
             # ---------- ALERTA PERSISTENTE ----------
-            if classes_perigosas:  # se há risco
-                if alert_start is None:  # inicia contagem
-                    alert_start = time.time()  # marca início
-                elif (time.time() - alert_start) >= duracao_limite and not alerta_enviado:  # risco persistiu
-                    alerta_enviado = True  # evita reenvio imediato
-                    print(f"🚨 Alerta persistente na câmera {camera_name} ({camera_id}): {classes_perigosas}")  # log
-                    os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)  # garante pasta
-                    filename = f"alerta_cam{camera_id}_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"  # nome do arquivo
-                    path = os.path.join(IMG_REAL_TIME_DIR, filename)  # caminho final
-                    ok, buf = cv2.imencode(".jpg", frame)  # codifica JPEG
-                    if ok:  # sucesso
-                        with open(path, "wb") as f:  # abre arquivo
-                            f.write(fernet.encrypt(buf.tobytes()))  # grava cifrado
+            if classes_perigosas:
+                if alert_start is None:
+                    alert_start = time.time()
+                elif (time.time() - alert_start) >= duracao_limite and not alerta_enviado:
+                    alerta_enviado = True
+                    print(f"🚨 Alerta persistente na câmera {camera_name} ({camera_id}): {classes_perigosas}")
+                    os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
+                    filename = f"alerta_cam{camera_id}_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"
+                    path = os.path.join(IMG_REAL_TIME_DIR, filename)
+                    ok, buf = cv2.imencode(".jpg", frame)
+                    if ok:
+                        with open(path, "wb") as f:
+                            f.write(fernet.encrypt(buf.tobytes()))
                         # 📧 Envia e-mail em background
-                        enviar_email_em_background(results, path)  # dispara e-mail
-                        await _safe_ws_send_text(ws, {  # notifica cliente
+                        enviar_email_em_background(results, path)
+                        await _safe_ws_send_text(ws, {
                             "alerta": True,
                             "mensagem": f"🚨 Alerta da câmera {camera_name} ({', '.join(classes_perigosas)}). E-mail enviado!"
-                        })  # fim payload
-            else:  # sem risco
-                alert_start = None  # reseta contagem
-                alerta_enviado = False  # libera próximo envio
+                        })
+            else:
+                alert_start = None
+                alerta_enviado = False
 
             # ---------- 💾 SALVA DETECÇÕES NO BANCO A CADA 10s ----------
-            now = time.time()  # tempo atual
-            if (now - last_db_ts) >= intervalo_db:  # janela atingida
+            now = time.time()
+            if (now - last_db_ts) >= intervalo_db:
                 try:
-                    conn = get_connection()  # abre conexão BD
-                    cur = conn.cursor()  # cursor
-                    os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)  # garante pasta
-                    filename_db = f"det_cam{camera_id}_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"  # nome snapshot
-                    path_db = os.path.join(IMG_REAL_TIME_DIR, filename_db)  # caminho
-                    ok, buf = cv2.imencode(".jpg", frame)  # codifica JPEG
-                    if ok:  # sucesso
-                        with open(path_db, "wb") as f:  # abre arquivo
-                            f.write(fernet.encrypt(buf.tobytes()))  # grava cifrado
+                    conn = get_connection()
+                    cur = conn.cursor()
+                    os.makedirs(IMG_REAL_TIME_DIR, exist_ok=True)
+                    filename_db = f"det_cam{camera_id}_{datetime.now():%Y-%m-%d_%H-%M-%S}.jpg"
+                    path_db = os.path.join(IMG_REAL_TIME_DIR, filename_db)
+                    ok, buf = cv2.imencode(".jpg", frame)
+                    if ok:
+                        with open(path_db, "wb") as f:
+                            f.write(fernet.encrypt(buf.tobytes()))
 
-                        for b in results.boxes:  # insere cada detecção
-                            x1, y1, x2, y2 = map(int, b.xyxy[0])  # bbox
-                            cls_name = results.names[int(b.cls[0])]  # classe
-                            conf = float(b.conf[0])  # confiança
-                            cur.execute("""  # insert SQL
+                        for b in results.boxes:
+                            x1, y1, x2, y2 = map(int, b.xyxy[0])
+                            cls_name = results.names[int(b.cls[0])]
+                            conf = float(b.conf[0])
+                            cur.execute("""
                                 INSERT INTO detections
                                 (user_id, image_name, image_path, class_name, confidence,
                                  x1, y1, x2, y2, device, model_name, camera_name)
                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """, (
-                                user_id,           # ✅ vem do token  # parâmetro
-                                filename_db,       # nome do arquivo  # parâmetro
-                                path_db,           # caminho  # parâmetro
-                                cls_name,          # classe  # parâmetro
-                                conf,              # confiança  # parâmetro
-                                x1, y1, x2, y2,    # bbox  # parâmetro
-                                device,            # cpu/cuda  # parâmetro
-                                "YOLO",            # modelo  # parâmetro
-                                camera_name        # nome da câmera  # parâmetro
-                            ))  # fim execute
-                        conn.commit()  # commit
-                    cur.close()  # fecha cursor
-                    conn.close()  # fecha conexão
-                    last_db_ts = now  # atualiza janela
-                    print(f"💾 Detecções da câmera {camera_name} salvas no banco.")  # log
+                                user_id,           # ✅ vem do token
+                                filename_db,
+                                path_db,
+                                cls_name,
+                                conf,
+                                x1, y1, x2, y2,
+                                device,
+                                "YOLO",
+                                camera_name
+                            ))
+                        conn.commit()
+                    cur.close()
+                    conn.close()
+                    last_db_ts = now
+                    print(f"💾 Detecções da câmera {camera_name} salvas no banco.")
                 except Exception as e:
-                    print(f"❌ Erro ao salvar detecções no banco: {e}")  # log erro
+                    print(f"❌ Erro ao salvar detecções no banco: {e}")
 
             # ---------- ENVIA FRAME ----------
-            ok, buf = cv2.imencode(".jpg", frame)  # codifica frame
-            if ok:  # sucesso
-                await ws.send_bytes(buf.tobytes())  # envia bytes JPEG
+            ok, buf = cv2.imencode(".jpg", frame)
+            if ok:
+                await ws.send_bytes(buf.tobytes())
 
-            await asyncio.sleep(0.02)  # pequena pausa
+            await asyncio.sleep(0.02)
 
     except WebSocketDisconnect:
-        print(f"🔌 Câmera {camera_id}: conexão encerrada.")  # log desconexão
+        print(f"🔌 Câmera {camera_id}: conexão encerrada.")
     finally:
-        if stop:  # se evento existe
-            stop.set()  # sinaliza parada ao processo
-        if proc and proc.is_alive():  # se processo ativo
-            proc.terminate()  # encerra processo
-            proc.join(timeout=1.0)  # aguarda término
-        if ws.application_state == WebSocketState.CONNECTED:  # se ainda conectado
-            await _safe_ws_send_text(ws, {"erro": "conexao_encerrada"})  # avisa cliente
-            await ws.close()  # fecha WS
+        if stop:
+            stop.set()
+        if proc and proc.is_alive():
+            proc.terminate()
+            proc.join(timeout=1.0)
+        if ws.application_state == WebSocketState.CONNECTED:
+            await _safe_ws_send_text(ws, {"erro": "conexao_encerrada"})
+            await ws.close()
