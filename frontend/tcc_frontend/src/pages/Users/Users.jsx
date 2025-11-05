@@ -1,172 +1,172 @@
-// Importa bibliotecas e dependências // linha de comentário informativa já presente
-import React, { useEffect, useState } from "react"; // importa React e hooks para estado (useState) e efeitos (useEffect)
-import { useAuth } from "../../context/AuthContext"; // importa contexto de autenticação para obter dados do usuário logado
-import getHostName from "../../../utils/getUrl"; // util para resolver a URL base da API do backend
-import Header from "../../components/Header"; // componente de cabeçalho reutilizável
+// Importa bibliotecas e dependências
+import React, { useEffect, useState } from "react";
+import { useAuth } from "../../context/AuthContext";
+import getHostName from "../../../utils/getUrl";
+import Header from "../../components/Header";
 
-export const Users = () => { // declara e exporta o componente funcional Users
-  // Estados para gerenciar dados do formulário e lista // comentário original explicando o bloco de estados
-  const [usuarios, setUsuarios] = useState([]);       // lista de usuários carregada da API
-  const [login, setLogin] = useState("");             // campo controlado para o login do usuário
-  const [password, setPassword] = useState("");       // campo controlado para a senha
-  const [name, setName] = useState("");               // ✅ novo campo: nome completo // estado para o nome exibido
-  const [nivel, setNivel] = useState(1);              // nível de acesso (1, 2 ou 3) com padrão 1
-  const [editandoId, setEditandoId] = useState(null); // identifica o usuário em edição (null quando criando)
-  const [error, setError] = useState(null);           // armazena mensagens de erro da API para renderização
+export const Users = () => {
+  // Estados para gerenciar dados do formulário e lista
+  const [usuarios, setUsuarios] = useState([]);       // lista de usuários
+  const [login, setLogin] = useState("");             // campo de login
+  const [password, setPassword] = useState("");       // campo de senha
+  const [name, setName] = useState("");               // ✅ novo campo: nome completo
+  const [nivel, setNivel] = useState(1);              // nível de acesso
+  const [editandoId, setEditandoId] = useState(null); // id em edição
+  const [error, setError] = useState(null);           // erro da API
 
-  const { username } = useAuth(); // obtém o username do usuário autenticado via contexto
-  const API_URL = getHostName(); // resolve a URL base do backend (ex.: http://localhost:3001/api)
+  const { username } = useAuth();
+  const API_URL = getHostName();
 
-  // Função para ler o token JWT armazenado // comentário explicativo da função de util interno
-  const getAuthHeader = () => { // retorna headers de autorização se houver token
-    const token = localStorage.getItem("access_token"); // lê token JWT do localStorage
-    return token ? { Authorization: `Bearer ${token}` } : {}; // monta header Authorization ou objeto vazio
-  }; // fim getAuthHeader
+  // Função para ler o token JWT armazenado
+  const getAuthHeader = () => {
+    const token = localStorage.getItem("access_token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
-  // 🔹 Carrega a lista de usuários do backend // comentário original indicando operação de leitura
-  const carregarUsuarios = async () => { // função assíncrona para buscar usuários
-    try { // tenta realizar a requisição
-      const res = await fetch(`${API_URL}/users`, { // chama endpoint GET /users
-        headers: { // define cabeçalhos da requisição
-          "Content-Type": "application/json", // indica JSON na resposta/negociação
-          ...getAuthHeader(), // injeta Authorization se disponível
-        }, // fim headers
-      }); // fim fetch
-      if (!res.ok) throw new Error(`https ${res.status}`); // lança erro caso status HTTP não seja 2xx
-      const data = await res.json(); // parseia o corpo JSON retornado
-      setUsuarios(data); // atualiza estado com a lista de usuários
-    } catch (err) { // captura falhas de rede/HTTP
-      console.error("Falha ao buscar usuários:", err); // loga o erro no console
-      setError(err.message); // guarda mensagem de erro para exibir na UI
-    } // fim try/catch
-  }; // fim carregarUsuarios
+  // 🔹 Carrega a lista de usuários do backend
+  const carregarUsuarios = async () => {
+    try {
+      const res = await fetch(`${API_URL}/users`, {
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeader(),
+        },
+      });
+      if (!res.ok) throw new Error(`https ${res.status}`);
+      const data = await res.json();
+      setUsuarios(data);
+    } catch (err) {
+      console.error("Falha ao buscar usuários:", err);
+      setError(err.message);
+    }
+  };
 
-  // 🔹 Cria ou atualiza usuário // comentário original indicando operação de escrita
-  const adicionarOuAtualizarUsuario = async (e) => { // handler do submit do formulário
-    e.preventDefault(); // previne o reload da página padrão do form
-    if (!login) return alert("Preencha o login"); // validação simples: login obrigatório
+  // 🔹 Cria ou atualiza usuário
+  const adicionarOuAtualizarUsuario = async (e) => {
+    e.preventDefault();
+    if (!login) return alert("Preencha o login");
 
-    // monta o corpo da requisição // comentário original sobre construção do payload
-    const payload = { login, name }; // ✅ inclui o nome // objeto base com login e nome
-    if (password) payload.password = password; // inclui senha somente se informada
-    if (nivel) payload.nivel = Number(nivel); // garante que nível seja número ao enviar
-    if (username) payload.username = username; // opcional: inclui username do operador (para logs no backend)
+    // monta o corpo da requisição
+    const payload = { login, name }; // ✅ inclui o nome
+    if (password) payload.password = password;
+    if (nivel) payload.nivel = Number(nivel);
+    if (username) payload.username = username;
 
-    const url = editandoId // decide endpoint conforme operação
-      ? `${API_URL}/users/${editandoId}` // URL para atualizar (PUT)
-      : `${API_URL}/users`; // URL para criar (POST)
-    const method = editandoId ? "PUT" : "POST"; // método HTTP conforme criação/edição
+    const url = editandoId
+      ? `${API_URL}/users/${editandoId}`
+      : `${API_URL}/users`;
+    const method = editandoId ? "PUT" : "POST";
 
-    if (!editandoId && !password) { // validação extra: criação exige senha
-      return alert("Senha é obrigatória ao criar um usuário"); // feedback ao usuário
-    } // fim validação senha
+    if (!editandoId && !password) {
+      return alert("Senha é obrigatória ao criar um usuário");
+    }
 
-    try { // tenta executar requisição de criação/atualização
-      const res = await fetch(url, { // envia para o endpoint definido
-        method, // método HTTP dinamicamente escolhido
-        headers: { // cabeçalhos da requisição
-          "Content-Type": "application/json", // indica JSON no corpo
-          ...getAuthHeader(), // adiciona Authorization se houver token
-        }, // fim headers
-        body: JSON.stringify(payload), // serializa payload em JSON
-      }); // fim fetch
-      if (!res.ok) throw new Error(`https ${res.status}`); // caso falhe, lança erro para o catch
-      resetarForm(); // limpa o formulário após sucesso
-      carregarUsuarios(); // recarrega a lista atualizada da API
-    } catch (err) { // trata erros da operação
-      alert(`Erro ao ${editandoId ? "atualizar" : "criar"} usuário`); // mensagem contextual conforme ação
-      console.error(err); // log detalhado no console
-    } // fim try/catch
-  }; // fim adicionarOuAtualizarUsuario
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeader(),
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`https ${res.status}`);
+      resetarForm();
+      carregarUsuarios();
+    } catch (err) {
+      alert(`Erro ao ${editandoId ? "atualizar" : "criar"} usuário`);
+      console.error(err);
+    }
+  };
 
-  // 🔹 Reseta o formulário após salvar // comentário original descrevendo a função
-  const resetarForm = () => { // função utilitária para limpar campos
-    setLogin(""); // limpa login
-    setPassword(""); // limpa senha
-    setName(""); // limpa nome
-    setNivel(1); // retorna nível ao padrão (1)
-    setEditandoId(null); // sai do modo edição
-  }; // fim resetarForm
+  // 🔹 Reseta o formulário após salvar
+  const resetarForm = () => {
+    setLogin("");
+    setPassword("");
+    setName("");
+    setNivel(1);
+    setEditandoId(null);
+  };
 
-  // 🔹 Preenche o formulário ao clicar em editar // comentário original
-  const editarUsuario = (user) => { // inicia edição de um usuário existente
-    setLogin(user.login); // preenche login com o valor atual
-    setName(user.name || ""); // preenche nome ou string vazia se ausente
-    setNivel(user.nivel); // define o nível atual do usuário
-    setEditandoId(user.id); // marca o id que está em edição
-  }; // fim editarUsuario
+  // 🔹 Preenche o formulário ao clicar em editar
+  const editarUsuario = (user) => {
+    setLogin(user.login);
+    setName(user.name || "");
+    setNivel(user.nivel);
+    setEditandoId(user.id);
+  };
 
-  // 🔹 Remove usuário // comentário original
-  const removerUsuario = async (id) => { // handler para excluir um usuário
-    if (!window.confirm("Tem certeza que deseja excluir?")) return; // confirma ação destrutiva
-    try { // tenta realizar deleção
-      const res = await fetch(`${API_URL}/users/${id}`, { // chama DELETE /users/:id
-        method: "DELETE", // método HTTP de remoção
-        headers: { // injeta Authorization se presente
-          ...getAuthHeader(), // cabeçalho com Bearer token
-        }, // fim headers
-      }); // fim fetch
-      if (!res.ok) throw new Error(`https ${res.status}`); // se falhar, encaminha para catch
-      carregarUsuarios(); // atualiza a lista após remoção
-    } catch { // captura qualquer erro
-      alert("Erro ao remover usuário"); // mostra erro genérico ao usuário
-    } // fim try/catch
-  }; // fim removerUsuario
+  // 🔹 Remove usuário
+  const removerUsuario = async (id) => {
+    if (!window.confirm("Tem certeza que deseja excluir?")) return;
+    try {
+      const res = await fetch(`${API_URL}/users/${id}`, {
+        method: "DELETE",
+        headers: {
+          ...getAuthHeader(),
+        },
+      });
+      if (!res.ok) throw new Error(`https ${res.status}`);
+      carregarUsuarios();
+    } catch {
+      alert("Erro ao remover usuário");
+    }
+  };
 
-  // 🔹 Carrega usuários na montagem do componente // comentário original
-  useEffect(() => { // efeito chamado ao montar o componente
-    carregarUsuarios(); // busca a lista inicial de usuários
-  }, []); // dependências vazias: roda apenas uma vez
+  // 🔹 Carrega usuários na montagem do componente
+  useEffect(() => {
+    carregarUsuarios();
+  }, []);
 
-  if (error) return <div>Erro: {error}</div>; // renderiza mensagem de erro caso exista erro na busca
+  if (error) return <div>Erro: {error}</div>;
 
-  return ( // JSX de renderização do componente
-    <> {/* Fragmento React para agrupar múltiplos elementos sem nó extra no DOM */}
-      <Header /> {/* Renderiza o cabeçalho da aplicação */}
-      <div className="p-10 max-w-xl mx-auto"> {/* container central com padding e largura máxima */}
-        <h2 className="text-2xl font-bold mb-4"> {/* título do formulário com estilos */}
-          {editandoId ? "Editar Usuário" : "Adicionar Usuário"} {/* alterna texto conforme modo */}
-        </h2> {/* fim do título */}
+  return (
+    <>
+      <Header />
+      <div className="p-10 max-w-xl mx-auto">
+        <h2 className="text-2xl font-bold mb-4">
+          {editandoId ? "Editar Usuário" : "Adicionar Usuário"}
+        </h2>
 
-        {/* 🔹 Formulário */} {/* comentário informativo da seção do formulário */}
-        <form onSubmit={adicionarOuAtualizarUsuario} className="mb-6 space-y-4"> {/* form que dispara submit handler */}
+        {/* 🔹 Formulário */}
+        <form onSubmit={adicionarOuAtualizarUsuario} className="mb-6 space-y-4">
           <input
             type="text"
             placeholder="Login"
             className="w-full p-2 border rounded"
             value={login}
             onChange={(e) => setLogin(e.target.value)}
-          /> {/* campo de login controlado */}
+          />
           <input
             type="text"
             placeholder="Nome Completo"
             className="w-full p-2 border rounded"
             value={name}
             onChange={(e) => setName(e.target.value)}
-          /> {/* campo do nome controlado */}
+          />
           <input
             type="password"
             placeholder="Senha"
             className="w-full p-2 border rounded"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-          /> {/* campo de senha controlado */}
+          />
           <select
             className="w-full p-2 border rounded"
             value={nivel}
             onChange={(e) => setNivel(e.target.value)}
-          > {/* seletor de nível de acesso */}
-            <option value={1}>Nível 1 - Restrito</option> {/* opção nível 1 */}
-            <option value={2}>Nível 2 - Intermediário</option> {/* opção nível 2 */}
-            <option value={3}>Nível 3 - Admin</option> {/* opção nível 3 */}
-          </select> {/* fim do select */}
+          >
+            <option value={1}>Nível 1 - Restrito</option>
+            <option value={2}>Nível 2 - Intermediário</option>
+            <option value={3}>Nível 3 - Admin</option>
+          </select>
           <button
             type="submit"
             className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-500"
           >
             {editandoId ? "Atualizar Usuário" : "Adicionar Usuário"}
-          </button> {/* botão principal do formulário */}
-          {editandoId && ( // renderização condicional: exibe botão de cancelar quando em edição
+          </button>
+          {editandoId && (
             <button
               type="button"
               onClick={resetarForm}
@@ -174,44 +174,44 @@ export const Users = () => { // declara e exporta o componente funcional Users
             >
               Cancelar edição
             </button>
-          )} {/* fim do condicional de cancelamento */}
-        </form> {/* fim do formulário */}
+          )}
+        </form>
 
-        {/* 🔹 Lista de usuários */} {/* comentário original da seção de listagem */}
-        <ul className="space-y-2"> {/* lista com espaçamento vertical entre itens */}
-          {usuarios.map((user) => ( // mapeia usuários em itens da lista
+        {/* 🔹 Lista de usuários */}
+        <ul className="space-y-2">
+          {usuarios.map((user) => (
             <li
               key={user.id}
               className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-2"
-            > {/* item de usuário com layout responsivo e borda inferior */}
-              <div> {/* bloco com dados do usuário */}
-                <span className="font-semibold text-gray-800">#{user.id}</span>{" "} {/* exibe id com destaque */}
-                <span className="font-medium">{user.login}</span>{" "} {/* exibe login */}
+            >
+              <div>
+                <span className="font-semibold text-gray-800">#{user.id}</span>{" "}
+                <span className="font-medium">{user.login}</span>{" "}
                 <span className="text-gray-600">
                   ({user.name || "Sem nome"})
-                </span>{" "} {/* exibe nome ou placeholder */}
+                </span>{" "}
                 <span className="text-sm text-gray-500">
                   — Nível {user.nivel}
-                </span> {/* exibe o nível do usuário */}
-              </div> {/* fim bloco de dados */}
-              <div className="mt-2 sm:mt-0 space-x-2"> {/* bloco de ações (editar/remover) */}
+                </span>
+              </div>
+              <div className="mt-2 sm:mt-0 space-x-2">
                 <button
                   onClick={() => editarUsuario(user)}
                   className="text-sm text-blue-600 hover:underline"
                 >
                   Editar
-                </button> {/* botão que preenche o formulário com os dados do usuário */}
+                </button>
                 <button
                   onClick={() => removerUsuario(user.id)}
                   className="text-sm text-red-600 hover:underline"
                 >
                   Remover
-                </button> {/* botão que solicita remoção do usuário */}
-              </div> {/* fim bloco de ações */}
+                </button>
+              </div>
             </li>
-          ))} {/* fim map de usuários */}
-        </ul> {/* fim da lista */}
-      </div> {/* fim do container principal */}
-    </> // fim do fragmento raiz
-  ); // fim do return do componente
-}; // fim da declaração do componente Users
+          ))}
+        </ul>
+      </div>
+    </>
+  );
+};
