@@ -12,6 +12,7 @@ export default function Cam() { // Define o componente funcional Cam
   const wsRef = useRef(null); // Referência para manter a instância do WebSocket (persistente entre renders)
 
   const [loading, setLoading] = useState(true); // Controla a tela/overlay de carregamento
+  const [stream, setStream] = useState(null); // Mantém referência ao MediaStream atual da câmera
 
   const API_URL = getHostNameSocket(); // Obtém a URL base do servidor de WebSocket
   const token = localStorage.getItem("access_token") || ""; // Lê o token de acesso do localStorage
@@ -60,6 +61,7 @@ export default function Cam() { // Define o componente funcional Cam
           }
         }
         if (videoRef.current) videoRef.current.srcObject = stream; // Atribui stream ao <video>
+        setStream(stream); // Armazena o MediaStream para permitir cleanup reativo
       } catch {
         setLoading(true); // Mantém loading em caso de erro/permissão negada
       }
@@ -72,6 +74,13 @@ export default function Cam() { // Define o componente funcional Cam
       if (stream) stream.getTracks().forEach((t) => t.stop()); // Para todas as trilhas (libera a webcam)
     };
   }, []); // Executa apenas uma vez ao montar
+
+  // Desativa câmera ao sair da página (cleanup do stream)
+  useEffect(() => { // Observa mudanças em 'stream'
+    return () => { // Função de limpeza chamada ao desmontar ou trocar o stream
+      if (stream) stream.getTracks().forEach((track) => track.stop()); // Interrompe todas as tracks
+    };
+  }, [stream]); // Reexecuta cleanup se o stream mudar
 
   // Captura e envia frames ao servidor
   useEffect(() => { // Captura frames e envia via WebSocket
@@ -100,6 +109,13 @@ export default function Cam() { // Define o componente funcional Cam
     const timer = setInterval(sendFrame, 100); // ~10 fps
     return () => clearInterval(timer); // Limpa intervalo em unmount
   }, []); // Uma vez ao montar
+
+    // Desativa câmera ao sair da página (cleanup do stream)
+    useEffect(() => { // Observa mudanças em 'stream'
+      return () => { // Função de limpeza chamada ao desmontar ou trocar o stream
+        if (stream) stream.getTracks().forEach((track) => track.stop()); // Interrompe todas as tracks
+      };
+    }, [stream]); // Reexecuta cleanup se o stream mudar
 
   return ( // Estrutura JSX do componente
     <div className="bg-gray-200 h-screen"> {/* Container de página com fundo cinza e altura total */}
