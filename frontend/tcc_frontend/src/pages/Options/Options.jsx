@@ -7,7 +7,7 @@ import precision from "../../assets/imgs/precision-marketing.png"; // Imagem do 
 import Header from "../../components/Header"; // Componente de cabeçalho
 import { Link } from "react-router-dom"; // Componente de link para navegação declarativa
 
-export default function Options() {
+export default function Options() { // Página de opções (cards de navegação)
   const navigate = useNavigate(); // Instância do hook; atualmente não é utilizada
 
   return (
