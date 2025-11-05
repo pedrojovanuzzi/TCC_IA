@@ -50,7 +50,7 @@ def verificar_e_enviar_alerta(result, media_path: str):  # verifica classes não
             return  # encerra a função
 
         assunto = "🚨 Alerta de Segurança - Detecção Irregular"  # assunto do e-mail
-        corpo = f"""  # corpo HTML do e-mail (template)
+        corpo = f"""
         <h2>⚠️ Alerta de Segurança Detectado</h2>
         <p>Classes detectadas sem EPI: <b>{', '.join(classes_perigosas)}</b></p>
         <p>Data: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</p>
