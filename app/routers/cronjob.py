@@ -1,5 +1,5 @@
 # app/routers/cronjob.py
-from fastapi import APIRouter, Depends, HTTPException  # Importa classes e funções essenciais do FastAPI
+from fastapi import APIRouter, Body, Depends, HTTPException  # Importa classes e funções essenciais do FastAPI
 from pydantic import BaseModel, EmailStr  # Importa o BaseModel e o tipo EmailStr para validação de dados
 from database import get_connection  # Função para obter conexão com o banco de dados
 from auth import verificar_token  # Função de autenticação que valida o token do usuário
@@ -8,11 +8,6 @@ import re, traceback  # 're' para expressões regulares e 'traceback' para exibi
 
 router = APIRouter()  # Cria o roteador para agrupar rotas relacionadas ao cronjob
 
-# ✅ Inclui o campo 'email'
-class CronJobConfig(BaseModel):  # Define o modelo de dados esperado na requisição POST
-    time: str  # Intervalo de tempo informado em formato textual (ex: '10D 2H 30M')
-    active: bool  # Define se o cronjob está ativo
-    email: EmailStr  # Email que receberá notificações (validação automática pelo Pydantic)
 
 
 def parse_time_string(time_str: str) -> datetime:  # Converte string de tempo em data futura
@@ -35,51 +30,71 @@ def parse_time_string(time_str: str) -> datetime:  # Converte string de tempo em
     return datetime.now() + timedelta(**delta_kwargs)  # Retorna a data atual somada ao intervalo
 
 
-@router.post("/cronjob")  # Define rota POST para salvar ou atualizar o cronjob
-def salvar_cronjob(config: CronJobConfig, token=Depends(verificar_token)):  # Recebe os dados e o token de autenticação
-    if token["nivel"] < 2:  # Verifica se o usuário tem nível de permissão suficiente
-        raise HTTPException(403, "Permissão negada")  # Retorna erro 403 caso não tenha permissão
+@router.post("/cronjob")  # Define a rota HTTP POST para /api/cronjob
+def salvar_cronjob(
+    config: dict = Body(...),  # Indica que o corpo da requisição virá em formato JSON (será convertido em dicionário Python)
+    token=Depends(verificar_token)  # Extrai e valida o token JWT antes de processar a rota
+):
+    # 🔐 Verifica se o usuário tem nível de permissão suficiente (mínimo nível 2)
+    if token["nivel"] < 2:
+        raise HTTPException(403, "Permissão negada")  # Retorna erro 403 se não tiver permissão
 
     try:
-        conn = get_connection()  # Abre conexão com o banco de dados
-        c = conn.cursor()  # Cria o cursor para executar comandos SQL
+        # 🧩 Extrai os valores do JSON recebido (corpo da requisição)
+        time_str = config["time"]    # Texto do intervalo, ex: "10D 2H 30M"
+        active = config["active"]    # Booleano indicando se o cronjob está ativo
+        email = config["email"]      # E-mail para notificações
 
-        dt_result = parse_time_string(config.time)  # Converte o tempo em data real
-        print(f"⏰ Próxima execução agendada para: {dt_result}")  # Exibe no log o horário da próxima execução
+        # 🧠 Converte o texto de tempo em data real (exemplo: "10D 2H" → datetime futuro)
+        dt_result = parse_time_string(time_str)
+        print(f"⏰ Próxima execução agendada para: {dt_result}")  # Exibe no terminal a data calculada
 
-        # Verifica se já existe um registro
-        c.execute("SELECT COUNT(*) FROM cronjob")  # Conta quantos registros já existem
-        existe = c.fetchone()[0]  # Armazena o resultado da contagem
+        # 🗄️ Abre conexão com o banco de dados
+        conn = get_connection()
+        c = conn.cursor()  # Cria cursor para executar comandos SQL
 
-        if existe > 0:  # Caso já exista registro, atualiza
+        # 🔍 Verifica se já existe um registro na tabela 'cronjob'
+        c.execute("SELECT COUNT(*) FROM cronjob")  # Executa contagem
+        existe = c.fetchone()[0]  # Obtém resultado da contagem
+
+        # 🧾 Se já existir, faz UPDATE
+        if existe > 0:
             c.execute(
                 "UPDATE cronjob SET time=%s, active=%s, interval_text=%s, email=%s",
                 (
-                    dt_result.strftime("%Y-%m-%d %H:%M:%S"),  # Converte datetime em string
-                    int(config.active),  # Converte booleano em inteiro (1/0)
-                    config.time,  # Salva texto do intervalo
-                    config.email,  # Salva o email
+                    dt_result.strftime("%Y-%m-%d %H:%M:%S"),  # Converte datetime para string
+                    int(active),  # Converte True/False em 1/0 (para salvar no banco)
+                    time_str,  # Salva texto original do intervalo
+                    email,  # Salva e-mail informado
                 ),
             )
-        else:  # Caso não exista, insere novo registro
+
+        # ➕ Se não existir, faz INSERT
+        else:
             c.execute(
                 "INSERT INTO cronjob (time, active, interval_text, email) VALUES (%s, %s, %s, %s)",
                 (
                     dt_result.strftime("%Y-%m-%d %H:%M:%S"),  # Data formatada
-                    int(config.active),  # Valor booleano convertido
-                    config.time,  # Intervalo original
-                    config.email,  # Email informado
+                    int(active),  # Converte booleano para inteiro
+                    time_str,  # Texto original (ex: "10D 2H")
+                    email,  # E-mail informado
                 ),
             )
 
-        conn.commit()  # Confirma alterações no banco
-        conn.close()  # Fecha conexão
-        return {"mensagem": "Configuração salva com sucesso!"}  # Retorna resposta de sucesso
+        # 💾 Confirma as alterações no banco
+        conn.commit()
 
-    except Exception as e:  # Captura qualquer erro durante o processo
-        print("❌ ERRO NO CRONJOB:")  # Mensagem de erro no terminal
-        traceback.print_exc()  # Mostra rastreamento detalhado do erro
-        raise HTTPException(500, f"Erro ao salvar configuração: {e}")  # Retorna erro 500
+        # 🔒 Fecha a conexão
+        conn.close()
+
+        # ✅ Retorna resposta de sucesso em JSON
+        return {"mensagem": "Configuração salva com sucesso!"}
+
+    # ⚠️ Captura qualquer erro ocorrido durante o processo
+    except Exception as e:
+        print("❌ ERRO NO CRONJOB:")  # Mostra aviso de erro no console
+        traceback.print_exc()  # Exibe rastreamento detalhado do erro
+        raise HTTPException(500, f"Erro ao salvar configuração: {e}")  # Retorna erro 500 com descrição
 
 
 @router.get("/cronjob")  # Define rota GET para listar configuração do cronjob
