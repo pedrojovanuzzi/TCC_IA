@@ -68,6 +68,7 @@ def deletar(user_id: int, token=Depends(verificar_token)):  # recebe id do usuá
         raise HTTPException(404, "Usuário não encontrado")  # retorna erro 404
 
     login = r[0]  # guarda login para log
+    c.execute("DELETE FROM detections WHERE user_id=%s", (user_id,)) 
     c.execute("DELETE FROM users WHERE id=%s", (user_id,))  # executa exclusão do usuário
     conn.commit(); conn.close()  # confirma e fecha conexão
     log_operation(token["user_id"], f"deletou usuário '{login}' (id={user_id})")  # registra a exclusão no log
