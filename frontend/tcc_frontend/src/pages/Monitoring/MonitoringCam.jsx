@@ -61,25 +61,6 @@ export const MonitoringCam = () => { // Visualização de uma câmera específic
     }
   };
 
-  // Conexão principal via WebSocket para receber frames
-  useEffect(() => {
-    if (!camera) return; // Só conecta depois de carregar dados
-
-    const ws = new WebSocket(`${API_URL_WEBSOCKET}/ws/camera/${camera.id}?token=${token}`); // WS por câmera
-    ws.binaryType = "arraybuffer"; // Recebe binário
-    wsRef.current = ws; // Salva ref
-
-    ws.onmessage = (event) => { // Ao receber dado
-      if (typeof event.data === "string") return; // Ignora mensagens de texto
-      const blob = new Blob([event.data], { type: "image/jpeg" }); // Transforma em blob JPEG
-      paintBlob(blob); // Desenha no canvas
-    };
-
-    ws.onerror = () => setFallback(true); // Em erro, ativa fallback
-    ws.onclose = () => setFallback(true); // Em fechamento, ativa fallback
-
-    return () => ws.close(); // Fecha WS ao desmontar
-  }, [camera, API_URL_WEBSOCKET, token]);
 
   // Fallback: envia frames de um vídeo local e também recebe frames processados
   useEffect(() => {
