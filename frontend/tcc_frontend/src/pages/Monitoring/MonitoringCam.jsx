@@ -134,6 +134,83 @@ export const MonitoringCam = () => { // Visualização de uma câmera específic
     };
   }, [fallback, API_URL_WEBSOCKET, token]);
 
+
+  // Conexão principal via WebSocket para receber frames + ENVIAR FRAMES (modo normal)
+useEffect(() => {
+  if (!camera) return; // Só conecta quando a câmera foi carregada
+
+  
+  const ws = new WebSocket(
+    `${API_URL_WEBSOCKET}/ws/camera/${camera.id}?token=${token}`
+  ); // Cria WS específico da câmera
+
+  ws.binaryType = "arraybuffer"; // Indica recebimento de binário (JPEG)
+  wsRef.current = ws; // Guarda referência para uso futuro
+
+  // === RECEBIMENTO DE FRAMES (já existia) ===
+  ws.onmessage = (event) => {
+    if (typeof event.data === "string") return; // Ignora mensagens de texto
+    const blob = new Blob([event.data], { type: "image/jpeg" }); // Transforma em Blob
+    paintBlob(blob); // Desenha no canvas
+  };
+
+  ws.onerror = () => setFallback(true); // Em erro, ativa fallback
+  ws.onclose = () => setFallback(true); // Ao fechar, ativa fallback
+
+  // === ENVIO DE FRAMES NO MODO NORMAL (NOVO TRECHO AQUI) ===
+  const video = document.createElement("video"); // Cria objeto de vídeo
+  video.src = camera.stream_url || ""; // URL real da câmera (RTSP convertido via backend / HLS)
+  video.autoplay = true;
+  video.muted = true;
+  video.playsInline = true; // Necessário no mobile
+  video.style.display = "none"; // Oculto
+  document.body.appendChild(video); // Adiciona temporariamente na página
+
+  // Canvas temporário para capturar os frames do <video>
+  const canvasTemp = document.createElement("canvas");
+  const ctx = canvasTemp.getContext("2d");
+
+  const sendFrameNormal = () => {
+    if (video.readyState >= 2 && ws.readyState === WebSocket.OPEN) {
+      canvasTemp.width = video.videoWidth; // Ajusta dimensões
+      canvasTemp.height = video.videoHeight;
+
+      ctx.drawImage(video, 0, 0, canvasTemp.width, canvasTemp.height); // Puxa o frame atual
+
+      canvasTemp.toBlob(
+        (blob) => {
+          if (!blob) return;
+          const reader = new FileReader(); // Para converter para base64
+          reader.onloadend = () => {
+            const b64 = String(reader.result).split(",")[1]; // Extrai base64
+            ws.send(
+              JSON.stringify({
+                camera_name: camera.name, // 🔥 Usa o nome REAL da câmera
+                frame: b64, // Frame convertido
+              })
+            );
+          };
+          reader.readAsDataURL(blob); // Inicia conversão
+        },
+        "image/jpeg",
+        0.7
+      ); // Qualidade 0.7 (~ bom e leve)
+    }
+
+    sendTimerRef.current = setTimeout(sendFrameNormal, 100); // Envia a cada 100ms (~10fps)
+  };
+
+  video.addEventListener("play", sendFrameNormal); // Quando o vídeo começar, inicia loop de envio
+
+  // === LIMPEZA ===
+  return () => {
+    ws.close(); // Fecha WebSocket
+    video.remove(); // Remove vídeo oculto
+    if (sendTimerRef.current) clearTimeout(sendTimerRef.current); // Cancela loop
+  };
+}, [camera, API_URL_WEBSOCKET, token]);
+
+
   return (
     <>
       <Header /> {/* Cabeçalho */}
